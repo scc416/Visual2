@@ -433,3 +433,4 @@ packages/build/FAKE/tools/System.ValueTuple.dll
 packages/build/FAKE/tools/System.ValueTuple.xml
 packages/build/FAKE/tools/VSFile.dll
 packages/build/FAKE/tools/VSFile.xml
+app/js/app/js/tippy.all.min.js
