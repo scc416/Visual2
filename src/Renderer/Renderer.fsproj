@@ -4,8 +4,6 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Ref.fs" />
-    <Compile Include="Update.fs" />
     <Compile Include="Renderer.fs" />
   </ItemGroup>
   <ItemGroup>
