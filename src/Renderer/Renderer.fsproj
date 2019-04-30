@@ -1,9 +1,21 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Refs.fs" />
+    <Compile Include="Tooltips.fs" />
+    <Compile Include="Stats.fs" />
+    <Compile Include="Editors.fs" />
+    <Compile Include="ErrorDocs.fs" />
+    <Compile Include="Tabs.fs" />
+    <Compile Include="Settings.fs" />
+    <Compile Include="Views.fs" />
+    <Compile Include="Files.fs" />
+    <Compile Include="Testbench.fs" />
+    <Compile Include="Integration.fs" />
+    <Compile Include="Tests.fs" />
+    <Compile Include="MenuBar.fs" />
     <Compile Include="Renderer.fs" />
   </ItemGroup>
   <ItemGroup>
