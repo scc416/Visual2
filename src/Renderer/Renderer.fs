@@ -55,9 +55,9 @@ type Model =
         /// 0 => production. 1 => development. 2 => debug parameter.
         DebugLevel : int
         LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
-        Activity: bool
-        Sleeping: bool
-        lastRemindTime: System.TimeSpan option
+        Activity : bool
+        Sleeping : bool
+        LastRemindTime : System.TimeSpan option
         Settings : VSettings
     }
 
@@ -90,7 +90,7 @@ let init _ =
             LastOnlineFetchTime = Result.Error System.DateTime.Now
             Activity = true
             Sleeping = false
-            lastRemindTime = None
+            LastRemindTime = None
             Settings = 
                 {
                     EditorFontSize = "16"
@@ -162,7 +162,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                    [
                        div [ ClassName "toolbar-actions" ] 
                            [
-                               div [ ClassName "btn-group" ] 
+                               div [ ClassName "btn-group" ]
                                    [
                                        button [ ClassName "btn btn-default" ]
                                               [
@@ -174,38 +174,23 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                   span [ ClassName "icon icon-floppy" ] 
                                                        []
                                               ]
-
                                    ]
                                button [ ClassName "btn btn-fixed btn-default button-run" ]
-                                      [
-                                          str "Run"
-                                      ]
+                                      [ str "Run" ]
                                button [ ClassName "btn btn-default" ]
-                                      [
-                                          str "Reset"
-                                      ]
+                                      [ str "Reset" ]
                                button [ ClassName "btn btn-default button-back" ]
-                                      [
-                                          str " Step"
-                                      ]
+                                      [ str " Step" ]
                                button [ ClassName "btn btn-default button-forward" ]
-                                      [
-                                          str "Step "
-                                      ]
+                                      [ str "Step " ]
                                button [ ClassName "btn btn-large btn-default" ; Disabled true ]
-                                      [
-                                          str "-"
-                                      ]
+                                      [ str "-" ]
                                div [ ClassName "btn-group" ]
                                    [
                                        button [ ClassName "btn btn-large btn-default" ]
-                                              [
-                                                  str "\u23F1"
-                                              ]
+                                              [ str "\U0001F551" ]
                                        button [ ClassName "btn btn-large btn-default" ; Disabled true ]
-                                              [
-                                                  str "-"
-                                              ]
+                                              [ str "-" ]
                                    ]
                                div [ ClassName "btn-group pull-right" ] 
                                    [
@@ -213,30 +198,22 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                   currentRepClassName Hex model.CurrentRep
                                                   DOMAttr.OnClick (fun _ -> Hex |> ChangeRep |> dispatch)
                                               ]
-                                              [
-                                                  str "Hex"
-                                              ]
+                                              [ str "Hex" ]
                                        button [ 
                                                   currentRepClassName Bin model.CurrentRep
                                                   DOMAttr.OnClick (fun _ -> Bin |> ChangeRep |> dispatch)
                                               ]
-                                              [
-                                                  str "Bin"
-                                              ]
+                                              [ str "Bin" ]
                                        button [ 
                                                   currentRepClassName Dec model.CurrentRep
                                                   DOMAttr.OnClick (fun _ -> Dec |> ChangeRep |> dispatch)
                                               ]
-                                              [
-                                                  str "Dec"
-                                              ]
+                                              [ str "Dec" ]
                                        button [ 
                                                   currentRepClassName UDec model.CurrentRep
                                                   DOMAttr.OnClick (fun _ -> UDec|> ChangeRep |> dispatch)
                                               ]
-                                              [
-                                                  str "uDec"
-                                              ]
+                                              [ str "uDec" ]
                                    ]
                            ]
                    ]
