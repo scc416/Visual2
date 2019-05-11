@@ -431,7 +431,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                                           [ str "R13" ]
                                                                    span [ ClassName "btn btn-reg-con selectable-text" ] 
                                                                         [ 
-                                                                            0u |> formatter model.CurrentRep |> str  
+                                                                            4278190080u |> formatter model.CurrentRep |> str  
                                                                         ]
                                                                ]
                                                        ]
