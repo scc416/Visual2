@@ -98,6 +98,7 @@ type Model =
         Sleeping : bool
         LastRemindTime : System.TimeSpan option
         Settings : VSettings
+        Text : string
     }
 
 type Msg =
@@ -105,6 +106,7 @@ type Msg =
     | ChangeRep of Representations
     | ToggleByteView
     | ToggleReverseView
+    | EditorTextChange of string
 
 let init _ =
         { 
@@ -141,6 +143,7 @@ let init _ =
                     RegisteredKey = ""
                     OnlineFetchText = ""
                 }
+            Text = ""
         }, Cmd.none
 
 let update (msg : Msg) (model : Model) =
@@ -150,6 +153,8 @@ let update (msg : Msg) (model : Model) =
         | ChangeRep rep -> { model with CurrentRep = rep }
         | ToggleByteView -> { model with ByteView = not model.ByteView }
         | ToggleReverseView -> { model with ReverseDirection = not model.ReverseDirection }
+        | EditorTextChange str ->
+                { model with Text = str }
     m, Cmd.none
 
 
@@ -194,6 +199,8 @@ let dashboardWidth rep view =
     w |> setDashboardWidth
 
 let view (model : Model) (dispatch : Msg -> unit) =
+    //let editor = Editor.editor [  ]
+    //let config = Monaco.get
     dashboardWidth model.CurrentRep model.CurrentView
     div [ ClassName "window" ] 
         [ 
@@ -267,7 +274,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                          //    Style [ Height "100%" ; Width "100%" ] 
                                          //]
                                          //[]
-                                     Editor.editor []
+                                      Editor.editor [ Editor.OnChange (EditorTextChange >> dispatch)
+                                                      Editor.Value model.Text ]
+                                                      //Editor.EditorDidMount (fun _ -> dispatch HtmlEditorLoaded) ] 
                                  ] 
                              div [ ClassName "pane" ; Id "dashboard"] 
                                  [
@@ -598,6 +607,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                         ] 
                 ]
         ]
+
 
 Program.mkProgram init update view
 #if DEBUG

@@ -241,7 +241,7 @@ let createNamedFileTab fName fPath =
         let fv =
             DIV [ "editor"; "invisible" ] []
             |> ID(Refs.fileViewIdFormatter id)
-        Refs.fileViewPane.appendChild fv |> ignore
+        //Refs.fileViewPane.appendChild fv |> ignore
         addEditor fv
         id
 
