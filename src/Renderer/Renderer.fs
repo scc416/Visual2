@@ -19,6 +19,8 @@ open Monaco.Monaco.Languages
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Monaco.Monaco
+open Views2
+open Tabs2
 
     module Monaco =
 
@@ -31,7 +33,7 @@ open Monaco.Monaco
             | DefaultValue of obj
             | Language of string
             | Theme of string
-            | Options  of Monaco.Editor.IEditorConstructionOptions
+            | Options of Monaco.Editor.IEditorConstructionOptions
             | OnChange of (obj * obj -> unit)
             | EditorWillMount of (Monaco.IExports -> unit)
             | EditorDidMount of (Monaco.Editor.IEditor * Monaco.IExports -> unit)
@@ -61,7 +63,7 @@ type Model =
         /// tab containing current testbench specification (if testbench is loaded)
         TestbenchTab : int option
         /// Map tabIds to the editors which are contained in them
-        Editors : Map<int, obj>
+        Editors : Map<int, Editor>
         /// Map of content widgets currently on editor, indexed by id
         CurrentTabWidgets : Map<string, obj>
         /// id of tab containing settings form, if this exists
@@ -107,12 +109,15 @@ type Msg =
     | ToggleByteView
     | ToggleReverseView
     | EditorTextChange of string
+    | CreateNewTab
+    | DeleteTab of int
+    | SelectFileTab of int
 
 let init _ =
         { 
-            CurrentFileTabId = -1 // By default no tab is open
+            CurrentFileTabId = 0 // By default no tab is open
             TestbenchTab = None
-            Editors = Map.empty
+            Editors = Map.ofList [(0, {FileName = None ; EditorText = ""})]
             CurrentTabWidgets = Map.empty
             SettingsTab = None
             CurrentRep = Hex
@@ -153,8 +158,59 @@ let update (msg : Msg) (model : Model) =
         | ChangeRep rep -> { model with CurrentRep = rep }
         | ToggleByteView -> { model with ByteView = not model.ByteView }
         | ToggleReverseView -> { model with ReverseDirection = not model.ReverseDirection }
-        | EditorTextChange str ->
-                { model with Text = str }
+        | EditorTextChange str -> 
+            { model with Editors = Map.add model.CurrentFileTabId 
+                                           {
+                                               model.Editors.[model.CurrentFileTabId] with EditorText = str
+                                           }
+                                           model.Editors }
+        | CreateNewTab -> 
+            let newId = uniqueTabId model.Editors
+            {
+                model with CurrentFileTabId = newId
+                           Editors = Map.add newId {
+                                                   EditorText = ""
+                                                   FileName = None
+                                               } 
+                                              model.Editors
+                           //FileTabList = fileTabList
+            }
+        | SelectFileTab id -> 
+            let newCurrentId =
+                match Map.containsKey id model.Editors with
+                | false -> 
+                    match Map.isEmpty model.Editors with
+                    | true -> 
+                        -1
+                    | false ->
+                        model.Editors
+                        |> Map.toList
+                        |> List.rev
+                        |> List.head
+                        |> fst
+                | true -> id
+            { model with CurrentFileTabId = newCurrentId }
+        | DeleteTab id -> 
+            match id with
+            | x when x = model.CurrentFileTabId ->
+                let newEditors =
+                    Map.remove x model.Editors
+                let newCurrentTabId =
+                    match Map.isEmpty newEditors with
+                    | true -> 
+                        -1
+                    | false ->
+                        newEditors
+                        |> Map.toList
+                        |> List.rev
+                        |> List.head
+                        |> fst
+                { 
+                    model with CurrentFileTabId = newCurrentTabId
+                               Editors = newEditors       
+                }
+            | _ -> 
+                { model with Editors = Map.remove id model.Editors }
     m, Cmd.none
 
 
@@ -199,8 +255,31 @@ let dashboardWidth rep view =
     w |> setDashboardWidth
 
 let view (model : Model) (dispatch : Msg -> unit) =
-    //let editor = Editor.editor [  ]
-    //let config = Monaco.get
+    Browser.console.log ("Editors: " + (string model.Editors)) |> ignore
+    Browser.console.log ("Current tab: " + (string model.CurrentFileTabId)) |> ignore
+    let tabGroup (map : Map<int, Editor>) : (ReactElement list) =
+        let tab fileName number =
+            div [ 
+                    tabViewClassName number model.CurrentFileTabId
+                    DOMAttr.OnClick (fun _ -> SelectFileTab number |> dispatch)
+                    number |> fileTabIdFormatter |> Id
+
+                ] 
+                [
+                    span [ number |> tabFilePathIdFormatter |> Id ; ClassName "invisible" ] []
+                    span [ 
+                             ClassName "icon icon-cancel icon-close-tab" 
+                             DOMAttr.OnClick (fun _ -> DeleteTab number |> dispatch)
+                         ] []
+                    span [ tabGroupClassName number model.CurrentFileTabId ; number |> tabNameIdFormatter |> Id ] [ str fileName ]
+                ]
+        map
+        |> Map.map (fun key value -> 
+            match value.FileName with
+            | Some x -> tab x key
+            | _ -> tab "Untitled.s" key)
+        |> Map.toList
+        |> List.map (fun (_, name) -> name)
     dashboardWidth model.CurrentRep model.CurrentView
     div [ ClassName "window" ] 
         [ 
@@ -266,21 +345,29 @@ let view (model : Model) (dispatch : Msg -> unit) =
             div [ ClassName "window-content" ] 
                 [ 
                     div [ ClassName "pane-group" ] 
-                        [ 
-                             div [ ClassName "pane"] 
-                                 [
-                                     //div [ 
-                                         //    Id "editor"
-                                         //    Style [ Height "100%" ; Width "100%" ] 
-                                         //]
-                                         //[]
-                                      Editor.editor [ Editor.OnChange (EditorTextChange >> dispatch)
-                                                      Editor.Value model.Text ]
-                                                      //Editor.EditorDidMount (fun _ -> dispatch HtmlEditorLoaded) ] 
-                                 ] 
+                        [
+                             div [ ClassName "pane" ; Id "file-view-pane"] 
+                                      (div [ Id "tabs-files" ; ClassName "tab-group"]
+                                           (List.append (tabGroup model.Editors) 
+                                                        [ 
+                                                            div [ 
+                                                                    Id "new-file-tab"
+                                                                    ClassName "tab-item tab-item-fixed" 
+                                                                    DOMAttr.OnClick (fun _ -> CreateNewTab |> dispatch)
+                                                                ]
+                                                           [ span [ ClassName "icon icon-plus"] []]
+                                                        ])  :: ( div [ Id "darken-overlay" ; ClassName "invisible" ] [] :: if model.CurrentFileTabId = -1 then [] else [ Editor.editor [ Editor.OnChange (EditorTextChange >> dispatch) ; Editor.Value model.Editors.[model.CurrentFileTabId].EditorText ]]))
+                             //div [ ClassName "pane" ] 
+                                                              //[
+                                                              //    div [ 
+                                                              //            Id "editor"
+                                                              //            Style [ Height "100%" ; Width "100%" ] 
+                                                              //        ]
+                                                              //        []
+                                                              //] 
                              div [ ClassName "pane" ; Id "dashboard"] 
                                  [
-                                     div [ Id "controls"]
+                                     div [ Id "controls" ]
                                          [
                                              ul [ ClassName "list-group" ] 
                                                 [
@@ -295,16 +382,19 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                                            currentViewClassName Registers model.CurrentView
                                                                            DOMAttr.OnClick (fun _ -> 
                                                                                Registers |> ChangeView |> dispatch)
+                                                                           Id "tab-reg"
                                                                        ] 
                                                                        [ str "Registers" ]
                                                                    div [ 
                                                                            currentViewClassName Memory model.CurrentView
                                                                            DOMAttr.OnClick (fun _ -> 
                                                                                Memory |> ChangeView |> dispatch)
+                                                                           Id "tab-mem"
                                                                        ] 
                                                                        [ str "Memory" ]
                                                                    div [ 
                                                                            currentViewClassName Symbols model.CurrentView
+                                                                           Id "tab-sym"
                                                                            DOMAttr.OnClick (fun _ -> 
                                                                                Symbols |> ChangeView |> dispatch)
                                                                        ] 
@@ -315,15 +405,18 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                          ]
                                      div [ Id "viewer" ] 
                                          [
-                                             ul [ currentTabClassName Registers model.CurrentView ] 
+                                             ul [ 
+                                                    currentTabClassName Registers model.CurrentView
+                                                    Id "view-reg"
+                                                ] 
                                                 [
                                                     li [ ClassName "list-group-item" ] 
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR0" ] 
                                                                           [ str "R0" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R0" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -333,9 +426,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR1" ] 
                                                                           [ str "R1" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R1" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -345,9 +438,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR2" ] 
                                                                           [ str "R2" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R2" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -357,9 +450,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR3" ] 
                                                                           [ str "R3" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R3" ] 
                                                                         [ 
                                                                            0u |> formatter model.CurrentRep |> str                                                                           ]
                                                                ]
@@ -368,9 +461,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR4" ] 
                                                                           [ str "R4" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R4" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -380,9 +473,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR5" ] 
                                                                           [ str "R5" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R5" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -392,9 +485,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR6" ] 
                                                                           [ str "R6" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R6" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -404,9 +497,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR7" ] 
                                                                           [ str "R7" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R7" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -416,9 +509,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR8" ] 
                                                                           [ str "R8" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R8" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -428,9 +521,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR9" ] 
                                                                           [ str "R9" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R9" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -440,9 +533,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR10" ] 
                                                                           [ str "R10" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R10" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -452,9 +545,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR11" ] 
                                                                           [ str "R11" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R11" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -464,9 +557,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR12" ] 
                                                                           [ str "R12" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R12" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -476,9 +569,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR13" ] 
                                                                           [ str "R13" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R13" ] 
                                                                         [ 
                                                                             4278190080u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -488,9 +581,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR14" ] 
                                                                           [ str "R14" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R14" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
@@ -500,16 +593,16 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                        [
                                                            div [ ClassName "btn-group full-width" ] 
                                                                [
-                                                                   button [ ClassName "btn btn-reg" ] 
+                                                                   button [ ClassName "btn btn-reg" ; Id "BR15"] 
                                                                           [ str "R15" ]
-                                                                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                                                                   span [ ClassName "btn btn-reg-con selectable-text" ; Id "R15" ] 
                                                                         [ 
                                                                             0u |> formatter model.CurrentRep |> str  
                                                                         ]
                                                                ]
                                                        ]
                                                 ]
-                                             ul [ currentTabClassName Memory model.CurrentView ]
+                                             ul [ currentTabClassName Memory model.CurrentView ; Id "view-mem"]
                                                 [ 
                                                    li [ Class "list-group-item" ]
                                                       [ 
@@ -518,16 +611,18 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                                   button [ 
                                                                              viewButtonClassName model.ByteView
                                                                              DOMAttr.OnClick (fun _ -> ToggleByteView |> dispatch)
+                                                                             Id "byte-view"
                                                                          ]
                                                                          [ byteViewButtonString model.ByteView ]
                                                                   button [ 
                                                                              viewButtonClassName model.ReverseDirection 
                                                                              DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)
+                                                                             Id "reverse-view"
                                                                          ]
                                                                          [ reverseDirectionButtonString model.ReverseDirection] 
                                                               ] 
                                                       ]
-                                                   li [ Class "list-group" ]
+                                                   li [ Class "list-group" ; Id "mem-list" ]
                                                       [
                                                           div [ 
                                                                   Class "list-group-item"
@@ -561,44 +656,45 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                                     [ str "Uninitialized memory is zeroed" ] 
                                                               ] 
                                                       ] ]
-                                             div [ currentTabClassName Symbols  model.CurrentView ]
-                                                 [ table [ ClassName "table-striped" ]
+                                             div [ currentTabClassName Symbols  model.CurrentView ; Id "view-sym" ]
+                                                 [ table [ ClassName "table-striped" ; Id "sym-table" ]
                                                          [] 
                                                  ]
                                          ]
-                                     footer [ ClassName "toolbar toolbar-footer" ] 
+                                     footer [ ClassName "toolbar toolbar-footer" ; Id "viewer-footer" ] 
                                             [
                                                 div [ 
                                                         ClassName "pull-right"
                                                         Style [ Margin 5 ] 
+                                                        Id "flags"
                                                     ]
                                                     [
                                                         div [ ClassName "btn-group btn-flag-group" ] 
                                                             [
                                                                 button [ ClassName "btn btn-flag" ] 
                                                                        [ str "N" ]
-                                                                button [ ClassName "btn btn-flag-con" ] 
+                                                                button [ ClassName "btn btn-flag-con" ; Id "flag_N" ] 
                                                                        [ str "0" ]
                                                             ]
                                                         div [ ClassName "btn-group btn-flag-group" ] 
                                                             [
                                                                 button [ ClassName "btn btn-flag" ] 
                                                                        [ str "Z" ]
-                                                                button [ ClassName "btn btn-flag-con" ] 
+                                                                button [ ClassName "btn btn-flag-con" ; Id "flag_Z" ] 
                                                                        [ str "0" ]
                                                             ]
                                                         div [ ClassName "btn-group btn-flag-group" ] 
                                                             [
                                                                 button [ ClassName "btn btn-flag" ] 
                                                                        [ str "C" ]
-                                                                button [ ClassName "btn btn-flag-con" ] 
+                                                                button [ ClassName "btn btn-flag-con" ; Id "flag_C" ] 
                                                                        [ str "0" ]
                                                             ]
                                                         div [ ClassName "btn-group btn-flag-group" ] 
                                                             [
                                                                 button [ ClassName "btn btn-flag" ] 
                                                                        [ str "V" ]
-                                                                button [ ClassName "btn btn-flag-con" ] 
+                                                                button [ ClassName "btn btn-flag-con" ; Id "flag_V" ] 
                                                                        [ str "0" ]
                                                             ]
                                                     ]
@@ -607,7 +703,6 @@ let view (model : Model) (dispatch : Msg -> unit) =
                         ] 
                 ]
         ]
-
 
 Program.mkProgram init update view
 #if DEBUG

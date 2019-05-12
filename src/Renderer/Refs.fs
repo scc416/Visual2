@@ -28,6 +28,12 @@ let appVersion = "1.06.9"
 //                               Types used in this module
 // **********************************************************************************
 
+type Editor = 
+    { 
+        EditorText : string
+        FileName : string Option
+    }
+
 /// Bases to display data in for all Views
 /// Udec = unsigned ecimal
 type Representations =
