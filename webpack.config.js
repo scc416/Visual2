@@ -1,19 +1,22 @@
 var path = require("path");
 var webpack = require("webpack");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 function resolve(filePath) {
   return path.join(__dirname, filePath)
 }
 
 var babelOptions = {
-    presets: [
-        ["@babel/preset-env", {
-            "targets": {
-                "browsers": ["last 2 versions"]
-            },
-        "modules": false
-        }]
-    ]
+    presets: ["@babel/preset-react"],
+//    presets: [
+//        ["@babel/preset-env", {
+//            "targets": {
+//                "browsers": ["last 2 versions"]
+//            },
+//        "modules": false
+//        }]
+//    ],
+    plugins: ['@babel/plugin-proposal-class-properties']
 };
 
 var isProduction = process.argv.indexOf("-w") < 0;
@@ -43,7 +46,15 @@ var basicConfig = {
           loader: 'babel-loader',
           options: babelOptions
         },
-      }
+      },
+            {
+            test:  /\.(sass|scss|css)$/,
+            use: [
+                  isProduction ? MiniCssExtractPlugin.loader : 'style-loader',
+                  'css-loader',
+                  'sass-loader',
+                  ],
+            }
     ]
   }
 };

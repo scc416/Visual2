@@ -14,6 +14,45 @@ open Fable.Import.Browser
 open Fable.Import.React
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
+open Monaco
+open Monaco.Monaco.Languages
+open Fable.Helpers.React
+open Fable.Helpers.React.Props
+open Monaco.Monaco
+
+    module Monaco =
+
+        open Fable.Core.JsInterop
+
+        type Props =
+            | Width of obj
+            | Height of obj
+            | Value of obj
+            | DefaultValue of obj
+            | Language of string
+            | Theme of string
+            | Options  of Monaco.Editor.IEditorConstructionOptions
+            | OnChange of (obj * obj -> unit)
+            | EditorWillMount of (Monaco.IExports -> unit)
+            | EditorDidMount of (Monaco.Editor.IEditor * Monaco.IExports -> unit)
+            | RequireConfig of obj
+
+        let inline editor (props: Props list) : React.ReactElement =
+            ofImport "default" "react-monaco-editor" (keyValueList CaseRules.LowerFirst props) []
+
+    module Editor =
+
+        open Fable.Core.JsInterop
+
+        type Props =
+            | OnChange of (string -> unit)
+            | Value of string
+            | Language of string
+            | IsReadOnly of bool
+            | EditorDidMount of (unit -> unit)
+
+        let inline editor (props: Props list) : React.ReactElement =
+            ofImport "default" "./js/Editor.js" (keyValueList CaseRules.LowerFirst props) []
 
 type Model =
     { 
@@ -223,11 +262,12 @@ let view (model : Model) (dispatch : Msg -> unit) =
                         [ 
                              div [ ClassName "pane"] 
                                  [
-                                     div [ 
-                                             Id "editor"
-                                             Style [ Height "100%" ; Width "100%" ] 
-                                         ]
-                                         []
+                                     //div [ 
+                                         //    Id "editor"
+                                         //    Style [ Height "100%" ; Width "100%" ] 
+                                         //]
+                                         //[]
+                                     Editor.editor []
                                  ] 
                              div [ ClassName "pane" ; Id "dashboard"] 
                                  [

@@ -14,6 +14,7 @@ nuget Fable.Elmish.Browser
 nuget Fable.Elmish.Debugger
 nuget Fable.Elmish.HMR
 nuget Fable.PowerPack
+github fable-compiler/ts2fable-exports:dev Monaco.fs
 
 group Build
 source https://nuget.org/api/v2

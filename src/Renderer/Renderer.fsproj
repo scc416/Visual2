@@ -1,8 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\paket-files\fable-compiler\ts2fable-exports\Monaco.fs">
+      <Paket>True</Paket>
+      <Link>paket-files/Monaco.fs</Link>
+    </Compile>
     <Compile Include="Refs.fs" />
     <Compile Include="Tooltips.fs" />
     <Compile Include="Stats.fs" />

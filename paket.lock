@@ -567,8 +567,13 @@ NUGET
     Thoth.Json (2.3) - restriction: >= netstandard2.0
       Fable.Core (>= 2.0) - restriction: >= netstandard2.0
       FSharp.Core (>= 4.5.2) - restriction: >= netstandard2.0
-
+GITHUB
+  remote: fable-compiler/ts2fable-exports
+    Monaco.fs (27a5261d5ff81d9a6a677efd330f3e0208556ee9)
 GROUP Build
 NUGET
   remote: https://www.nuget.org/api/v2
     FAKE (5.8.4)
+GITHUB
+  remote: fable-compiler/ts2fable-exports
+    Monaco.fs (27a5261d5ff81d9a6a677efd330f3e0208556ee9)
