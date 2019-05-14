@@ -72,21 +72,6 @@ var mainConfig = Object.assign({
 }, basicConfig);
 
 var rendererConfig = Object.assign({
-  plugins: [
-
-    //new UglifyJSPlugin(),
-
-    new CopyWebpackPlugin([
-      {
-        from: 'node_modules/monaco-editor/min/vs',
-        to: 'vs',
-      },
-      {
-        from: 'node_modules/tippy.js/dist/tippy.all.min.js',
-        to: 'app/js/tippy.all.min.js',
-      }
-    ])
-  ],
   target: "electron-renderer",
   devtool: "source-map",
   entry: resolve("src/Renderer/Renderer.fsproj"),

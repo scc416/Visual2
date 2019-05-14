@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -8,23 +8,9 @@
       <Paket>True</Paket>
       <Link>paket-files/Monaco.fs</Link>
     </Compile>
-    <Compile Include="Refs.fs" />
-    <Compile Include="Tooltips.fs" />
-    <Compile Include="Stats.fs" />
-    <Compile Include="Editors.fs" />
-    <Compile Include="ErrorDocs.fs" />
-    <Compile Include="Tabs.fs" />
-    <Compile Include="Settings.fs" />
-    <Compile Include="Views.fs" />
-    <Compile Include="Files.fs" />
-    <Compile Include="Testbench.fs" />
-    <Compile Include="Integration.fs" />
-    <Compile Include="Tests.fs" />
-    <Compile Include="MenuBar.fs" />
+    <Compile Include="MonacoEditor.fs" />
     <Compile Include="Renderer.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Emulator\Emulator.fsproj" />
+
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
