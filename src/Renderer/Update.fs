@@ -18,7 +18,7 @@ open Monaco.Monaco.Languages
 open Monaco.Monaco
 open Views2
 open Tabs2
-open Editors2
+open React
 open MenuBar2
 
 let openFileUpdate editors filePath id =
