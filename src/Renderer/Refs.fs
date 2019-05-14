@@ -28,10 +28,14 @@ let appVersion = "1.06.9"
 //                               Types used in this module
 // **********************************************************************************
 
+
+
 type Editor = 
     { 
         EditorText : string
         FileName : string Option
+        Saved : bool
+        Path : string Option
     }
 
 /// Bases to display data in for all Views
@@ -59,7 +63,62 @@ type VSettings = {
     OnlineFetchText : string
     }
 
+type Model =
+    { 
+        /// File Tab currently selected (and therefore visible)
+        CurrentFileTabId : int
+        /// tab containing current testbench specification (if testbench is loaded)
+        TestbenchTab : int option
+        /// Map tabIds to the editors which are contained in them
+        Editors : Map<int, Editor>
+        /// Map of content widgets currently on editor, indexed by id
+        CurrentTabWidgets : Map<string, obj>
+        /// id of tab containing settings form, if this exists
+        SettingsTab : int option
+        /// The current number representation being used
+        CurrentRep : Representations
+        /// indicates what the current DOM symbols display representation is
+        DisplayedCurrentRep : Representations
+        /// The current View in the right-hand pane
+        CurrentView : Views
+        /// Whether the Memory View is byte of word based
+        ByteView : bool
+        /// direction of memory addresses
+        ReverseDirection : bool
+        /// Number of instructions imulated before break. If 0 run forever
+        MaxStepsToRun : int
+        /// Contents of data memory
+        MemoryMap : Map<uint32, uint32>
+        /// Contents of CPU registers
+        RegMap : Map<CommonData.RName, uint32>
+        /// Contents of CPU flags
+        Flags : CommonData.Flags
+        /// Values of all Defined Symols
+        SymbolMap : Map<string, uint32 * ExecutionTop.SymbolType>
+        /// version of symbolMap currently displayed
+        DisplayedSymbolMap : Map<string, uint32 * ExecutionTop.SymbolType>
+        /// Current state of simulator
+        RunMode : ExecutionTop.RunMode
+        /// Global debug level set from main process.
+        /// 0 => production. 1 => development. 2 => debug parameter.
+        DebugLevel : int
+        LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
+        Activity : bool
+        Sleeping : bool
+        LastRemindTime : System.TimeSpan option
+        Settings : VSettings
+    }
 
+type Msg =
+    | ChangeView of Views
+    | ChangeRep of Representations
+    | ToggleByteView
+    | ToggleReverseView
+    | EditorTextChange of string
+    | CreateNewTab
+    | DeleteTab of int
+    | SelectFileTab of int
+    | OpenFile
 
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries

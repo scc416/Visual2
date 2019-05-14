@@ -20,7 +20,9 @@
     <Compile Include="Integration.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="MenuBar.fs" />
+    <Compile Include="MenuBar2.fs" />
     <Compile Include="Tabs2.fs" />
+    <Compile Include="Editors2.fs" />
     <Compile Include="Views2.fs" />
     <Compile Include="Renderer.fs" />
   </ItemGroup>
