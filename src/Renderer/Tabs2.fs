@@ -20,7 +20,8 @@ open Editors
 let uniqueTabId (editor : Map<int, Editor>) =
     // Look in fileTabList and find the next unique id
     match Map.isEmpty editor with
-    | true -> 0
+    | true -> 
+        0
     | false -> 
         let lastid, _ = 
             editor

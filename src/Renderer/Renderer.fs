@@ -18,7 +18,7 @@ open Monaco.Monaco.Languages
 open Monaco.Monaco
 open Views2
 open Tabs2
-open Editors2
+open React
 open MenuBar2
 open Update
 
@@ -71,49 +71,36 @@ let update (msg : Msg) (model : Model) =
         | ToggleReverseView -> 
             { model with ReverseDirection = not model.ReverseDirection }
         | EditorTextChange str -> 
-            {
-                model with Editors = 
-                               Map.add model.CurrentFileTabId 
-                                       {
-                                           model.Editors.[model.CurrentFileTabId] with EditorText = str
-                                                                                       Saved = false
-                                       }
-                                       model.Editors 
-            }
+            let newEditors = editorTextChangeUpdate str 
+                                                    model.CurrentFileTabId 
+                                                    model.Editors 
+            { model with Editors = newEditors }
         | NewFile -> 
-            let newId = uniqueTabId model.Editors
-            {
-                model with CurrentFileTabId = newId
-                           Editors = Map.add newId blankTab model.Editors
-            }
+            let newTabId = uniqueTabId model.Editors
+            let newEditors = Map.add newTabId blankTab model.Editors
+            { model with CurrentFileTabId = newTabId
+                         Editors = newEditors }
         | SelectFileTab id -> 
-            let newCurrentId = 
-                match Map.isEmpty model.Editors with
-                | true -> -1
-                | _ -> 
-                    match Map.containsKey id model.Editors with
-                    | true -> id
-                    | _ -> selectLastTabId model.Editors
-            { model with CurrentFileTabId = newCurrentId }
+            let newTabId = selectFileTabUpdate id model.Editors
+            { model with CurrentFileTabId = newTabId }
         | DeleteTab id -> 
-            match id with
-            | x when x = model.CurrentFileTabId ->
-                let newEditors = Map.remove id model.Editors
-                let newCurrentTabId = 
-                    match Map.isEmpty newEditors with
-                    | true -> -1
-                    | false -> selectLastTabId newEditors
-                { 
-                    model with CurrentFileTabId = newCurrentTabId
-                               Editors = newEditors       
-                }
-            | _ -> model
+            let newTabId, newEditors = deleteTabUpdate id 
+                                                       model.CurrentFileTabId 
+                                                       model.Editors
+            { model with CurrentFileTabId = newTabId
+                         Editors = newEditors }
         | OpenFile -> 
-            openFileModel model
+            let newEditors, newFilePath, newTabId = 
+                openFileUpdate model.Editors 
+                               model.Settings.CurrentFilePath
+                               model.CurrentFileTabId
+            { model with Editors = newEditors
+                         CurrentFileTabId = newTabId
+                         Settings = { model.Settings with CurrentFilePath = newFilePath }}
     m, Cmd.none
 
 let view (model : Model) (dispatch : Msg -> unit) =
-    MenuBar.mainMenu dispatch 
+    mainMenu dispatch
     Browser.console.log(string model.Editors)
     dashboardWidth model.CurrentRep model.CurrentView
     div [ ClassName "window" ] 

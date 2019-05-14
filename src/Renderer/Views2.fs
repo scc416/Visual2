@@ -15,7 +15,7 @@ open Fable.Import.Browser
 open Fable.Import.React
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
-open Editors2
+open React
 
 /// return the set of representation buttons
 let repButtons (currentRep : Representations) 
@@ -128,18 +128,16 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
 
     /// the editor
     let editorViewDiv =
-        let editorView = 
-            match currentFileTabId with
-            | -1 -> 
-                []
-            | _ -> 
-                [ 
-                    Editor.editor [
-                                      Editor.OnChange (EditorTextChange >> dispatch) 
-                                      Editor.Value editors.[currentFileTabId].EditorText 
-                                  ]
-                ]
-        div [ Id "darken-overlay" ; ClassName "invisible" ] [] :: editorView
+        match currentFileTabId with
+        | -1 -> 
+            []
+        | _ -> 
+            [ 
+                Editor.editor [
+                                  Editor.OnChange (EditorTextChange >> dispatch) 
+                                  Editor.Value editors.[currentFileTabId].EditorText 
+                              ]
+            ]
     tabHeaders :: editorViewDiv
 
 // ***********************************************************************************

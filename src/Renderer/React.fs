@@ -1,4 +1,4 @@
-﻿module Editors2
+﻿module React
 
 open Elmish
 open Fable.Core
