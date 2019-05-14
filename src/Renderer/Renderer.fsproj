@@ -24,6 +24,7 @@
     <Compile Include="Tabs2.fs" />
     <Compile Include="Editors2.fs" />
     <Compile Include="Views2.fs" />
+    <Compile Include="Update.fs" />
     <Compile Include="Renderer.fs" />
   </ItemGroup>
   <ItemGroup>

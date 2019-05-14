@@ -35,3 +35,11 @@ let selectLastTabId editor =
     |> List.rev
     |> List.head
     |> fst
+
+let blankTab =
+    {
+        EditorText = ""
+        FileName = None
+        FilePath = None
+        Saved = true
+    }

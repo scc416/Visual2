@@ -34,8 +34,8 @@ type Editor =
     { 
         EditorText : string
         FileName : string Option
+        FilePath : string Option
         Saved : bool
-        Path : string Option
     }
 
 /// Bases to display data in for all Views

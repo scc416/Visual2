@@ -20,17 +20,13 @@ open Views2
 open Tabs2
 open Editors2
 open MenuBar2
+open Update
 
 let init _ =
         { 
             CurrentFileTabId = 0
             TestbenchTab = None
-            Editors = Map.ofList [ (0, {
-                                           FileName = None
-                                           EditorText = ""
-                                           Saved = true
-                                           Path = None
-                                       })]
+            Editors = Map.ofList [ (0, blankTab)]
             CurrentTabWidgets = Map.empty
             SettingsTab = None
             CurrentRep = Hex
@@ -88,13 +84,7 @@ let update (msg : Msg) (model : Model) =
             let newId = uniqueTabId model.Editors
             {
                 model with CurrentFileTabId = newId
-                           Editors = Map.add newId {
-                                                       EditorText = ""
-                                                       FileName = None
-                                                       Saved = true
-                                                       Path = None
-                                                   }
-                                              model.Editors
+                           Editors = Map.add newId blankTab model.Editors
             }
         | SelectFileTab id -> 
             let newCurrentId = 
@@ -119,30 +109,7 @@ let update (msg : Msg) (model : Model) =
                 }
             | _ -> model
         | OpenFile -> 
-            let newId = uniqueTabId model.Editors
-            let newEditor =
-                model.Settings.CurrentFilePath
-                |> MenuBar2.openFile
-            let length = List.length newEditor
-            let newEditors =
-                newEditor
-                |> List.filter (fun x ->
-                    let empty = Map.isEmpty model.Editors
-                    let exist = Map.forall (fun _ value -> 
-                        value.Path <> x.Path) model.Editors
-                    match empty, exist with
-                    | false, false -> false
-                    | _ -> true)
-                |> List.zip [newId .. newId + length - 1]
-                |> Map.ofList
-            let mapMerge newMap = Map.fold (fun map key value -> Map.add key value map) newMap
-            let mergedEditors = mapMerge newEditors model.Editors
-            let openedEditor = newEditor |> List.head
-            let newId = 
-                mergedEditors
-                |> Map.tryFindKey (fun _ value -> value.Path = openedEditor.Path)
-            { model with Editors = mergedEditors
-                         CurrentFileTabId = newId.Value }
+            openFileModel model
     m, Cmd.none
 
 let view (model : Model) (dispatch : Msg -> unit) =

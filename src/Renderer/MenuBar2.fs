@@ -21,10 +21,10 @@ let openListOfFiles (fLst : string list) : Editor List =
     fLst
     |> List.map (fun x -> 
         { 
-            Saved = true
             EditorText = readFile x
+            FilePath = Some x
             FileName = x |> fileName |> Some
-            Path = Some x
+            Saved = true
         })
 
 let openFile currentFilePath =
@@ -32,6 +32,11 @@ let openFile currentFilePath =
     options.properties <- ResizeArray([ "openFile"; "multiSelections" ]) |> Some
     options.filters <- Files.fileFilterOpts
     options.defaultPath <- Some currentFilePath
-    electron.remote.dialog.showOpenDialog (options)
-    |> Seq.toList
-    |> openListOfFiles
+    let seq = electron.remote.dialog.showOpenDialog (options)
+    match isUndefined seq with
+    | true -> 
+        []
+    | false ->
+        seq
+        |> Seq.toList
+        |> openListOfFiles

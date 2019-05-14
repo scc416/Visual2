@@ -39,4 +39,4 @@ open Monaco
             | EditorDidMount of (unit -> unit)
 
         let inline editor (props: Props list) : React.ReactElement =
-            ofImport "default" "./js/Editor.js" (keyValueList CaseRules.LowerFirst props) []
+            ofImport "default" "../../app/js/editor.js" (keyValueList CaseRules.LowerFirst props) []
