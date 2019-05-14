@@ -115,7 +115,7 @@ type Msg =
     | ToggleByteView
     | ToggleReverseView
     | EditorTextChange of string
-    | CreateNewTab
+    | NewFile
     | DeleteTab of int
     | SelectFileTab of int
     | OpenFile

@@ -227,13 +227,13 @@ let makeMenu (name : string) (table : MenuItemOptions list) =
  *                                         MENUS
  *
  ****************************************************************************************************)
-let fileMenu() =
+let fileMenu (dispatch : (Msg -> Unit)) =
     makeMenu "File" [
-            makeItem "New" (Some "CmdOrCtrl+N") (interlockAction "make new file tab" (createFileTab >> ignore))
+            makeItem "New" (Some "CmdOrCtrl+N") (interlockAction "make new file tab" (fun _ -> Refs.NewFile |> dispatch))
             menuSeparator
             makeItem "Save" (Some "CmdOrCtrl+S") (interlockAction "save file" Files.saveFile)
             makeItem "Save As" (Some "CmdOrCtrl+Shift+S") (interlockAction "save file" Files.saveFileAs)
-            makeItem "Open" (Some "CmdOrCtrl+O") (interlockAction "open file" (openFile >> ignore))
+            makeItem "Open" (Some "CmdOrCtrl+O") (interlockAction "open file" (fun _ -> Refs.OpenFile |> dispatch ))
             menuSeparator
             makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" deleteCurrentTab)
             menuSeparator
@@ -261,22 +261,17 @@ let editMenu() =
         makeItem "Preferences" Core.Option.None (interlockAction "show preferences tab" createSettingsTab)
     ]
 
-//let viewMenu() =
-        //let devToolsKey = if Node.Globals.``process``.platform = NodeJS.Platform.Darwin then "Alt+Command+I" else "Ctrl+Shift+I"
-        //makeMenu "View" [
-        //    makeRoleItem "Toggle Fullscreen" (Some "F11") MenuItemRole.Togglefullscreen
-        //    menuSeparator
-        //    makeRoleItem "Zoom In" (Some "CmdOrCtrl+Plus") MenuItemRole.Zoomin
-        //    makeRoleItem "Zoom Out" (Some "CmdOrCtrl+-") MenuItemRole.Zoomout
-        //    makeRoleItem "Reset Zoom" (Some "CmdOrCtrl+0") MenuItemRole.Resetzoom
-        //    menuSeparator
-        //    makeCondItem (debugLevel > 0) "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
-        //]
-
-
-
-
-
+let viewMenu() =
+        let devToolsKey = if Node.Globals.``process``.platform = NodeJS.Platform.Darwin then "Alt+Command+I" else "Ctrl+Shift+I"
+        makeMenu "View" [
+            makeRoleItem "Toggle Fullscreen" (Some "F11") MenuItemRole.Togglefullscreen
+            menuSeparator
+            makeRoleItem "Zoom In" (Some "CmdOrCtrl+Plus") MenuItemRole.Zoomin
+            makeRoleItem "Zoom Out" (Some "CmdOrCtrl+-") MenuItemRole.Zoomout
+            makeRoleItem "Reset Zoom" (Some "CmdOrCtrl+0") MenuItemRole.Resetzoom
+            menuSeparator
+            makeCondItem (debugLevel > 0) "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
+        ]
 
 let popupMenu (items) =
     let menu = electron.remote.Menu.Create()
@@ -336,12 +331,12 @@ let helpMenu() =
 
 
 /// Make all app menus
-let mainMenu() =
+let mainMenu (dispatch : (Msg -> Unit))=
     let template =
         ResizeArray<MenuItemOptions> [
-            fileMenu()
+            fileMenu dispatch
             editMenu()
-            //viewMenu()
+            viewMenu()
             helpMenu()
             testMenu()
         ]

@@ -109,7 +109,7 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
             div [ 
                     Id "new-file-tab"
                     ClassName "tab-item tab-item-fixed" 
-                    DOMAttr.OnClick (fun _ -> CreateNewTab |> dispatch)
+                    DOMAttr.OnClick (fun _ -> NewFile |> dispatch)
                 ]
                [ span [ ClassName "icon icon-plus"] []]
         ]

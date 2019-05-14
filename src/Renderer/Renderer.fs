@@ -23,41 +23,41 @@ open MenuBar2
 open Update
 
 let init _ =
-        { 
-            CurrentFileTabId = 0
-            TestbenchTab = None
-            Editors = Map.ofList [ (0, blankTab)]
-            CurrentTabWidgets = Map.empty
-            SettingsTab = None
-            CurrentRep = Hex
-            DisplayedCurrentRep = Hex
-            CurrentView = Registers
-            ByteView = false
-            ReverseDirection = false
-            MaxStepsToRun = 50000
-            MemoryMap = Map.empty
-            RegMap = ExecutionTop.initialRegMap
-            Flags = initialFlags
-            SymbolMap = Map.empty
-            DisplayedSymbolMap = Map.empty
-            RunMode = ExecutionTop.ResetMode
-            DebugLevel = 0
-            LastOnlineFetchTime = Result.Error System.DateTime.Now
-            Activity = true
-            Sleeping = false
-            LastRemindTime = None
-            Settings = 
-                {
-                    EditorFontSize = "16"
-                    SimulatorMaxSteps = "20000"
-                    EditorTheme = "solarised-dark"
-                    EditorWordWrap = "off"
-                    EditorRenderWhitespace = "none"
-                    CurrentFilePath = Fable.Import.Node.Exports.os.homedir()
-                    RegisteredKey = ""
-                    OnlineFetchText = ""
-                }
-        }, Cmd.none
+    { 
+        CurrentFileTabId = 0
+        TestbenchTab = None
+        Editors = Map.ofList [ (0, blankTab)]
+        CurrentTabWidgets = Map.empty
+        SettingsTab = None
+        CurrentRep = Hex
+        DisplayedCurrentRep = Hex
+        CurrentView = Registers
+        ByteView = false
+        ReverseDirection = false
+        MaxStepsToRun = 50000
+        MemoryMap = Map.empty
+        RegMap = ExecutionTop.initialRegMap
+        Flags = initialFlags
+        SymbolMap = Map.empty
+        DisplayedSymbolMap = Map.empty
+        RunMode = ExecutionTop.ResetMode
+        DebugLevel = 0
+        LastOnlineFetchTime = Result.Error System.DateTime.Now
+        Activity = true
+        Sleeping = false
+        LastRemindTime = None
+        Settings = 
+            {
+                EditorFontSize = "16"
+                SimulatorMaxSteps = "20000"
+                EditorTheme = "solarised-dark"
+                EditorWordWrap = "off"
+                EditorRenderWhitespace = "none"
+                CurrentFilePath = Fable.Import.Node.Exports.os.homedir()
+                RegisteredKey = ""
+                OnlineFetchText = ""
+            }
+    }, Cmd.none
 
 let update (msg : Msg) (model : Model) =
     let m = 
@@ -80,7 +80,7 @@ let update (msg : Msg) (model : Model) =
                                        }
                                        model.Editors 
             }
-        | CreateNewTab -> 
+        | NewFile -> 
             let newId = uniqueTabId model.Editors
             {
                 model with CurrentFileTabId = newId
@@ -113,6 +113,7 @@ let update (msg : Msg) (model : Model) =
     m, Cmd.none
 
 let view (model : Model) (dispatch : Msg -> unit) =
+    MenuBar.mainMenu dispatch 
     Browser.console.log(string model.Editors)
     dashboardWidth model.CurrentRep model.CurrentView
     div [ ClassName "window" ] 
