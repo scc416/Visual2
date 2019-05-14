@@ -146,6 +146,8 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
 //                   Functions Relating to View Panel (on the right)
 // ***********************************************************************************
 
+
+
 /// return the set of view buttons for the panel on the right
 let viewButtons currentView dispatch =
 
@@ -158,12 +160,16 @@ let viewButtons currentView dispatch =
 
     /// return a view button
     let viewButton view =
+
         div [ 
+                //DOMAttr.OnMouseMove (fun _ -> tippy ("","boundary = <div>Registers</div>"))
                 currentViewClass view
                 DOMAttr.OnClick (fun _ -> 
                     view |> ChangeView |> dispatch)
             ] 
-            [ view |> string |> str ]
+            [ view |> string |> str 
+              Tooltips.tippy [ Tooltips.Content "Registers" ]
+                             [ div [] [ str "Registers" ]]]
 
     div [ Id "controls" ]
         [

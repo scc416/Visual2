@@ -261,17 +261,17 @@ let editMenu() =
         makeItem "Preferences" Core.Option.None (interlockAction "show preferences tab" createSettingsTab)
     ]
 
-let viewMenu() =
-        let devToolsKey = if Node.Globals.``process``.platform = NodeJS.Platform.Darwin then "Alt+Command+I" else "Ctrl+Shift+I"
-        makeMenu "View" [
-            makeRoleItem "Toggle Fullscreen" (Some "F11") MenuItemRole.Togglefullscreen
-            menuSeparator
-            makeRoleItem "Zoom In" (Some "CmdOrCtrl+Plus") MenuItemRole.Zoomin
-            makeRoleItem "Zoom Out" (Some "CmdOrCtrl+-") MenuItemRole.Zoomout
-            makeRoleItem "Reset Zoom" (Some "CmdOrCtrl+0") MenuItemRole.Resetzoom
-            menuSeparator
-            makeCondItem (debugLevel > 0) "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
-        ]
+//let viewMenu() =
+        //let devToolsKey = if Node.Globals.``process``.platform = NodeJS.Platform.Darwin then "Alt+Command+I" else "Ctrl+Shift+I"
+        //makeMenu "View" [
+        //    makeRoleItem "Toggle Fullscreen" (Some "F11") MenuItemRole.Togglefullscreen
+        //    menuSeparator
+        //    makeRoleItem "Zoom In" (Some "CmdOrCtrl+Plus") MenuItemRole.Zoomin
+        //    makeRoleItem "Zoom Out" (Some "CmdOrCtrl+-") MenuItemRole.Zoomout
+        //    makeRoleItem "Reset Zoom" (Some "CmdOrCtrl+0") MenuItemRole.Resetzoom
+        //    menuSeparator
+        //    makeCondItem (debugLevel > 0) "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
+        //]
 
 
 
@@ -341,7 +341,7 @@ let mainMenu() =
         ResizeArray<MenuItemOptions> [
             fileMenu()
             editMenu()
-            viewMenu()
+            //viewMenu()
             helpMenu()
             testMenu()
         ]
