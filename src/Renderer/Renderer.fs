@@ -18,9 +18,9 @@ open Monaco.Monaco.Languages
 open Monaco.Monaco
 open Views2
 open Tabs2
-open React
 open MenuBar2
 open Update
+open Tooltips2
 
 let init _ =
     { 
@@ -100,7 +100,7 @@ let update (msg : Msg) (model : Model) =
     m, Cmd.none
 
 let view (model : Model) (dispatch : Msg -> unit) =
-    mainMenu dispatch
+    //mainMenu dispatch
     Browser.console.log(string model.Editors)
     dashboardWidth model.CurrentRep model.CurrentView
     div [ ClassName "window" ] 
@@ -131,10 +131,21 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                       [ str "-" ]
                                div [ ClassName "btn-group" ]
                                    [
-                                       button [ ClassName "btn btn-large btn-default" ]
-                                              [ str "\U0001F551" ]
-                                       button [ ClassName "btn btn-large btn-default" ; Disabled true ]
-                                              [ str "-" ]
+                                       tooltips (Content clockSymTooltipStr :: 
+                                                 Placement "bottom" :: 
+                                                 basicTooltipsPropsLst)
+                                                [
+                                                    button [ ClassName "btn btn-large btn-default" ]
+                                                           [ str "\U0001F551" ]
+                                                ]
+                                       tooltips (Content clockTooltipStr :: 
+                                                 Placement "bottom" :: 
+                                                 basicTooltipsPropsLst)
+                                                [
+                                                    button [ ClassName "btn btn-large btn-default" ]//; Disabled true ]
+                                                           [ str "-" ]
+                                                ]
+                                       
                                    ]
                                repButtons model.CurrentRep dispatch
                            ]

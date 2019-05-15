@@ -22,12 +22,11 @@
     <Compile Include="MenuBar.fs" />
     <Compile Include="MenuBar2.fs" />
     <Compile Include="Tabs2.fs" />
-    <Compile Include="React.fs" />
+    <Compile Include="Editor2.fs" />
+    <Compile Include="Tooltips2.fs" />
     <Compile Include="Views2.fs" />
     <Compile Include="Update.fs" />
     <Compile Include="Renderer.fs" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Emulator\Emulator.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

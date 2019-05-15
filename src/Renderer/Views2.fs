@@ -15,7 +15,12 @@ open Fable.Import.Browser
 open Fable.Import.React
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
-open React
+open Tooltips2
+open Editors2
+
+// ***********************************************************************************
+//                   Functions Relating to Representation Buttons
+// ***********************************************************************************
 
 /// return the set of representation buttons
 let repButtons (currentRep : Representations) 
@@ -29,12 +34,17 @@ let repButtons (currentRep : Representations)
             function
             | x when x = currentRep -> ClassName "btn btn-rep btn-rep-enabled"
             | _ -> ClassName "btn btn-rep"
-
-        button [ 
-                   currentRepButtonsClass rep
-                   DOMAttr.OnClick (fun _ -> rep |> ChangeRep |> dispatch)
-               ]
-               [ rep |> string |> str ]
+        tooltips ((rep |> repTooltipStr |> Content) :: 
+                  Placement "bottom" :: 
+                  defaultTooltipsPropsLst)
+                 [
+                     button [ 
+                                currentRepButtonsClass rep
+                                DOMAttr.OnClick (fun _ -> rep |> ChangeRep |> dispatch)
+                            ]
+                            [ rep |> string |> str ]
+                 ]
+        
 
     div [ ClassName "btn-group pull-right" ] 
         [
@@ -145,7 +155,6 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
 // ***********************************************************************************
 
 
-
 /// return the set of view buttons for the panel on the right
 let viewButtons currentView dispatch =
 
@@ -158,16 +167,17 @@ let viewButtons currentView dispatch =
 
     /// return a view button
     let viewButton view =
-
-        div [ 
-                //DOMAttr.OnMouseMove (fun _ -> tippy ("","boundary = <div>Registers</div>"))
-                currentViewClass view
-                DOMAttr.OnClick (fun _ -> 
-                    view |> ChangeView |> dispatch)
-            ] 
-            [ view |> string |> str 
-              Tooltips.tippy [ Tooltips.Content "Registers" ]
-                             [ div [] [ str "Registers" ]]]
+        tooltips ((view |> viewTooltipStr |> Content) ::
+                  Placement "bottom" :: 
+                  defaultTooltipsPropsLst)
+                 [
+                     div [ 
+                             currentViewClass view
+                             DOMAttr.OnClick (fun _ -> 
+                                 view |> ChangeView |> dispatch)
+                         ] 
+                         [ view |> string |> str ]
+                 ]
 
     div [ Id "controls" ]
         [
@@ -208,21 +218,26 @@ let viewButtonClass =
 
 /// return the view panel on the right
 let viewPanel model dispatch = 
-    let registerLi reg = 
+    let registerLi rName = 
         li [ ClassName "list-group-item" ] 
            [
                div [ ClassName "btn-group full-width" ] 
                    [
-                       button [ 
-                                  ClassName "btn btn-reg"
-                                  "B" + string reg |> Id
-                              ] 
-                              [ string reg |> str ]
+                       tooltips ((rName |> regTooltipStr |> Content) :: 
+                                 Placement "bottom" ::
+                                 basicTooltipsPropsLst)
+                                [
+                                    button [ 
+                                               ClassName "btn btn-reg"
+                                               "B" + string rName |> Id
+                                           ] 
+                                           [  rName |> string |> str ]
+                                ]
                        span [ 
                                 ClassName "btn btn-reg-con selectable-text"
-                                "R" + string reg |> Id
+                                rName |> string |> Id
                             ] 
-                            [ model.RegMap.[reg] |> formatter model.CurrentRep |> str ]
+                            [ model.RegMap.[rName] |> formatter model.CurrentRep |> str ]
                    ]
            ]
     let registerSet =
@@ -325,17 +340,23 @@ let footer (flags : CommonData.Flags) =
             ]
     footer [ ClassName "toolbar toolbar-footer" ; Id "viewer-footer" ] 
            [
-               div [ 
-                       ClassName "pull-right"
-                       Style [ Margin 5 ]
-                       Id "flags"
-                   ]
-                   [
-                       footerDiv "N" flags.C
-                       footerDiv "Z" flags.Z
-                       footerDiv "C" flags.C
-                       footerDiv "V" flags.V
-                   ]
+               tooltips (Content flagTooltipStr :: 
+                         Placement "top" :: 
+                         basicTooltipsPropsLst)
+                        [
+                            div [ 
+                                    ClassName "pull-right"
+                                    Style [ Margin 5 ]
+                                    Id "flags"
+                                ]
+                                [
+                                    footerDiv "N" flags.C
+                                    footerDiv "Z" flags.Z
+                                    footerDiv "C" flags.C
+                                    footerDiv "V" flags.V
+                                ]
+                        ]
+              
            ]
 
 let dashboardWidth rep view =
