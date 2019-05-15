@@ -108,7 +108,6 @@ let view (model : Model) (dispatch : Msg -> unit) =
               dispatch 
               model.DialogBox
     Browser.console.log(string model.Editors)
-    dashboardWidth model.CurrentRep model.CurrentView
     div [ ClassName "window" ] 
         [
             header [ ClassName "toolbar toolbar-header" ] 
@@ -133,22 +132,22 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                       [ str " Step" ]
                                button [ ClassName "btn btn-default button-forward" ]
                                       [ str "Step " ]
-                               button [ ClassName "btn btn-large btn-default" ; Disabled true ]
+                               button [ ClassName "btn btn-large btn-default status-bar" ]//; Disabled true ]
                                       [ str "-" ]
-                               div [ ClassName "btn-group" ]
+                               div [ ClassName "btn-group clock" ]
                                    [
                                        tooltips (Content clockSymTooltipStr :: 
                                                  Placement "bottom" :: 
                                                  basicTooltipsPropsLst)
                                                 [
-                                                    button [ ClassName "btn btn-large btn-default" ]
+                                                    button [ ClassName "btn btn-large btn-default clock-symbol" ]
                                                            [ str "\U0001F551" ]
                                                 ]
                                        tooltips (Content clockTooltipStr :: 
                                                  Placement "bottom" :: 
                                                  basicTooltipsPropsLst)
                                                 [
-                                                    button [ ClassName "btn btn-large btn-default" ]//; Disabled true ]
+                                                    button [ ClassName "btn btn-large btn-default clock-time" ]//; Disabled true ]
                                                            [ str "-" ]
                                                 ]
 
@@ -160,9 +159,10 @@ let view (model : Model) (dispatch : Msg -> unit) =
                 [ 
                     div [ ClassName "pane-group" ] 
                         [
-                             div [ ClassName "pane" ; Id "file-view-pane"] 
+                             div [ ClassName "pane file-view-pane"] 
                                  (editorPanel model.CurrentFileTabId model.Editors dispatch)
-                             div [ ClassName "pane" ; Id "dashboard"] 
+                             div [ ClassName "pane dashboard"
+                                   dashboardStyle model.CurrentRep ]
                                  [
                                      viewButtons model.CurrentView dispatch
                                      viewPanel model dispatch

@@ -18,6 +18,22 @@ open Fable.Helpers.React.Props
 open Tooltips2
 open Editors2
 
+let dashboardStyle rep =
+    let width = 
+        match rep with
+        | Bin  -> 500
+        | _ -> 350
+    Style [ MaxWidth width ; MinWidth width ]
+
+let viewerStyle rep =
+    let width = 
+        match rep with
+        | Bin  -> 500
+        | _ -> 350
+    Style [ MaxWidth width
+            MinWidth width
+            Left ("100vw - " + string width) ]
+
 // ***********************************************************************************
 //                   Functions Relating to Representation Buttons
 // ***********************************************************************************
@@ -95,21 +111,13 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
         div [ 
                 tabHeaderClass id
                 DOMAttr.OnClick (fun _ -> SelectFileTab id |> dispatch)
-                id |> fileTabIdFormatter |> Id
             ] 
             [
-                span [ 
-                         id |> tabFilePathIdFormatter |> Id 
-                         ClassName "invisible" 
-                     ] []
-                span [ 
-                         ClassName "icon icon-cancel icon-close-tab" 
-                         DOMAttr.OnClick (fun _ -> DeleteTab id |> dispatch)
-                     ] []
+                span [ ClassName "invisible" ] []
+                span [ ClassName "icon icon-cancel icon-close-tab"] []
                 span [ 
                          ClassName "tab-file-name" 
-                         tabHeaderTextStyle editor.Saved 
-                         id |> tabNameIdFormatter |> Id 
+                         tabHeaderTextStyle editor.Saved
                      ] 
                      [ editor.Saved |> fileNameFormat fileName |> str ]
             ]
@@ -117,7 +125,6 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
     let addNewTabDiv =
         [ 
             div [ 
-                    Id "new-file-tab"
                     ClassName "tab-item tab-item-fixed" 
                     DOMAttr.OnClick (fun _ -> NewFile |> dispatch)
                 ]
@@ -134,13 +141,10 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
 
         addNewTabDiv 
         |> List.append filesHeader
-        |> div [ Id "tabs-files" ; ClassName "tab-group"]
+        |> div [ ClassName "tab-group tabs-files"]
 
     let overlay =
-        div [ 
-                Id "darken-overlay"
-                ClassName "invisible" 
-            ] []
+        div [ ClassName "invisible darken-overlay" ] []
     /// the editor
     let editorViewDiv =
         match currentFileTabId with
@@ -184,7 +188,7 @@ let viewButtons currentView dispatch =
                          [ view |> string |> str ]
                  ]
 
-    div [ Id "controls" ]
+    div []
         [
             ul [ ClassName "list-group" ] 
                [
@@ -250,7 +254,7 @@ let viewPanel model dispatch =
         |> List.map (fun x -> 
             x |> CommonData.register |> registerLi )
 
-    let regView = ul [ ClassName "list-group" ; Id "view-reg" ] registerSet
+    let regView = ul [ ClassName "list-group" ] registerSet
 
     let memTable = 
         match Map.isEmpty model.MemoryMap with
@@ -288,7 +292,7 @@ let viewPanel model dispatch =
             ]
 
     let memView = 
-       ul [ Id "view-mem" ; ClassName "list-group" ]
+       ul [ ClassName "list-group" ]
            [ 
               li [ Class "list-group-item" ]
                  [ 
@@ -297,26 +301,24 @@ let viewPanel model dispatch =
                              button [ 
                                         viewButtonClass model.ByteView
                                         DOMAttr.OnClick (fun _ -> ToggleByteView |> dispatch)
-                                        Id "byte-view"
                                     ]
                                     [ byteViewButtonString model.ByteView ]
                              button [ 
                                         viewButtonClass model.ReverseDirection 
                                         DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)
-                                        Id "reverse-view"
                                     ]
                                     [ reverseDirectionButtonString model.ReverseDirection ] 
                          ] 
                  ]
-              li [ Class "list-group" ; Id "mem-list" ] memTable
+              li [ Class "list-group" ] memTable
               li [ ]
                  [ 
                      div [ Style [ TextAlign "center" ] ]
                          [ b [] [ str "Uninitialized memory is zeroed" ] ] 
                  ] ]
     let symbolView =
-        div [ ClassName "list-group"; Id "view-sym" ]
-            [ table [ ClassName "table-striped" ; Id "sym-table" ]
+        div [ ClassName "list-group" ]
+            [ table [ ClassName "table-striped" ]
                     [] 
             ]
     let view =
@@ -324,7 +326,7 @@ let viewPanel model dispatch =
         | Registers -> regView
         | Memory -> memView
         | Symbols -> symbolView
-    div [ Id "viewer" ] 
+    div [ ClassName "viewer" ; viewerStyle model.CurrentRep ] 
         [ view ]
 
 let footer (flags : CommonData.Flags) =
@@ -339,11 +341,10 @@ let footer (flags : CommonData.Flags) =
                        [ str letter ]
                 button [ 
                            ClassName "btn btn-flag-con"
-                           "flag_" + letter |> Id 
                        ] 
                        [ str text ]
             ]
-    footer [ ClassName "toolbar toolbar-footer" ; Id "viewer-footer" ] 
+    footer [ ClassName "toolbar toolbar-footer" ] 
            [
                tooltips (Content flagTooltipStr :: 
                          Placement "top" :: 
@@ -352,7 +353,6 @@ let footer (flags : CommonData.Flags) =
                             div [ 
                                     ClassName "pull-right"
                                     Style [ Margin 5 ]
-                                    Id "flags"
                                 ]
                                 [
                                     footerDiv "N" flags.C
@@ -364,11 +364,3 @@ let footer (flags : CommonData.Flags) =
               
            ]
 
-let dashboardWidth rep view =
-    let w =
-        match rep, view with
-        | Bin, _ -> "--dashboard-width-binrep"
-        | _, Registers -> "--dashboard-width-init-registers"
-        | _ -> "--dashboard-width-init-other"
-        |> getCustomCSS
-    w |> setDashboardWidth
