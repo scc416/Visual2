@@ -335,7 +335,10 @@ let footer (flags : CommonData.Flags) =
             match flag with
             | true -> "1"
             | false -> "0"
-        div [ ClassName "btn-group btn-flag-group" ] 
+        div [ 
+                ClassName "btn-group btn-flag-group" 
+                Style [ Margin 5 ]
+            ] 
             [
                 button [ ClassName "btn btn-flag" ] 
                        [ str letter ]
@@ -350,10 +353,7 @@ let footer (flags : CommonData.Flags) =
                          Placement "top" :: 
                          basicTooltipsPropsLst)
                         [
-                            div [ 
-                                    ClassName "pull-right"
-                                    Style [ Margin 5 ]
-                                ]
+                            div [ ClassName "pull-right" ]
                                 [
                                     footerDiv "N" flags.C
                                     footerDiv "Z" flags.Z
