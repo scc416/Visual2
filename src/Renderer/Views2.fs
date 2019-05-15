@@ -136,6 +136,11 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
         |> List.append filesHeader
         |> div [ Id "tabs-files" ; ClassName "tab-group"]
 
+    let overlay =
+        div [ 
+                Id "darken-overlay"
+                ClassName "invisible" 
+            ] []
     /// the editor
     let editorViewDiv =
         match currentFileTabId with

@@ -63,6 +63,9 @@ type VSettings = {
     OnlineFetchText : string
     }
 
+type DialogBox =
+    | OpenFileDl
+
 type Model =
     { 
         /// File Tab currently selected (and therefore visible)
@@ -107,6 +110,7 @@ type Model =
         Sleeping : bool
         LastRemindTime : System.TimeSpan option
         Settings : VSettings
+        DialogBox : DialogBox option
     }
 
 type Msg =
@@ -118,7 +122,8 @@ type Msg =
     | NewFile
     | DeleteTab of int
     | SelectFileTab of int
-    | OpenFile
+    | OpenFile of Editor list
+    | OpenFileDialog
 
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries

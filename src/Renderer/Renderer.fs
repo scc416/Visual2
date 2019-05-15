@@ -57,6 +57,7 @@ let init _ =
                 RegisteredKey = ""
                 OnlineFetchText = ""
             }
+        DialogBox = None
     }, Cmd.none
 
 let update (msg : Msg) (model : Model) =
@@ -89,22 +90,27 @@ let update (msg : Msg) (model : Model) =
                                                        model.Editors
             { model with CurrentFileTabId = newTabId
                          Editors = newEditors }
-        | OpenFile -> 
+        | OpenFile editors -> 
             let newEditors, newFilePath, newTabId = 
-                openFileUpdate model.Editors 
+                openFileUpdate (model.Editors, editors)
                                model.Settings.CurrentFilePath
                                model.CurrentFileTabId
             { model with Editors = newEditors
                          CurrentFileTabId = newTabId
-                         Settings = { model.Settings with CurrentFilePath = newFilePath }}
+                         Settings = { model.Settings with CurrentFilePath = newFilePath }
+                         DialogBox = None }
+        | OpenFileDialog -> { model with DialogBox = Some OpenFileDl }
     m, Cmd.none
 
 let view (model : Model) (dispatch : Msg -> unit) =
     //mainMenu dispatch
+    dialogBox model.Settings.CurrentFilePath 
+              dispatch 
+              model.DialogBox
     Browser.console.log(string model.Editors)
     dashboardWidth model.CurrentRep model.CurrentView
     div [ ClassName "window" ] 
-        [ 
+        [
             header [ ClassName "toolbar toolbar-header" ] 
                    [
                        div [ ClassName "toolbar-actions" ] 
@@ -113,7 +119,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                    [
                                        button [
                                                   ClassName "btn btn-default" 
-                                                  DOMAttr.OnClick (fun _ -> OpenFile |> dispatch )
+                                                  DOMAttr.OnClick (fun _ -> OpenFileDialog |> dispatch )
                                               ]
                                               [ span [ ClassName "icon icon-folder" ] [] ]
                                        button [ ClassName "btn btn-default" ]
@@ -145,7 +151,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                     button [ ClassName "btn btn-large btn-default" ]//; Disabled true ]
                                                            [ str "-" ]
                                                 ]
-                                       
+
                                    ]
                                repButtons model.CurrentRep dispatch
                            ]

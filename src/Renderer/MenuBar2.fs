@@ -30,7 +30,7 @@ let openListOfFiles (fLst : string list) : Editor List =
             Saved = true
         })
 
-let openFile currentFilePath =
+let openFile currentFilePath (dispatch : Msg -> Unit) =
     let options = createEmpty<OpenDialogOptions>
     options.properties <- ResizeArray([ "openFile"; "multiSelections" ]) |> Some
     options.filters <- Files.fileFilterOpts
@@ -38,12 +38,20 @@ let openFile currentFilePath =
     let seq = electron.remote.dialog.showOpenDialog (options)
     match isUndefined seq with
     | true -> 
-        []
+        OpenFile [] |> dispatch
     | false ->
-        seq
-        |> Seq.toList
-        |> openListOfFiles
+        let fileLst =
+            seq
+            |> Seq.toList
+            |> openListOfFiles
+        OpenFile fileLst |> dispatch
 
+let dialogBox filePath dispatch =
+    function
+    | Some x when x = OpenFileDl ->
+        openFile filePath dispatch
+    | _ -> 
+        ()
 
 let display runMode =
     match runMode with
@@ -223,7 +231,7 @@ let fileMenu (dispatch : (Msg -> Unit)) =
             menuSeparator
             makeItem "Save" (Some "CmdOrCtrl+S") (interlockAction "save file" Files.saveFile)
             makeItem "Save As" (Some "CmdOrCtrl+Shift+S") (interlockAction "save file" Files.saveFileAs)
-            makeItem "Open" (Some "CmdOrCtrl+O") (interlockAction "open file" (fun _ -> Refs.OpenFile |> dispatch ))
+            makeItem "Open" (Some "CmdOrCtrl+O") (interlockAction "open file" (fun _ -> Refs.OpenFileDialog |> dispatch ))
             menuSeparator
             makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" deleteCurrentTab)
             menuSeparator

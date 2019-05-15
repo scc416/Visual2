@@ -21,42 +21,42 @@ open Tabs2
 open Editors2
 open MenuBar2
 
-let openFileUpdate editors filePath id =
-    let newId = uniqueTabId editors
-    let newEditor = openFile filePath
-    let length = List.length newEditor
+let mapMerge newMap = 
+    newMap 
+    |> Map.fold (fun map key value -> 
+        Map.add key value map)
+
+let openFileUpdate (oldEditors, editor)
+                   filePath 
+                   id =
+    let newId = uniqueTabId oldEditors
+    let length = List.length editor
     match length with
     | 0 -> 
-        editors, filePath, id
+        oldEditors, filePath, id
     | _ ->
         let newEditors =
-            let empty = Map.isEmpty editors
-            newEditor
-            |> List.filter (fun x ->
+            let empty = Map.isEmpty oldEditors
+            editor
+            |> List.zip [newId .. newId + length - 1]
+            |> List.filter (fun (_, x) ->
                 let exist = 
-                    editors
+                    oldEditors
                     |> Map.forall (fun _ value -> 
-                        value.FilePath <> x.FilePath) 
+                        value.FilePath <> x.FilePath)
                 match empty, exist with
                 | false, false -> false
                 | _ -> true)
-            |> List.zip [newId .. newId + length - 1]
             |> Map.ofList
-        let mapMerge newMap = 
-            newMap 
-            |> Map.fold (fun map key value -> 
-                Map.add key 
-                        value 
-                        map)
-        let mergedEditors = mapMerge newEditors editors
-        let openedEditor = List.head newEditor
+        let mergedEditors = mapMerge newEditors oldEditors
+        let currentEditor = List.head editor
         let newId = 
             mergedEditors
-            |> Map.tryFindKey (fun _ value -> 
-                value.FilePath = openedEditor.FilePath)
-        mergedEditors, 
-        mergedEditors.[newId.Value].FilePath.Value, 
-        newId.Value
+            |> Map.findKey (fun _ value -> 
+                value.FilePath = currentEditor.FilePath)
+        mergedEditors,
+        mergedEditors.[newId].FilePath.Value, 
+        newId
               
 let selectFileTabUpdate id editors =
     match Map.isEmpty editors with
