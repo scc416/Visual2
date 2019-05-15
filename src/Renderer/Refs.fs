@@ -65,6 +65,7 @@ type VSettings = {
 
 type DialogBox =
     | OpenFileDl
+    | SaveAsDl
 
 type Model =
     { 
@@ -124,6 +125,9 @@ type Msg =
     | SelectFileTab of int
     | OpenFile of Editor list
     | OpenFileDialog
+    | SaveFile
+    | SaveAsFileDialog
+    | SaveAsFile of (string * string) option
 
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries
@@ -413,10 +417,6 @@ let cacheLastWithActionIfChanged actionFunc =
             cache <- Some inDat
             actionFunc inDat
 
-
-
-
-
 /// A reference to the settings for the app
 /// persistent using electron-settings
 let settings : obj = electron.remote.require "electron-settings"
@@ -590,7 +590,7 @@ let runExtPage url () =
     electron.shell.openExternal url |> ignore
 
 
-let writeToFile str path =
+let writeToFile (str : string) (path:string) =
     let errorHandler _err = // TODO: figure out how to handle errors which can occur
         ()
     fs.writeFile (path, str, errorHandler)

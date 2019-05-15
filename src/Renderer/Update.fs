@@ -26,7 +26,7 @@ let mapMerge newMap =
     |> Map.fold (fun map key value -> 
         Map.add key value map)
 
-let openFileUpdate (oldEditors, editor)
+let openFileUpdate (oldEditors : Map<int, Editor>, editor : Editor List)
                    filePath 
                    id =
     let newId = uniqueTabId oldEditors

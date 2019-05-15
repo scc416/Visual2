@@ -10,48 +10,7 @@ open Refs
 open Settings
 open Tabs
 open EEExtensions
-
-let openListOfFiles (fLst : string list) : Editor List =
-    let readFile (path:string) =
-        Node.Exports.fs.readFileSync (path, "utf8")
-    let fileName path =
-        path
-        |> String.toList
-        |> List.rev
-        |> List.takeWhile (fun x -> x <> '/')
-        |> List.rev
-        |> List.toString
-    fLst
-    |> List.map (fun x -> 
-        { 
-            EditorText = readFile x
-            FilePath = Some x
-            FileName = x |> fileName |> Some
-            Saved = true
-        })
-
-let openFile currentFilePath (dispatch : Msg -> Unit) =
-    let options = createEmpty<OpenDialogOptions>
-    options.properties <- ResizeArray([ "openFile"; "multiSelections" ]) |> Some
-    options.filters <- Files.fileFilterOpts
-    options.defaultPath <- Some currentFilePath
-    let seq = electron.remote.dialog.showOpenDialog (options)
-    match isUndefined seq with
-    | true -> 
-        OpenFile [] |> dispatch
-    | false ->
-        let fileLst =
-            seq
-            |> Seq.toList
-            |> openListOfFiles
-        OpenFile fileLst |> dispatch
-
-let dialogBox filePath dispatch =
-    function
-    | Some x when x = OpenFileDl ->
-        openFile filePath dispatch
-    | _ -> 
-        ()
+open Files2
 
 let display runMode =
     match runMode with
@@ -229,8 +188,8 @@ let fileMenu (dispatch : (Msg -> Unit)) =
     makeMenu "File" [
             makeItem "New" (Some "CmdOrCtrl+N") (interlockAction "make new file tab" (fun _ -> Refs.NewFile |> dispatch))
             menuSeparator
-            makeItem "Save" (Some "CmdOrCtrl+S") (interlockAction "save file" Files.saveFile)
-            makeItem "Save As" (Some "CmdOrCtrl+Shift+S") (interlockAction "save file" Files.saveFileAs)
+            makeItem "Save" (Some "CmdOrCtrl+S") (interlockAction "save file" (fun _ -> Refs.SaveFile |> dispatch ))
+            makeItem "Save As" (Some "CmdOrCtrl+Shift+S") (interlockAction "save file" (fun _ -> Refs.SaveAsFileDialog |> dispatch ))
             makeItem "Open" (Some "CmdOrCtrl+O") (interlockAction "open file" (fun _ -> Refs.OpenFileDialog |> dispatch ))
             menuSeparator
             makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" deleteCurrentTab)
@@ -268,7 +227,8 @@ let viewMenu() =
             makeRoleItem "Zoom Out" (Some "CmdOrCtrl+-") MenuItemRole.Zoomout
             makeRoleItem "Reset Zoom" (Some "CmdOrCtrl+0") MenuItemRole.Resetzoom
             menuSeparator
-            makeCondItem (debugLevel > 0) "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
+            //makeCondItem (debugLevel > 0) "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
+            makeItem "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
         ]
 
 let popupMenu (items) =

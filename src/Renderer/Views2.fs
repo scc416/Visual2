@@ -114,7 +114,8 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
             ] 
             [
                 span [ ClassName "invisible" ] []
-                span [ ClassName "icon icon-cancel icon-close-tab"] []
+                span [ ClassName "icon icon-cancel icon-close-tab" 
+                       DOMAttr.OnClick (fun _ -> DeleteTab id |> dispatch)] []
                 span [ 
                          ClassName "tab-file-name" 
                          tabHeaderTextStyle editor.Saved
@@ -124,11 +125,9 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
     /// button (actually is a clickable div) that add new tab
     let addNewTabDiv =
         [ 
-            div [ 
-                    ClassName "tab-item tab-item-fixed" 
-                    DOMAttr.OnClick (fun _ -> NewFile |> dispatch)
-                ]
-               [ span [ ClassName "icon icon-plus"] []]
+            div [ ClassName "tab-item tab-item-fixed" 
+                  DOMAttr.OnClick (fun _ -> NewFile |> dispatch) ]
+                [ span [ ClassName "icon icon-plus"] []]
         ]
 
     /// all tab headers plus the add new tab button
@@ -151,12 +150,8 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
         | -1 -> 
             []
         | _ -> 
-            [ 
-                Editor.editor [
-                                  Editor.OnChange (EditorTextChange >> dispatch) 
-                                  Editor.Value editors.[currentFileTabId].EditorText 
-                              ]
-            ]
+            [ Editor.editor [ Editor.OnChange (EditorTextChange >> dispatch) 
+                              Editor.Value editors.[currentFileTabId].EditorText ]]
     tabHeaders :: editorViewDiv
 
 // ***********************************************************************************
@@ -189,23 +184,13 @@ let viewButtons currentView dispatch =
                  ]
 
     div []
-        [
-            ul [ ClassName "list-group" ] 
-               [
-                   li [ 
-                          ClassName "list-group-item"
-                          Style [ Padding 0 ]
-                      ] 
-                      [
-                          div [ ClassName "tab-group full-width" ]
-                              [
-                                  viewButton Registers
-                                  viewButton Memory
-                                  viewButton Symbols
-                              ]
-                      ]
-               ]
-        ]
+        [ ul [ ClassName "list-group" ] 
+             [ li [ ClassName "list-group-item"
+                    Style [ Padding 0 ]] 
+                  [ div [ ClassName "tab-group full-width" ]
+                        [ viewButton Registers
+                          viewButton Memory
+                          viewButton Symbols ]]]]
 
 /// return the string in byte view button (memory view)
 let byteViewButtonString =
