@@ -53,23 +53,16 @@ let repButtons (currentRep : Representations)
         tooltips ((rep |> repTooltipStr |> Content) :: 
                   Placement "bottom" :: 
                   defaultTooltipsPropsLst)
-                 [
-                     button [ 
-                                currentRepButtonsClass rep
-                                DOMAttr.OnClick (fun _ -> rep |> ChangeRep |> dispatch)
-                            ]
-                            [ rep |> string |> str ]
-                 ]
-        
+                 [ button [ currentRepButtonsClass rep
+                            DOMAttr.OnClick (fun _ -> rep |> ChangeRep |> dispatch)]
+                          [ rep |> string |> str ]]
 
     div [ ClassName "btn-group pull-right" ] 
-        [
-            repButton Hex
-            repButton Bin
-            repButton Dec
-            repButton UDec
-        ]
-
+        [ repButton Hex
+          repButton Bin
+          repButton Dec
+          repButton UDec]
+         
 // ***********************************************************************************
 //                     Functions Relating to Editor Panel
 // ***********************************************************************************
@@ -108,27 +101,19 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
             | Some x -> x
             | _ -> "Untitled.s"
 
-        div [ 
-                tabHeaderClass id
-                DOMAttr.OnClick (fun _ -> SelectFileTab id |> dispatch)
-            ] 
-            [
-                span [ ClassName "invisible" ] []
-                span [ ClassName "icon icon-cancel icon-close-tab" 
-                       DOMAttr.OnClick (fun _ -> DeleteTab id |> dispatch)] []
-                span [ 
-                         ClassName "tab-file-name" 
-                         tabHeaderTextStyle editor.Saved
-                     ] 
-                     [ editor.Saved |> fileNameFormat fileName |> str ]
-            ]
+        div [ tabHeaderClass id
+              DOMAttr.OnClick (fun _ -> SelectFileTab id |> dispatch)] 
+            [ span [ ClassName "invisible" ] []
+              span [ ClassName "icon icon-cancel icon-close-tab" 
+                     DOMAttr.OnClick (fun _ -> DeleteTab id |> dispatch)] []
+              span [ ClassName "tab-file-name" 
+                     tabHeaderTextStyle editor.Saved ] 
+                   [ editor.Saved |> fileNameFormat fileName |> str ]]
     /// button (actually is a clickable div) that add new tab
     let addNewTabDiv =
-        [ 
-            div [ ClassName "tab-item tab-item-fixed" 
-                  DOMAttr.OnClick (fun _ -> NewFile |> dispatch) ]
-                [ span [ ClassName "icon icon-plus"] []]
-        ]
+        [ div [ ClassName "tab-item tab-item-fixed" 
+                DOMAttr.OnClick (fun _ -> NewFile |> dispatch) ]
+              [ span [ ClassName "icon icon-plus"] []]]
 
     /// all tab headers plus the add new tab button
     let tabHeaders =
@@ -140,7 +125,7 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
 
         addNewTabDiv 
         |> List.append filesHeader
-        |> div [ ClassName "tab-group tabs-files"]
+        |> div [ ClassName "tab-group tabs-files" ]
 
     let overlay =
         div [ ClassName "invisible darken-overlay" ] []
@@ -150,18 +135,16 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
         | -1 -> 
             []
         | _ -> 
-            [ Editor.editor [ Editor.OnChange (EditorTextChange >> dispatch) 
-                              Editor.Value editors.[currentFileTabId].EditorText ]]
+            [ editor [ OnChange (EditorTextChange >> dispatch) 
+                       Value editors.[currentFileTabId].EditorText ]]
     tabHeaders :: editorViewDiv
 
 // ***********************************************************************************
 //                   Functions Relating to View Panel (on the right)
 // ***********************************************************************************
 
-
 /// return the set of view buttons for the panel on the right
 let viewButtons currentView dispatch =
-
     /// return class of the view button
     /// active if it is the current view
     let currentViewClass =
@@ -171,18 +154,10 @@ let viewButtons currentView dispatch =
 
     /// return a view button
     let viewButton view =
-        tooltips ((view |> viewTooltipStr |> Content) ::
-                  Placement "bottom" :: 
-                  defaultTooltipsPropsLst)
-                 [
-                     div [ 
-                             currentViewClass view
-                             DOMAttr.OnClick (fun _ -> 
-                                 view |> ChangeView |> dispatch)
-                         ] 
-                         [ view |> string |> str ]
-                 ]
-
+        tooltips ((view |> viewTooltipStr |> Content) :: Placement "bottom" :: defaultTooltipsPropsLst)
+                 [ div [ currentViewClass view
+                         DOMAttr.OnClick (fun _ -> view |> ChangeView |> dispatch) ] 
+                       [ view |> string |> str ]]
     div []
         [ ul [ ClassName "list-group" ] 
              [ li [ ClassName "list-group-item"
@@ -214,26 +189,12 @@ let viewButtonClass =
 let viewPanel model dispatch = 
     let registerLi rName = 
         li [ ClassName "list-group-item" ] 
-           [
-               div [ ClassName "btn-group full-width" ] 
-                   [
-                       tooltips ((rName |> regTooltipStr |> Content) :: 
-                                 Placement "bottom" ::
-                                 basicTooltipsPropsLst)
-                                [
-                                    button [ 
-                                               ClassName "btn btn-reg"
-                                               "B" + string rName |> Id
-                                           ] 
-                                           [  rName |> string |> str ]
-                                ]
-                       span [ 
-                                ClassName "btn btn-reg-con selectable-text"
-                                rName |> string |> Id
-                            ] 
-                            [ model.RegMap.[rName] |> formatter model.CurrentRep |> str ]
-                   ]
-           ]
+           [ div [ ClassName "btn-group full-width" ] 
+                 [ tooltips ((rName |> regTooltipStr |> Content) :: Placement "bottom" :: basicTooltipsPropsLst)
+                            [ button [ ClassName "btn btn-reg" ] 
+                                     [  rName |> string |> str ]]
+                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                        [ model.RegMap.[rName] |> formatter model.CurrentRep |> str ]]]
     let registerSet =
         [0 .. 15]
         |> List.map (fun x -> 
@@ -243,69 +204,47 @@ let viewPanel model dispatch =
 
     let memTable = 
         match Map.isEmpty model.MemoryMap with
-        | true -> []
+        | true -> 
+            []
         | false -> 
             let rows =
                 let row address value =
                     tr []
-                       [ 
-                           td [ Class "td-mem" ]
-                              [ address |> string |> str ]
-                           td [ Class "td-mem" ]
-                              [ value |> string |> str ] 
-                       ] 
+                       [ td [ Class "td-mem" ]
+                            [ address |> string |> str ]
+                         td [ Class "td-mem" ]
+                            [ value |> string |> str ]] 
                 model.MemoryMap
                 |> Map.map (fun key value -> row key value)
                 |> Map.toList
                 |> List.map (fun (_, el) -> el)
-            [
-                div [ 
-                        Class "list-group-item"
-                        Style [ Padding "0px" ] 
-                    ]
-                    [ 
-                        table [ Class "table-striped" ]
-                              (tr [ Class "tr-head-mem" ]
-                                  [ 
-                                      th [ Class "th-mem" ]
-                                         [ str "Address" ]
-                                      th [ Class "th-mem" ]
-                                         [ str "Value" ] 
-                                 ] :: rows)
-                              
-                    ]
-            ]
+            [ div [ Class "list-group-item"
+                    Style [ Padding "0px" ]]
+                  [ table [ Class "table-striped" ]
+                          (tr [ Class "tr-head-mem" ]
+                              [ th [ Class "th-mem" ]
+                                   [ str "Address" ]
+                                th [ Class "th-mem" ]
+                                   [ str "Value" ]] :: rows )]]
 
     let memView = 
        ul [ ClassName "list-group" ]
-           [ 
-              li [ Class "list-group-item" ]
-                 [ 
-                     div [ Class "btn-group full-width" ]
-                         [
-                             button [ 
-                                        viewButtonClass model.ByteView
-                                        DOMAttr.OnClick (fun _ -> ToggleByteView |> dispatch)
-                                    ]
-                                    [ byteViewButtonString model.ByteView ]
-                             button [ 
-                                        viewButtonClass model.ReverseDirection 
-                                        DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)
-                                    ]
-                                    [ reverseDirectionButtonString model.ReverseDirection ] 
-                         ] 
-                 ]
-              li [ Class "list-group" ] memTable
-              li [ ]
-                 [ 
-                     div [ Style [ TextAlign "center" ] ]
-                         [ b [] [ str "Uninitialized memory is zeroed" ] ] 
-                 ] ]
+          [ li [ Class "list-group-item" ]
+               [ div [ Class "btn-group full-width" ]
+                     [ button [ viewButtonClass model.ByteView
+                                DOMAttr.OnClick (fun _ -> ToggleByteView |> dispatch)]
+                              [ byteViewButtonString model.ByteView ]
+                       button [ viewButtonClass model.ReverseDirection 
+                                DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)]
+                              [ reverseDirectionButtonString model.ReverseDirection ]]]
+            li [ Class "list-group" ] memTable
+            li [ ]
+               [ div [ Style [ TextAlign "center" ] ]
+                     [ b [] [ str "Uninitialized memory is zeroed" ]]]]
     let symbolView =
         div [ ClassName "list-group" ]
             [ table [ ClassName "table-striped" ]
-                    [] 
-            ]
+                    []]
     let view =
         match model.CurrentView with
         | Registers -> regView
@@ -320,32 +259,16 @@ let footer (flags : CommonData.Flags) =
             match flag with
             | true -> "1"
             | false -> "0"
-        div [ 
-                ClassName "btn-group btn-flag-group" 
-                Style [ Margin 5 ]
-            ] 
-            [
-                button [ ClassName "btn btn-flag" ] 
-                       [ str letter ]
-                button [ 
-                           ClassName "btn btn-flag-con"
-                       ] 
-                       [ str text ]
-            ]
+        div [ ClassName "btn-group btn-flag-group" 
+              Style [ Margin 5 ]] 
+            [ button [ ClassName "btn btn-flag" ] 
+                     [ str letter ]
+              button [ ClassName "btn btn-flag-con" ] 
+                     [ str text ]]
     footer [ ClassName "toolbar toolbar-footer" ] 
-           [
-               tooltips (Content flagTooltipStr :: 
-                         Placement "top" :: 
-                         basicTooltipsPropsLst)
-                        [
-                            div [ ClassName "pull-right" ]
-                                [
-                                    footerDiv "N" flags.C
-                                    footerDiv "Z" flags.Z
-                                    footerDiv "C" flags.C
-                                    footerDiv "V" flags.V
-                                ]
-                        ]
-              
-           ]
-
+           [ tooltips (Content flagTooltipStr :: Placement "top" :: basicTooltipsPropsLst)
+                      [ div [ ClassName "pull-right" ]
+                            [ footerDiv "N" flags.C
+                              footerDiv "Z" flags.Z
+                              footerDiv "C" flags.C
+                              footerDiv "V" flags.V ]]]

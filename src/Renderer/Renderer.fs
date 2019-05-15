@@ -97,52 +97,37 @@ let update (msg : Msg) (m : Model) =
                 openFileUpdate (m.Editors, editors)
                                m.Settings.CurrentFilePath
                                m.CurrentFileTabId
+            let newSettings = 
+                { m.Settings with CurrentFilePath = newFilePath }
             { m with Editors = newEditors
                      CurrentFileTabId = newTabId
-                     Settings = { m.Settings with CurrentFilePath = filePathSetting newFilePath }
+                     Settings = newSettings
                      DialogBox = None }
         | OpenFileDialog -> 
-             { m with DialogBox = Some OpenFileDl }
+            let newDialog = openFileDialogUpdate m.DialogBox
+            { m with DialogBox = newDialog }
         | SaveFile -> 
-            match m.CurrentFileTabId with
-            | -1 -> 
-                m
-            | x -> 
-                let filePath = m.Editors.[x].FilePath
-                match filePath with
-                | None -> { m with DialogBox = Some SaveAsDl }
-                | Some y -> 
-                    let currentEditor = m.Editors.[x]
-                    writeToFile currentEditor.EditorText
-                                y
-                    let newEditors = Map.add m.CurrentFileTabId 
-                                             { currentEditor with Saved = true }
-                                             m.Editors
-                    { m with Editors = newEditors }
+            let newDialog, newEditors = 
+                saveFileUpdate m.CurrentFileTabId
+                               m.Editors
+            { m with Editors = newEditors
+                     DialogBox = newDialog }
         | SaveAsFileDialog -> 
-            match m.CurrentFileTabId with
-            | -1 -> m
-            | _ -> { m with DialogBox = Some SaveAsDl }
+            let newDialogBox =
+                saveAsFileDialogUpdate m.CurrentFileTabId
+                                       m.DialogBox
+            { m with DialogBox = newDialogBox }
         | SaveAsFile fileInfo ->
-            match fileInfo with
-            | None -> { m with DialogBox = None }
-            | Some (filePath, fileName) ->
-                let newEditor =
-                    { m.Editors.[m.CurrentFileTabId] with FilePath = Some filePath
-                                                          FileName = Some fileName
-                                                          Saved = true }
-                let newEditors = 
-                    m.Editors
-                    |> Map.add m.CurrentFileTabId
-                               newEditor
-                    |> Map.filter (fun key value -> 
-                        key = m.CurrentFileTabId ||
-                        value.FilePath <> newEditor.FilePath )
-                let newSettings = 
-                    { m.Settings with CurrentFilePath = filePathSetting filePath }
-                { m with Editors = newEditors 
-                         DialogBox = None 
-                         Settings = newSettings }
+            let newEditors, newFilePathSetting =
+                saveAsFileUpdate m.Editors
+                                 (m.CurrentFileTabId, m.Settings.CurrentFilePath)
+                                 fileInfo
+            let newSettings = 
+                { m.Settings with CurrentFilePath = newFilePathSetting }
+            { m with DialogBox = None 
+                     Editors = newEditors
+                     Settings = newSettings }
+
     model, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =

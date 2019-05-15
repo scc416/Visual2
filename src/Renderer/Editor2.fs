@@ -9,37 +9,29 @@ open Monaco
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
 
-    module Monaco =
+//type Props =
+//    | Width of obj
+//    | Height of obj
+//    | Value of obj
+//    | DefaultValue of obj
+//    | Language of string
+//    | Theme of string
+//    | Options of Monaco.Editor.IEditorConstructionOptions
+//    | OnChange of (obj * obj -> unit)
+//    | EditorWillMount of (Monaco.IExports -> unit)
+//    | EditorDidMount of (Monaco.Editor.IEditor * Monaco.IExports -> unit)
+//    | RequireConfig of obj
 
-        open Fable.Core.JsInterop
+//let inline editor (props: Props list) : React.ReactElement =
+    //ofImport "default" "react-monaco-editor" (keyValueList CaseRules.LowerFirst props) []
 
-        type Props =
-            | Width of obj
-            | Height of obj
-            | Value of obj
-            | DefaultValue of obj
-            | Language of string
-            | Theme of string
-            | Options of Monaco.Editor.IEditorConstructionOptions
-            | OnChange of (obj * obj -> unit)
-            | EditorWillMount of (Monaco.IExports -> unit)
-            | EditorDidMount of (Monaco.Editor.IEditor * Monaco.IExports -> unit)
-            | RequireConfig of obj
+type EditorProps =
+    | OnChange of (string -> unit)
+    | Value of string
+    | Language of string
+    | IsReadOnly of bool
+    | EditorDidMount of (unit -> unit)
 
-        let inline editor (props: Props list) : React.ReactElement =
-            ofImport "default" "react-monaco-editor" (keyValueList CaseRules.LowerFirst props) []
-
-    module Editor =
-
-        open Fable.Core.JsInterop
-
-        type Props =
-            | OnChange of (string -> unit)
-            | Value of string
-            | Language of string
-            | IsReadOnly of bool
-            | EditorDidMount of (unit -> unit)
-
-        let inline editor (props: Props list) : React.ReactElement =
-            ofImport "default" "../../app/js/editor.js" (keyValueList CaseRules.LowerFirst props) []
+let inline editor (props: EditorProps list) : React.ReactElement =
+    ofImport "default" "../../app/js/editor.js" (keyValueList CaseRules.LowerFirst props) []
 

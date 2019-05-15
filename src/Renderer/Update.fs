@@ -20,6 +20,7 @@ open Views2
 open Tabs2
 open Editors2
 open MenuBar2
+open Files2
 
 let mapMerge newMap = 
     newMap 
@@ -55,7 +56,7 @@ let openFileUpdate (oldEditors : Map<int, Editor>, editor : Editor List)
             |> Map.findKey (fun _ value -> 
                 value.FilePath = currentEditor.FilePath)
         mergedEditors,
-        mergedEditors.[newId].FilePath.Value, 
+        filePathSetting mergedEditors.[newId].FilePath.Value, 
         newId
               
 let selectFileTabUpdate id editors =
@@ -85,3 +86,53 @@ let deleteTabUpdate id tabId editors =
         newTabId, newEditors
     | false -> 
         id, editors
+
+let saveFileUpdate tabId (editors : Map<int, Editor>) =
+    match tabId with
+    | -1 -> 
+        None, editors
+    | id -> 
+        let filePath = editors.[id].FilePath
+        match filePath with
+        | None -> 
+            Some SaveAsDl, editors
+        | Some fPath ->
+            let currentEditor = editors.[id]
+            writeToFile currentEditor.EditorText fPath
+            let newEditors = 
+                Map.add id
+                        { currentEditor with Saved = true }
+                        editors
+            None, newEditors
+
+let saveAsFileDialogUpdate tabId 
+                           dialogBox : DialogBox option =
+    match dialogBox, tabId with
+    | _, -1 | Some _, _ -> dialogBox
+    | _ -> Some SaveAsDl
+
+let openFileDialogUpdate =
+    function
+    | None -> Some OpenFileDl
+    | x -> x
+
+let saveAsFileUpdate (editors : Map<int, Editor>) 
+                     (tabId, filePathSettingStr)
+                     fileInfo = 
+    match fileInfo with
+    | None -> 
+        editors, filePathSettingStr
+    | Some (filePath, fileName) ->
+        let newEditor =
+            { editors.[tabId] with FilePath = Some filePath
+                                   FileName = Some fileName
+                                   Saved = true }
+        let newEditors = 
+            editors
+            |> Map.add tabId
+                       newEditor
+            |> Map.filter (fun key value ->
+                key = tabId ||
+                value.FilePath <> newEditor.FilePath)
+        let newFilePathSettings = filePathSetting filePath
+        newEditors, newFilePathSettings
