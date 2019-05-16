@@ -199,7 +199,7 @@ let fileMenu (dispatch : (Msg -> Unit)) =
 
 
 
-let editMenu() =
+let editMenu (dispatch : (Msg -> Unit)) =
     makeMenu "Edit" [
         makeItem "Undo" (Some "CmdOrCtrl+Z") Files.editorUndo
         makeItem "Redo" (Some "CmdOrCtrl+Shift+Z") Files.editorRedo
@@ -215,7 +215,7 @@ let editMenu() =
         menuSeparator
         makeItem "Increase Font Size" (Some "CmdOrCtrl+.") (fun () -> Settings.alterFontSize 2)
         makeItem "Decrease Font Size" (Some "CmdOrCtrl+,") (fun () -> Settings.alterFontSize -2)
-        makeItem "Preferences" Core.Option.None (interlockAction "show preferences tab" createSettingsTab)
+        makeItem "Preferences" Core.Option.None (interlockAction "show preferences tab" (fun _ -> SelectSettingsTab |> dispatch ))
     ]
 
 let viewMenu() =
@@ -293,7 +293,7 @@ let mainMenu (dispatch : (Msg -> Unit))=
     let template =
         ResizeArray<MenuItemOptions> [
             fileMenu dispatch
-            editMenu()
+            editMenu dispatch
             viewMenu()
             helpMenu()
             testMenu()

@@ -22,6 +22,7 @@ open MenuBar2
 open Update
 open Tooltips2
 open Files2
+open Settings2
 
 let init _ =
     { 
@@ -47,17 +48,7 @@ let init _ =
         Activity = true
         Sleeping = false
         LastRemindTime = None
-        Settings = 
-            {
-                EditorFontSize = "16"
-                SimulatorMaxSteps = "20000"
-                EditorTheme = "solarised-dark"
-                EditorWordWrap = "off"
-                EditorRenderWhitespace = "none"
-                CurrentFilePath = Fable.Import.Node.Exports.os.homedir()
-                RegisteredKey = ""
-                OnlineFetchText = ""
-            }
+        Settings = getJSONSettings()
         DialogBox = None
     }, Cmd.none
 
@@ -86,12 +77,17 @@ let update (msg : Msg) (m : Model) =
             let newTabId = selectFileTabUpdate id m.Editors
             { m with CurrentFileTabId = newTabId }
         | DeleteTab id -> 
+            let newSettingsTab =
+                match m.SettingsTab with
+                | Some x when x = id -> None
+                | x -> x
             let newTabId, newEditors = 
                 deleteTabUpdate id 
                                 m.CurrentFileTabId 
                                 m.Editors
             { m with CurrentFileTabId = newTabId
-                     Editors = newEditors }
+                     Editors = newEditors 
+                     SettingsTab = newSettingsTab }
         | OpenFile editors -> 
             let newEditors, newFilePath, newTabId = 
                 openFileUpdate (m.Editors, editors)
@@ -127,15 +123,31 @@ let update (msg : Msg) (m : Model) =
             { m with DialogBox = None 
                      Editors = newEditors
                      Settings = newSettings }
-
+        | SelectSettingsTab ->
+            match m.SettingsTab with
+            | None -> 
+                let newEditors, newTabId = 
+                    createSettingsTab m.Editors
+                { m with Editors = newEditors
+                         CurrentFileTabId = newTabId
+                         SettingsTab = Some newTabId}
+            | Some x -> { m with CurrentFileTabId = x }
+        | SaveSetting ->
+            let newSettings =
+                getFormSettings m.Settings
+            let newEditors = Map.remove m.SettingsTab.Value m.Editors
+            let newId = selectLastTabId newEditors
+            { m with Settings = newSettings 
+                     Editors = newEditors 
+                     CurrentFileTabId = newId 
+                     SettingsTab = None }
     model, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     mainMenu dispatch
     dialogBox m dispatch
     Browser.console.log(string m.Editors)
-    Browser.console.log(string m.CurrentFileTabId)
-    Browser.console.log(string m.Settings.CurrentFilePath)
+    Browser.console.log(string m.Settings)
     div [ ClassName "window" ] 
         [ header [ ClassName "toolbar toolbar-header" ] 
                  [ div [ ClassName "toolbar-actions" ] 
@@ -167,7 +179,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
           div [ ClassName "window-content" ] 
               [ div [ ClassName "pane-group" ] 
                     [ div [ ClassName "pane file-view-pane"] 
-                          (editorPanel m.CurrentFileTabId m.Editors dispatch)
+                          (editorPanel m.CurrentFileTabId m.Editors m.SettingsTab m.Settings dispatch)
                       div [ ClassName "pane dashboard"
                             dashboardStyle m.CurrentRep ]
                           [ viewButtons m.CurrentView dispatch

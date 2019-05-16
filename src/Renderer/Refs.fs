@@ -56,8 +56,8 @@ type VSettings = {
     EditorFontSize : string
     SimulatorMaxSteps : string
     EditorTheme : string
-    EditorWordWrap : string
-    EditorRenderWhitespace : string
+    EditorWordWrap : bool
+    EditorRenderWhitespace : bool
     CurrentFilePath : string
     RegisteredKey : string
     OnlineFetchText : string
@@ -128,6 +128,8 @@ type Msg =
     | SaveFile
     | SaveAsFileDialog
     | SaveAsFile of (string * string) option
+    | SelectSettingsTab
+    | SaveSetting
 
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries
@@ -425,8 +427,8 @@ let mutable vSettings = {
     EditorFontSize = "16"
     SimulatorMaxSteps = "20000"
     EditorTheme = "solarised-dark"
-    EditorWordWrap = "off"
-    EditorRenderWhitespace = "none"
+    EditorWordWrap = false
+    EditorRenderWhitespace = false
     CurrentFilePath = Fable.Import.Node.Exports.os.homedir()
     RegisteredKey = ""
     OnlineFetchText = ""
@@ -485,12 +487,12 @@ let checkSettings (vs : VSettings) =
 
 
 
-let setJSONSettings() =
+let setJSONSettings setting =
     let setSetting (name : string) (value : string) =
         printf "Saving JSON: %A" value
         settings?set (name, value) |> ignore
-    printfn "Saving settings to this PC: %A" vSettings
-    setSetting "JSON" (Fable.Import.JS.JSON.stringify vSettings)
+    printfn "Saving settings to this PC: %A" setting
+    setSetting "JSON" (Fable.Import.JS.JSON.stringify setting)
 
 
 let getJSONSettings() =

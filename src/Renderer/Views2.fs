@@ -17,6 +17,7 @@ open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Tooltips2
 open Editors2
+open Settings2
 
 let dashboardStyle rep =
     let width = 
@@ -82,8 +83,13 @@ let fileNameFormat (fileName : string)
     | true -> fileName
     | false -> fileName + " *"
 
+let tabNameClass id =
+    function
+    | Some x when x = id -> ClassName "tab-file-name icon icon-cog" 
+    | _ -> ClassName "tab-file-name" 
+
 /// return all the react elements in the editor panel (including the react monaco editor)
-let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
+let editorPanel currentFileTabId (editors : Map<int, Editor>) settingsTabId settings dispatch =
 
     /// return the class of the tab header
     /// "active" if it is the current tab
@@ -106,7 +112,7 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
             [ span [ ClassName "invisible" ] []
               span [ ClassName "icon icon-cancel icon-close-tab" 
                      DOMAttr.OnClick (fun _ -> DeleteTab id |> dispatch)] []
-              span [ ClassName "tab-file-name" 
+              span [ tabNameClass id settingsTabId
                      tabHeaderTextStyle editor.Saved ] 
                    [ editor.Saved |> fileNameFormat fileName |> str ]]
     /// button (actually is a clickable div) that add new tab
@@ -131,9 +137,11 @@ let editorPanel currentFileTabId (editors : Map<int, Editor>)  dispatch =
         div [ ClassName "invisible darken-overlay" ] []
     /// the editor
     let editorViewDiv =
-        match currentFileTabId with
-        | -1 -> 
+        match currentFileTabId, settingsTabId with
+        | -1, _ ->
             []
+        | _, Some x when x = currentFileTabId -> 
+            settingsMenu dispatch settings
         | _ -> 
             [ editor [ OnChange (EditorTextChange >> dispatch) 
                        Value editors.[currentFileTabId].EditorText ]]

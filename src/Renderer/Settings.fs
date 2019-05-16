@@ -48,8 +48,8 @@ let getFormSettings() =
             SimulatorMaxSteps = getIntSetting 0L 1000000000L vSettings.SimulatorMaxSteps (getS simulatorMaxSteps)
             EditorFontSize = getIntSetting 6L 100L vSettings.EditorFontSize (getS editorFontSize)
             EditorTheme = getS editorTheme
-            EditorWordWrap = getS editorWordWrap
-            EditorRenderWhitespace = getS editorRenderWhitespace
+            EditorWordWrap = true
+            EditorRenderWhitespace = true
             CurrentFilePath = vSettings.CurrentFilePath
             RegisteredKey = vSettings.RegisteredKey
             OnlineFetchText = vSettings.OnlineFetchText
@@ -69,8 +69,8 @@ let initFormSettings() =
     setS simulatorMaxSteps <| (uint64 vs.SimulatorMaxSteps).ToString()
     setS editorFontSize <| (uint64 vs.EditorFontSize).ToString()
     setS editorTheme vs.EditorTheme
-    setS editorWordWrap vs.EditorWordWrap
-    setS editorRenderWhitespace vs.EditorRenderWhitespace
+    setS editorWordWrap (string vs.EditorWordWrap)
+    setS editorRenderWhitespace (string vs.EditorRenderWhitespace)
 
 
 
@@ -182,7 +182,7 @@ let createSettingsTab() =
     match settingsTab with
     | Some tab -> selectFileTab tab
     | Microsoft.FSharp.Core.option.None ->
-        let id = createTab " &nbsp  Settings"
+        let id = createTab "   Settings"
         settingsTab <- Some id
 
         let tabName = fileTabName id
