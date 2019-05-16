@@ -27,7 +27,6 @@
     <Compile Include="Editor2.fs" />
     <Compile Include="Tooltips2.fs" />
     <Compile Include="Views2.fs" />
-    <Compile Include="Update.fs" />
     <Compile Include="Renderer.fs" />
     <ProjectReference Include="..\Emulator\Emulator.fsproj" />
   </ItemGroup>

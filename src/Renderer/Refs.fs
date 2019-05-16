@@ -129,7 +129,7 @@ type Msg =
     | SaveAsFileDialog
     | SaveAsFile of (string * string) option
     | SelectSettingsTab
-    | SaveSetting
+    | SaveSettings
 
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries

@@ -1,32 +1,12 @@
-﻿(*
-    VisUAL2 @ Imperial College London
-    Project: A user-friendly ARM emulator in F# and Web Technologies ( Github Electron & Fable Compiler )
-    Module: Renderer.Settings
-    Description: Code to handle persistent settings stored on PC as a file under user data
-*)
-
-/// implement electron-style persistent settings via electron-settings module
-
-module Settings2
+﻿module Settings2
 open Fable.Import.Browser
-open Fable.Core.JsInterop
-open Fable.Import
 open Refs
-open Elmish
-open Elmish.React
-open Elmish.HMR
-open Elmish.Debug
-open Elmish.Browser.Navigation
-open Fable.Core
-open Fable.Core.JsInterop
-open Fable.Import
-open Fable.Import.Browser
 open Fable.Import.React
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Tabs2
 
-
+/// string for the id, to obtain the value in input
 let editorFontSize = "editor-font-size"
 let simulatorMaxSteps = "simulator-max-steps"
 let editorTheme = "editor-theme"
@@ -45,10 +25,13 @@ let getIntSetting mini maxi (defi : string) setting =
     | INT n when n > maxi -> maxi |> string
     | _ -> defi
 
+
+/// examine, save (onto user's computer) and return the new settings
 let getFormSettings (settings : VSettings) =
     let getS (name : string) =
         let input = document.getElementById (name) :?> HTMLInputElement
         input.value
+    /// for checked box
     let getT (name : string) =
         let input = document.getElementById (name) :?> HTMLInputElement
         input.``checked``
@@ -63,24 +46,10 @@ let getFormSettings (settings : VSettings) =
             OnlineFetchText = settings.OnlineFetchText
         }
     let newSettings = checkSettings vs
-    printfn "Saving settings: %A" newSettings
     setJSONSettings newSettings
     newSettings
 
-//let initFormSettings settings =
-    //let setS (name : string) (v : string) =
-    //    let input = find
-    //    //reft.getElementById (name) :?> HTMLInputElement
-    //    //printfn "name=%A,dom=%A, value=%A" name input v
-    //    input.value <- v
-    //let vs = settings
-    //setS simulatorMaxSteps <| (uint64 vs.SimulatorMaxSteps).ToString()
-    //setS editorFontSize <| (uint64 vs.EditorFontSize).ToString()
-    //setS editorTheme vs.EditorTheme
-    //setS editorWordWrap vs.EditorWordWrap
-    //setS editorRenderWhitespace vs.EditorRenderWhitespace
-
-// React description for the settings menu
+/// React description for the settings menu
 let settingsMenu dispatch (settings : VSettings): ReactElement list =
     let onChange =
         OnChange (fun x -> EditorTextChange "" |> dispatch)
@@ -151,11 +120,12 @@ let settingsMenu dispatch (settings : VSettings): ReactElement list =
                                  onChange ] ] ]
              div [ Class "after" ]
                  []
-             div [ DOMAttr.OnClick (fun _ -> SaveSetting |> dispatch)]
+             div [ DOMAttr.OnClick (fun _ -> SaveSettings |> dispatch)]
                  [ div [ Class "btn btn-default" ]
                        [ str "Save and Close Settings" ] ] ] ]
 
-let createSettingsTab editors=
+/// create new setting tab and return new editors map & tab id
+let createSettingsTab editors =
     let id = uniqueTabId editors
     let newSettingTab = 
         { EditorText = ""
@@ -165,3 +135,25 @@ let createSettingsTab editors=
     let newEditors =
         Map.add id newSettingTab editors
     newEditors, id
+
+/// top-level function to select the settings tab
+/// create a setting tab when necessary
+let selectSettingsTabUpdate (settingsTab, editors) =
+    match settingsTab with
+    | None -> 
+        // no setting tab, make one
+        let newEditors, newTabId = 
+            createSettingsTab editors
+        newEditors, newTabId
+    // setting tab already exists
+    | Some x -> 
+        editors, x
+
+/// top-level function to save settings
+let saveSettingsUpdate (settings, editors, settingsTab) = 
+    let newSettings =
+        getFormSettings settings
+    // close and remove the setting tab after settings are saved
+    let newEditors = Map.remove settingsTab editors
+    let newId = selectLastTabId newEditors
+    newSettings, newEditors, newId

@@ -25,14 +25,12 @@ let inline tooltips (props: TooltipsProps list)
              elLst
 
 let basicTooltipsPropsLst =
-    [
-        Animation "fade"
-        Arrow true
-        Animation "fade"
-        Theme "bootstrap"
-        Distance 7
-        HideOnClick false
-    ]   
+    [ Animation "fade"
+      Arrow true
+      Animation "fade"
+      Theme "bootstrap"
+      Distance 7
+      HideOnClick false ]   
 
 let defaultTooltipsPropsLst =
     [
@@ -40,6 +38,10 @@ let defaultTooltipsPropsLst =
         Placement "bottom"
     ] @ 
     basicTooltipsPropsLst
+
+// ***********************************************************************************
+//                            strings for the tooltips
+// ***********************************************************************************
 
 let repTooltipStr =
     function

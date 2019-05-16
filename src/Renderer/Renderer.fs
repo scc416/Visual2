@@ -19,10 +19,10 @@ open Monaco.Monaco
 open Views2
 open Tabs2
 open MenuBar2
-open Update
 open Tooltips2
 open Files2
 open Settings2
+open Editors2
 
 let init _ =
     { 
@@ -64,35 +64,28 @@ let update (msg : Msg) (m : Model) =
         | ToggleReverseView -> 
             { m with ReverseDirection = not m.ReverseDirection }
         | EditorTextChange str -> 
-            let newEditors = editorTextChangeUpdate str 
-                                                    m.CurrentFileTabId 
-                                                    m.Editors 
+            let newEditors = 
+                editorTextChangeUpdate (m.CurrentFileTabId, m.Editors) 
+                                       str    
             { m with Editors = newEditors }
         | NewFile -> 
-            let newTabId = uniqueTabId m.Editors
-            let newEditors = Map.add newTabId blankTab m.Editors
+            let newTabId, newEditors = newFileUpdate m.Editors
             { m with CurrentFileTabId = newTabId
                      Editors = newEditors }
         | SelectFileTab id -> 
             let newTabId = selectFileTabUpdate id m.Editors
             { m with CurrentFileTabId = newTabId }
         | DeleteTab id -> 
-            let newSettingsTab =
-                match m.SettingsTab with
-                | Some x when x = id -> None
-                | x -> x
-            let newTabId, newEditors = 
-                deleteTabUpdate id 
-                                m.CurrentFileTabId 
-                                m.Editors
+            let newTabId, newEditors, newSettingsTab = 
+                deleteTabUpdate (m.CurrentFileTabId, m.Editors, m.SettingsTab)
+                                id 
             { m with CurrentFileTabId = newTabId
                      Editors = newEditors 
                      SettingsTab = newSettingsTab }
         | OpenFile editors -> 
             let newEditors, newFilePath, newTabId = 
-                openFileUpdate (m.Editors, editors)
-                               m.Settings.CurrentFilePath
-                               m.CurrentFileTabId
+                openFileUpdate (m.Editors, m.Settings.CurrentFilePath, m.CurrentFileTabId)
+                               editors
             let newSettings = 
                 { m.Settings with CurrentFilePath = newFilePath }
             { m with Editors = newEditors
@@ -104,19 +97,16 @@ let update (msg : Msg) (m : Model) =
             { m with DialogBox = newDialog }
         | SaveFile -> 
             let newDialog, newEditors = 
-                saveFileUpdate m.CurrentFileTabId
-                               m.Editors
+                saveFileUpdate (m.CurrentFileTabId, m.Editors)
             { m with Editors = newEditors
                      DialogBox = newDialog }
         | SaveAsFileDialog -> 
             let newDialogBox =
-                saveAsFileDialogUpdate m.CurrentFileTabId
-                                       m.DialogBox
+                saveAsFileDialogUpdate (m.CurrentFileTabId, m.DialogBox)
             { m with DialogBox = newDialogBox }
         | SaveAsFile fileInfo ->
             let newEditors, newFilePathSetting =
-                saveAsFileUpdate m.Editors
-                                 (m.CurrentFileTabId, m.Settings.CurrentFilePath)
+                saveAsFileUpdate (m.Editors, m.CurrentFileTabId, m.Settings.CurrentFilePath)
                                  fileInfo
             let newSettings = 
                 { m.Settings with CurrentFilePath = newFilePathSetting }
@@ -124,19 +114,14 @@ let update (msg : Msg) (m : Model) =
                      Editors = newEditors
                      Settings = newSettings }
         | SelectSettingsTab ->
-            match m.SettingsTab with
-            | None -> 
-                let newEditors, newTabId = 
-                    createSettingsTab m.Editors
-                { m with Editors = newEditors
-                         CurrentFileTabId = newTabId
-                         SettingsTab = Some newTabId}
-            | Some x -> { m with CurrentFileTabId = x }
-        | SaveSetting ->
-            let newSettings =
-                getFormSettings m.Settings
-            let newEditors = Map.remove m.SettingsTab.Value m.Editors
-            let newId = selectLastTabId newEditors
+            let newEditors, newTabId =
+                selectSettingsTabUpdate (m.SettingsTab, m.Editors)
+            { m with Editors = newEditors
+                     CurrentFileTabId = newTabId
+                     SettingsTab = Some newTabId }
+        | SaveSettings ->
+            let newSettings, newEditors, newId =
+                saveSettingsUpdate (m.Settings, m.Editors, m.SettingsTab.Value)
             { m with Settings = newSettings 
                      Editors = newEditors 
                      CurrentFileTabId = newId 
@@ -157,7 +142,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                       [ span [ ClassName "icon icon-folder" ] [] ]
                                button [ ClassName "btn btn-default"
                                         DOMAttr.OnClick (fun _ -> SaveFile |> dispatch) ]
-                                      [ span [ ClassName "icon icon-floppy" ] [] ]]
+                                      [ span [ ClassName "icon icon-floppy" ] [] ] ]
                          button [ ClassName "btn btn-fixed btn-default button-run" ]
                                 [ str "Run" ]
                          button [ ClassName "btn btn-default" ]
@@ -174,17 +159,18 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                                  [ str "\U0001F551" ]]
                                tooltips (Content clockTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
                                         [ button [ ClassName "btn btn-large btn-default clock-time" ]//; Disabled true ]
-                                                 [ str "-" ]]]
-                         repButtons m.CurrentRep dispatch ]]
+                                                 [ str "-" ] ] ]
+                         repButtons m.CurrentRep dispatch ] ]
           div [ ClassName "window-content" ] 
               [ div [ ClassName "pane-group" ] 
                     [ div [ ClassName "pane file-view-pane"] 
-                          (editorPanel m.CurrentFileTabId m.Editors m.SettingsTab m.Settings dispatch)
+                          (editorPanel (m.CurrentFileTabId, m.Editors, m.SettingsTab, m.Settings) 
+                                       dispatch)
                       div [ ClassName "pane dashboard"
                             dashboardStyle m.CurrentRep ]
                           [ viewButtons m.CurrentView dispatch
                             viewPanel m dispatch
-                            footer m.Flags ]]]]
+                            footer m.Flags ] ] ] ]
 
 Program.mkProgram init update view
 #if DEBUG

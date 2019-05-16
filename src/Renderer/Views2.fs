@@ -3,18 +3,7 @@
 open Refs
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
-open Elmish
-open Elmish.React
-open Elmish.HMR
-open Elmish.Debug
-open Elmish.Browser.Navigation
-open Fable.Core
-open Fable.Core.JsInterop
-open Fable.Import
-open Fable.Import.Browser
 open Fable.Import.React
-open Fable.Helpers.React
-open Fable.Helpers.React.Props
 open Tooltips2
 open Editors2
 open Settings2
@@ -56,13 +45,13 @@ let repButtons (currentRep : Representations)
                   defaultTooltipsPropsLst)
                  [ button [ currentRepButtonsClass rep
                             DOMAttr.OnClick (fun _ -> rep |> ChangeRep |> dispatch)]
-                          [ rep |> string |> str ]]
+                          [ rep |> string |> str ] ]
 
     div [ ClassName "btn-group pull-right" ] 
         [ repButton Hex
           repButton Bin
           repButton Dec
-          repButton UDec]
+          repButton UDec ]
          
 // ***********************************************************************************
 //                     Functions Relating to Editor Panel
@@ -89,7 +78,8 @@ let tabNameClass id =
     | _ -> ClassName "tab-file-name" 
 
 /// return all the react elements in the editor panel (including the react monaco editor)
-let editorPanel currentFileTabId (editors : Map<int, Editor>) settingsTabId settings dispatch =
+let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, settings) 
+                dispatch =
 
     /// return the class of the tab header
     /// "active" if it is the current tab
@@ -200,9 +190,9 @@ let viewPanel model dispatch =
            [ div [ ClassName "btn-group full-width" ] 
                  [ tooltips ((rName |> regTooltipStr |> Content) :: Placement "bottom" :: basicTooltipsPropsLst)
                             [ button [ ClassName "btn btn-reg" ] 
-                                     [  rName |> string |> str ]]
+                                     [  rName |> string |> str ] ]
                    span [ ClassName "btn btn-reg-con selectable-text" ] 
-                        [ model.RegMap.[rName] |> formatter model.CurrentRep |> str ]]]
+                        [ model.RegMap.[rName] |> formatter model.CurrentRep |> str ] ] ]
     let registerSet =
         [0 .. 15]
         |> List.map (fun x -> 
@@ -221,19 +211,19 @@ let viewPanel model dispatch =
                        [ td [ Class "td-mem" ]
                             [ address |> string |> str ]
                          td [ Class "td-mem" ]
-                            [ value |> string |> str ]] 
+                            [ value |> string |> str ] ] 
                 model.MemoryMap
                 |> Map.map (fun key value -> row key value)
                 |> Map.toList
                 |> List.map (fun (_, el) -> el)
             [ div [ Class "list-group-item"
-                    Style [ Padding "0px" ]]
+                    Style [ Padding "0px" ] ]
                   [ table [ Class "table-striped" ]
                           (tr [ Class "tr-head-mem" ]
                               [ th [ Class "th-mem" ]
                                    [ str "Address" ]
                                 th [ Class "th-mem" ]
-                                   [ str "Value" ]] :: rows )]]
+                                   [ str "Value" ]] :: rows ) ] ]
 
     let memView = 
        ul [ ClassName "list-group" ]
@@ -244,11 +234,11 @@ let viewPanel model dispatch =
                               [ byteViewButtonString model.ByteView ]
                        button [ viewButtonClass model.ReverseDirection 
                                 DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)]
-                              [ reverseDirectionButtonString model.ReverseDirection ]]]
+                              [ reverseDirectionButtonString model.ReverseDirection ] ] ]
             li [ Class "list-group" ] memTable
             li [ ]
                [ div [ Style [ TextAlign "center" ] ]
-                     [ b [] [ str "Uninitialized memory is zeroed" ]]]]
+                     [ b [] [ str "Uninitialized memory is zeroed" ] ] ] ]
     let symbolView =
         div [ ClassName "list-group" ]
             [ table [ ClassName "table-striped" ]
@@ -268,15 +258,15 @@ let footer (flags : CommonData.Flags) =
             | true -> "1"
             | false -> "0"
         div [ ClassName "btn-group btn-flag-group" 
-              Style [ Margin 5 ]] 
+              Style [ Margin 5 ] ] 
             [ button [ ClassName "btn btn-flag" ] 
                      [ str letter ]
               button [ ClassName "btn btn-flag-con" ] 
-                     [ str text ]]
+                     [ str text ] ]
     footer [ ClassName "toolbar toolbar-footer" ] 
            [ tooltips (Content flagTooltipStr :: Placement "top" :: basicTooltipsPropsLst)
                       [ div [ ClassName "pull-right" ]
                             [ footerDiv "N" flags.C
                               footerDiv "Z" flags.Z
                               footerDiv "C" flags.C
-                              footerDiv "V" flags.V ]]]
+                              footerDiv "V" flags.V ] ] ]
