@@ -11,6 +11,7 @@ open Settings
 open Tabs
 open EEExtensions
 open Files2
+open Tabs2
 
 let display runMode =
     match runMode with
@@ -97,15 +98,18 @@ let loadFileIntoTab tId (fileData : Node.Buffer.Buffer) =
     
 
 
-let loadDemo() =
-    Tabs.createFileTab()
-    |> fun tId ->
-        let sampleFileName = Tests.sampleDir + "karatsuba.s"
-        printfn "Reading sample file: %s" sampleFileName
-        Node.Exports.fs.readFile (sampleFileName, (fun _ data -> // TODO: find out what this error does
-                                              loadFileIntoTab tId data
-        ))
-        Tabs.setTabSaved tId
+let loadDemo (editors : Map<int, Editor>) : ( Map<int, Editor> * int) =
+    let sampleFileName = Tests.sampleDir + "karatsuba.s"
+    let txt = 
+        Node.Exports.fs.readFileSync (sampleFileName, "utf8")
+    let newEditor = 
+        { FileName = Option.None
+          FilePath = Option.None 
+          Saved = true
+          EditorText = txt }
+    let newId = uniqueTabId editors
+    let newEditors= Map.add newId newEditor editors
+    newEditors, newId
 
 
 
@@ -184,7 +188,7 @@ let makeMenu (name : string) (table : MenuItemOptions list) =
  *                                         MENUS
  *
  ****************************************************************************************************)
-let fileMenu (dispatch : (Msg -> Unit)) =
+let fileMenu id (dispatch : (Msg -> Unit)) =
     makeMenu "File" [
             makeItem "New" (Some "CmdOrCtrl+N") (interlockAction "make new file tab" (fun _ -> Refs.NewFile |> dispatch))
             menuSeparator
@@ -192,7 +196,7 @@ let fileMenu (dispatch : (Msg -> Unit)) =
             makeItem "Save As" (Some "CmdOrCtrl+Shift+S") (interlockAction "save file" (fun _ -> Refs.SaveAsFileDialog |> dispatch ))
             makeItem "Open" (Some "CmdOrCtrl+O") (interlockAction "open file" (fun _ -> Refs.OpenFileDialog |> dispatch ))
             menuSeparator
-            makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" deleteCurrentTab)
+            makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" (fun _ -> Refs.DeleteTab id |> dispatch ))
             menuSeparator
             makeItem "Quit" (Some "CmdOrCtrl+Q") ExitIfOK
         ]
@@ -267,7 +271,7 @@ let testMenu() =
         ]
 
 
-let helpMenu() =
+let helpMenu dispatch =
         makeMenu "Help" (
             [
                 makeItem "UAL instruction guide" Core.Option.None (runExtPage <| visualDocsPage "guide#content")
@@ -275,7 +279,7 @@ let helpMenu() =
                 makeItem "Testbenches" Core.Option.None (runExtPage <| visualDocsPage "testbench")
                 makeItem "Official ARM documentation" Core.Option.None (runExtPage "http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0234b/i1010871.html")
                 menuSeparator
-                makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" loadDemo)
+                makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" (fun _ -> Refs.LoadDemoCode |> dispatch))
                 makeCondItem (debugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" Integration.runTestbench)
                 makeCondItem (debugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" Tests.runAllEmulatorTests)
                 menuSeparator
@@ -289,13 +293,13 @@ let helpMenu() =
 
 
 /// Make all app menus
-let mainMenu (dispatch : (Msg -> Unit))=
+let mainMenu id (dispatch : (Msg -> Unit))=
     let template =
         ResizeArray<MenuItemOptions> [
-            fileMenu dispatch
+            fileMenu id dispatch
             editMenu dispatch
             viewMenu()
-            helpMenu()
+            helpMenu dispatch
             testMenu()
         ]
     template

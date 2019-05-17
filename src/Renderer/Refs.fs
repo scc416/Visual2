@@ -130,6 +130,7 @@ type Msg =
     | SaveAsFile of (string * string) option
     | SelectSettingsTab
     | SaveSettings
+    | LoadDemoCode
 
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries

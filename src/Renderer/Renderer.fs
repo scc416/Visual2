@@ -126,10 +126,14 @@ let update (msg : Msg) (m : Model) =
                      Editors = newEditors 
                      CurrentFileTabId = newId 
                      SettingsTab = None }
+        | LoadDemoCode -> 
+            let newEditors, newId = loadDemo m.Editors
+            { m with Editors = newEditors 
+                     CurrentFileTabId = newId }
     model, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
-    mainMenu dispatch
+    mainMenu m.CurrentFileTabId dispatch
     dialogBox m dispatch
     Browser.console.log(string m.Editors)
     Browser.console.log(string m.Settings)
