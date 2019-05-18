@@ -136,7 +136,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
     mainMenu m.CurrentFileTabId dispatch
     dialogBox m dispatch
     Browser.console.log(string m.Editors)
-    Browser.console.log(string m.Settings)
+    Browser.console.log(string m.CurrentFileTabId)
     div [ ClassName "window" ] 
         [ header [ ClassName "toolbar toolbar-header" ] 
                  [ div [ ClassName "toolbar-actions" ] 

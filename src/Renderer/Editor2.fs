@@ -34,9 +34,6 @@ let editorOptions vs =
         "renderWhitespace" ==> vs.EditorRenderWhitespace
         "fontSize" ==> vs.EditorFontSize
         "wordWrap" ==> vs.EditorWordWrap
-
-        // Application defined settings
-        "value" ==> "";
         "renderIndentGuides" ==> false
         "fontFamily" ==> "fira-code"
         "fontWeight" ==> "bold"
