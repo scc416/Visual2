@@ -18,7 +18,7 @@ type TooltipsProps =
     | Delay of int * int
     
 let inline tooltips (props: TooltipsProps list) 
-                 (elLst: React.ReactElement list) : React.ReactElement =
+                    (elLst: React.ReactElement list) : React.ReactElement =
     ofImport "default" 
              "@tippy.js/react" 
              (keyValueList CaseRules.LowerFirst props) 

@@ -134,7 +134,8 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
             settingsMenu dispatch settings
         | _ -> 
             [ editor [ OnChange (EditorTextChange >> dispatch) 
-                       Value editors.[currentFileTabId].EditorText ]]
+                       Value editors.[currentFileTabId].EditorText //]]
+                       settings |> editorOptions |> Options  ]]
     tabHeaders :: editorViewDiv
 
 // ***********************************************************************************

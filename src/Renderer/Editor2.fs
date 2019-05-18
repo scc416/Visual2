@@ -15,7 +15,7 @@ type Props =
     | DefaultValue of obj
     //| Language of string
     | Theme of string
-    | Options of Monaco.Editor.IEditorConstructionOptions
+    | Options of obj
     //| OnChange of (obj * obj -> unit)
     | EditorWillMount of (Monaco.IExports -> unit)
     //| EditorDidMount of (Monaco.Editor.IEditor * Monaco.IExports -> unit)
@@ -26,6 +26,28 @@ type Props =
     | IsReadOnly of bool
     | EditorDidMount of (unit -> unit)
 
+let editorOptions vs =
+    createObj [
+
+        // User defined settings
+        "theme" ==> vs.EditorTheme
+        "renderWhitespace" ==> vs.EditorRenderWhitespace
+        "fontSize" ==> vs.EditorFontSize
+        "wordWrap" ==> vs.EditorWordWrap
+
+        // Application defined settings
+        "value" ==> "";
+        "renderIndentGuides" ==> false
+        "fontFamily" ==> "fira-code"
+        "fontWeight" ==> "bold"
+        "language" ==> "arm";
+        "roundedSelection" ==> false;
+        "scrollBeyondLastLine" ==> false;
+        //"readOnly" ==> readOnly;
+        "automaticLayout" ==> true;
+        "minimap" ==> createObj [ "enabled" ==> false ];
+        "glyphMargin" ==> true
+    ]
 
 let inline editor (props: Props list) : React.ReactElement =
     ofImport "default" "react-monaco-editor" (keyValueList CaseRules.LowerFirst props) []
