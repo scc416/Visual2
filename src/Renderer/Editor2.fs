@@ -6,7 +6,10 @@ open Fable.Core.JsInterop
 open Fable.Import
 open Fable.Helpers.React
 open Monaco
+open Monaco.Monaco
+open Monaco.Editor
 open Refs
+open Fable.Import.Browser
 
 type Props =
     | Width of obj
@@ -26,6 +29,11 @@ type Props =
     | IsReadOnly of bool
     //| EditorDidMount of (unit -> unit)
 
+//[<Emit("$0($1...)")>]
+//let createModel (x : string): ITextModel = jsNative
+
+//let model = createModel ""
+
 let editorOptions vs =
     createObj [
 
@@ -44,10 +52,12 @@ let editorOptions vs =
         "automaticLayout" ==> true;
         "minimap" ==> createObj [ "enabled" ==> false ];
         "glyphMargin" ==> true
+        //"model" ==> model
     ]
 
 let inline editor (props: Props list) : React.ReactElement =
     ofImport "default" "react-monaco-editor" (keyValueList CaseRules.LowerFirst props) []
+
 
 //type EditorProps =
 //    | OnChange of (string -> unit)

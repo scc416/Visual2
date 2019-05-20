@@ -50,7 +50,7 @@ let init _ =
         LastRemindTime = None
         Settings = getJSONSettings()
         DialogBox = None
-    }, Cmd.ofMsg NewFile
+    }, Cmd.none
 
 let update (msg : Msg) (m : Model) =
     let model = 

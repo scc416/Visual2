@@ -88,6 +88,19 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
         | x when x = currentFileTabId -> ClassName "tab-item tab-file active" 
         | _ -> ClassName "tab-item tab-file"   
 
+    let editorClass (id : int) : HTMLAttr =
+        match id with
+        | x when x = currentFileTabId -> ClassName "editor" 
+        | _ -> ClassName "editor invisible"
+
+    let editor txt = 
+        editor [ //Value editors.[currentFileTabId].EditorText
+                   OnChange (EditorTextChange >> dispatch)
+                   settings |> editorOptions |> Options 
+                   DefaultValue txt ]
+    let editorDiv id =
+        div [ editorClass id ; id |> tabNameIdFormatter |> Key ] [ editor editors.[id].EditorText ]
+
     /// return a tab header
     let tabHeaderDiv (id : int) (editor : Editor) : ReactElement =
 
@@ -133,14 +146,9 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
         | _, Some x when x = currentFileTabId -> 
             settingsMenu dispatch settings
         | _ -> 
-            let model =
-                [ editor [ //Value editors.[currentFileTabId].EditorText
-                           OnChange (EditorTextChange >> dispatch)
-                           settings |> editorOptions |> Options  
-                           EditorDidMount (fun _  -> NewFile |> dispatch )]]
-            //let getmodel = getmodel model
-
-            model
+            editors
+            |> Map.toList
+            |> List.map (fun (key, _) -> editorDiv key)
     tabHeaders :: editorViewDiv
 
 // ***********************************************************************************
