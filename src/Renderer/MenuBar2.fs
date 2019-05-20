@@ -13,6 +13,7 @@ open EEExtensions
 open Files2
 open Tabs2
 
+
 let display runMode =
     match runMode with
     | ExecutionTop.ResetMode -> "ResetMode"
@@ -205,17 +206,17 @@ let fileMenu id (dispatch : (Msg -> Unit)) =
 
 let editMenu (dispatch : (Msg -> Unit)) =
     makeMenu "Edit" [
-        makeItem "Undo" (Some "CmdOrCtrl+Z") Files.editorUndo
-        makeItem "Redo" (Some "CmdOrCtrl+Shift+Z") Files.editorRedo
+        //makeItem "Undo" (Some "CmdOrCtrl+Z") (fun _ -> EditorUndo |> dispatch )
+        //makeItem "Redo" (Some "CmdOrCtrl+Shift+Z") Files.editorRedo
         menuSeparator
         makeRoleItem "Cut" (Some "CmdOrCtrl+X") MenuItemRole.Cut
         makeRoleItem "Copy" (Some "CmdOrCtrl+C") MenuItemRole.Copy
         makeRoleItem "Paste" (Some "CmdOrCtrl+V") MenuItemRole.Paste
         menuSeparator
-        makeItem "Select All" (Some "CmdOrCtrl+A") Files.editorSelectAll
-        menuSeparator
-        makeItem "Find" (Some "CmdOrCtrl+F") Files.editorFind
-        makeItem "Replace" (Some "CmdOrCtrl+H") Files.editorFindReplace
+        makeRoleItem "Select All" (Some "CmdOrCtrl+A") MenuItemRole.Selectall
+        //menuSeparator
+        //makeItem "Find" (Some "CmdOrCtrl+F") Files.editorFind
+        //makeItem "Replace" (Some "CmdOrCtrl+H") Files.editorFindReplace
         menuSeparator
         makeItem "Increase Font Size" (Some "CmdOrCtrl+.") (fun _ -> IncreaseFontSize |> dispatch )
         makeItem "Decrease Font Size" (Some "CmdOrCtrl+,") (fun _ -> DecreaseFontSize |> dispatch )
