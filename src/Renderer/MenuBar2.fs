@@ -217,8 +217,8 @@ let editMenu (dispatch : (Msg -> Unit)) =
         makeItem "Find" (Some "CmdOrCtrl+F") Files.editorFind
         makeItem "Replace" (Some "CmdOrCtrl+H") Files.editorFindReplace
         menuSeparator
-        makeItem "Increase Font Size" (Some "CmdOrCtrl+.") (fun () -> Settings.alterFontSize 2)
-        makeItem "Decrease Font Size" (Some "CmdOrCtrl+,") (fun () -> Settings.alterFontSize -2)
+        makeItem "Increase Font Size" (Some "CmdOrCtrl+.") (fun _ -> IncreaseFontSize |> dispatch )
+        makeItem "Decrease Font Size" (Some "CmdOrCtrl+,") (fun _ -> DecreaseFontSize |> dispatch )
         makeItem "Preferences" Core.Option.None (interlockAction "show preferences tab" (fun _ -> SelectSettingsTab |> dispatch ))
     ]
 

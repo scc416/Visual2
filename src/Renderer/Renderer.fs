@@ -50,7 +50,7 @@ let init _ =
         LastRemindTime = None
         Settings = getJSONSettings()
         DialogBox = None
-    }, Cmd.none
+    }, Cmd.ofMsg NewFile
 
 let update (msg : Msg) (m : Model) =
     let model = 
@@ -130,6 +130,12 @@ let update (msg : Msg) (m : Model) =
             let newEditors, newId = loadDemo m.Editors
             { m with Editors = newEditors 
                      CurrentFileTabId = newId }
+        | IncreaseFontSize ->
+            let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) + 2)}
+            { m with Settings = newSettings }
+        | DecreaseFontSize ->
+            let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) - 2)}
+            { m with Settings = newSettings }
     model, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =

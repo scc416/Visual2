@@ -133,9 +133,14 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
         | _, Some x when x = currentFileTabId -> 
             settingsMenu dispatch settings
         | _ -> 
-            [ editor [ Value editors.[currentFileTabId].EditorText
-                       OnChange (EditorTextChange >> dispatch)
-                       settings |> editorOptions |> Options  ]]
+            let model =
+                [ editor [ //Value editors.[currentFileTabId].EditorText
+                           OnChange (EditorTextChange >> dispatch)
+                           settings |> editorOptions |> Options  
+                           EditorDidMount (fun _  -> NewFile |> dispatch )]]
+            //let getmodel = getmodel model
+
+            model
     tabHeaders :: editorViewDiv
 
 // ***********************************************************************************

@@ -131,6 +131,8 @@ type Msg =
     | SelectSettingsTab
     | SaveSettings
     | LoadDemoCode
+    | IncreaseFontSize
+    | DecreaseFontSize
 
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries

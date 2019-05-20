@@ -18,13 +18,13 @@ type Props =
     | Options of obj
     //| OnChange of (obj * obj -> unit)
     | EditorWillMount of (Monaco.IExports -> unit)
-    //| EditorDidMount of (Monaco.Editor.IEditor * Monaco.IExports -> unit)
+    | EditorDidMount of (Monaco.Editor.IEditor * Monaco.IExports -> unit)
     | RequireConfig of obj
     | OnChange of (string -> unit)
     | Value of string
     | Language of string
     | IsReadOnly of bool
-    | EditorDidMount of (unit -> unit)
+    //| EditorDidMount of (unit -> unit)
 
 let editorOptions vs =
     createObj [
