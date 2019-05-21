@@ -112,9 +112,7 @@ let loadDemo (editors : Map<int, Editor>) : ( Map<int, Editor> * int) =
     let newId = Refs.uniqueTabId editors
     let newEditors= Map.add newId newEditor editors
     newEditors, newId
-
-
-
+    
 let showQuitMessage (callBack : bool -> unit) =
     let mess = "You have unsaved changes. Are you sure you want to exit and lose changes?"
     let buttons = [ "Save"; "Exit without saving" ]
@@ -207,17 +205,17 @@ let fileMenu id (dispatch : (Msg -> Unit)) editors =
 
 let editMenu (dispatch : (Msg -> Unit)) =
     makeMenu "Edit" [
-        //makeItem "Undo" (Some "CmdOrCtrl+Z") (fun _ -> EditorUndo |> dispatch )
-        //makeItem "Redo" (Some "CmdOrCtrl+Shift+Z") Files.editorRedo
+        //TODO: makeItem "Undo" (Some "CmdOrCtrl+Z") (fun _ -> EditorUndo |> dispatch )
+        //TODO: makeItem "Redo" (Some "CmdOrCtrl+Shift+Z") Files.editorRedo
         menuSeparator
         makeRoleItem "Cut" (Some "CmdOrCtrl+X") MenuItemRole.Cut
         makeRoleItem "Copy" (Some "CmdOrCtrl+C") MenuItemRole.Copy
         makeRoleItem "Paste" (Some "CmdOrCtrl+V") MenuItemRole.Paste
         menuSeparator
-        makeRoleItem "Select All" (Some "CmdOrCtrl+A") MenuItemRole.Selectall
+        //TODO: makeRoleItem "Select All" (Some "CmdOrCtrl+A") MenuItemRole.Selectall
         //menuSeparator
-        //makeItem "Find" (Some "CmdOrCtrl+F") Files.editorFind
-        //makeItem "Replace" (Some "CmdOrCtrl+H") Files.editorFindReplace
+        //TODO: makeItem "Find" (Some "CmdOrCtrl+F") Files.editorFind
+        //TODO: makeItem "Replace" (Some "CmdOrCtrl+H") Files.editorFindReplace
         menuSeparator
         makeItem "Increase Font Size" (Some "CmdOrCtrl+.") (fun _ -> IncreaseFontSize |> dispatch )
         makeItem "Decrease Font Size" (Some "CmdOrCtrl+,") (fun _ -> DecreaseFontSize |> dispatch )

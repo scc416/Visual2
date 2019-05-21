@@ -199,7 +199,9 @@ let viewButtonClass =
     | true -> ClassName "btn full-width btn-byte btn-byte-active"
 
 /// return the view panel on the right
-let viewPanel model dispatch = 
+let viewPanel (currentRep, currentView, regMap : Map<CommonData.RName, uint32>)
+              (memoryMap : Map<uint32, uint32>, symbolMap, byteView, reverseDirection)
+              dispatch = 
     let registerLi rName = 
         li [ ClassName "list-group-item" ] 
            [ div [ ClassName "btn-group full-width" ] 
@@ -207,7 +209,7 @@ let viewPanel model dispatch =
                             [ button [ ClassName "btn btn-reg" ] 
                                      [  rName |> string |> str ] ]
                    span [ ClassName "btn btn-reg-con selectable-text" ] 
-                        [ model.RegMap.[rName] |> formatter model.CurrentRep |> str ] ] ]
+                        [ regMap.[rName] |> formatter currentRep |> str ] ] ]
     let registerSet =
         [0 .. 15]
         |> List.map (fun x -> 
@@ -216,7 +218,7 @@ let viewPanel model dispatch =
     let regView = ul [ ClassName "list-group" ] registerSet
 
     let memTable = 
-        match Map.isEmpty model.MemoryMap with
+        match Map.isEmpty memoryMap with
         | true -> 
             []
         | false -> 
@@ -227,7 +229,7 @@ let viewPanel model dispatch =
                             [ address |> string |> str ]
                          td [ Class "td-mem" ]
                             [ value |> string |> str ] ] 
-                model.MemoryMap
+                memoryMap
                 |> Map.map (fun key value -> row key value)
                 |> Map.toList
                 |> List.map (fun (_, el) -> el)
@@ -244,12 +246,12 @@ let viewPanel model dispatch =
        ul [ ClassName "list-group" ]
           [ li [ Class "list-group-item" ]
                [ div [ Class "btn-group full-width" ]
-                     [ button [ viewButtonClass model.ByteView
+                     [ button [ viewButtonClass byteView
                                 DOMAttr.OnClick (fun _ -> ToggleByteView |> dispatch)]
-                              [ byteViewButtonString model.ByteView ]
-                       button [ viewButtonClass model.ReverseDirection 
+                              [ byteViewButtonString byteView ]
+                       button [ viewButtonClass reverseDirection 
                                 DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)]
-                              [ reverseDirectionButtonString model.ReverseDirection ] ] ]
+                              [ reverseDirectionButtonString reverseDirection ] ] ]
             li [ Class "list-group" ] memTable
             li [ ]
                [ div [ Style [ TextAlign "center" ] ]
@@ -259,11 +261,11 @@ let viewPanel model dispatch =
             [ table [ ClassName "table-striped" ]
                     []]
     let view =
-        match model.CurrentView with
+        match currentView with
         | Registers -> regView
         | Memory -> memView
         | Symbols -> symbolView
-    div [ ClassName "viewer" ; viewerStyle model.CurrentRep ] 
+    div [ ClassName "viewer" ; viewerStyle currentRep ] 
         [ view ]
 
 let footer (flags : CommonData.Flags) =
@@ -286,28 +288,3 @@ let footer (flags : CommonData.Flags) =
                               footerDiv "C" flags.C
                               footerDiv "V" flags.V ] ] ]
 
-let aboutDialog dispatch = 
-    (showVexAlert2 (sprintf "<h4>VisUAL2 ARM Simulator v%s</h4> " Refs.appVersion +
-                       "(c) 2018, Imperial College <br> Acknowledgements: Salman Arif (VisUAL), HLP 2018 class" +
-                       " (F# reimplementation), with special mention to Thomas Carrotti," +
-                       " Lorenzo Silvestri, and HLP Team 10")) 
-                   (fun _ -> CloseAboutDialog |> dispatch )
-
-/// determine if any dialog box has to be opened
-let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: int)
-              dispatch =
-    match dialogBox with
-    | Some x when x = OpenFileDl ->
-        openFile currentFilePath 
-                 dispatch
-    | Some x when x = SaveAsDl ->
-        saveFileAs currentFilePath 
-                   editors.[tabId]
-                   dispatch
-    | Some x when x = UnsavedFileDl ->
-        closeTabDialog editors.[tabId].FileName 
-                       dispatch
-    | Some x when x = AboutDl ->
-        aboutDialog dispatch
-    | _ -> 
-        ()

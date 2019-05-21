@@ -89,21 +89,6 @@ let saveFileAs filePathSetting (editor : Editor) dispatch : (unit) =
         let fileInfo = result, fileName result
         fileInfo |> Some |> SaveAsFile |> dispatch
 
-let closeTabDialog fileName dispatch= 
-    let fileName =
-        match fileName with
-        | Some x -> x
-        | _ -> "Untitled.s"
-    let dialog =
-        Browser.window.confirm (
-            sprintf "You have unsaved changes, are you sure you want to close %s?"
-                    (fileName))
-    match dialog with
-    | true -> DeleteTab |> dispatch
-    | _ -> ()
-
-
-
 /// top-level function for saving file
 /// open the save dialog when necessary
 let saveFileUpdate (tabId, editors : Map<int, Editor>) =

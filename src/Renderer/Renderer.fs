@@ -23,6 +23,7 @@ open Tooltips2
 open Files2
 open Settings2
 open Editors2
+open Dialog
 
 let init _ =
     { 
@@ -138,17 +139,16 @@ let update (msg : Msg) (m : Model) =
             { m with Editors = newEditors 
                      CurrentFileTabId = newId }
         | IncreaseFontSize ->
-            let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) + 2)}
+            let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) + 2) }
             { m with Settings = newSettings }
         | DecreaseFontSize ->
-            let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) - 2)}
+            let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) - 2) }
             { m with Settings = newSettings }
         | AboutDialog ->
-            match m.DialogBox with
-            | Some _ -> m
-            | None -> { m with DialogBox = Some AboutDl}
+            let newDialog = aboutDialogUpdate m.DialogBox
+            { m with DialogBox = newDialog }
         | CloseAboutDialog ->
-            { m with DialogBox = None}
+            { m with DialogBox = None }
     model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
@@ -193,7 +193,9 @@ let view (m : Model) (dispatch : Msg -> unit) =
                       div [ ClassName "pane dashboard"
                             dashboardStyle m.CurrentRep ]
                           [ viewButtons m.CurrentView dispatch
-                            viewPanel m dispatch
+                            viewPanel (m.CurrentRep, m.CurrentView, m.RegMap) 
+                                      (m.MemoryMap, m.SymbolMap, m.ByteView, m.ReverseDirection)
+                                      dispatch
                             footer m.Flags ] ] ] ]
 
 Program.mkProgram init update view
