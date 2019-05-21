@@ -160,16 +160,16 @@ let showQuitMessage (callBack : bool -> unit) =
 
 /// Check if there is any unsaved info. Display dialog asking for confirmation if there is.
 /// Otherwise exit.
-let ExitIfOK() =
-    let close() = electron.ipcRenderer.send "doClose" |> ignore
-    let callback (result : bool) =
-        match result with
-        | false -> ()
-        | true -> close()
-    let tabL = Tabs.unsavedTabs()
-    if tabL <> [] then
-        showQuitMessage callback
-    else close()
+//let ExitIfOK() =
+    //let close() = electron.ipcRenderer.send "doClose" |> ignore
+    //let callback (result : bool) =
+    //    match result with
+    //    | false -> ()
+    //    | true -> close()
+    //let tabL = Tabs.unsavedTabs()
+    //if tabL <> [] then
+    //    showQuitMessage callback
+    //else close()
 
 (****************************************************************************************************
  *

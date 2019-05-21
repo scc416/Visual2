@@ -68,6 +68,7 @@ type DialogBox =
     | SaveAsDl
     | UnsavedFileDl
     | AboutDl
+    | QuitDl
 
 type Model =
     { 
@@ -138,6 +139,8 @@ type Msg =
     | DecreaseFontSize
     | AboutDialog
     | CloseAboutDialog
+    | AttemptToExit
+    | Exit
 
 
 /// look in the Editors and find the next unique id

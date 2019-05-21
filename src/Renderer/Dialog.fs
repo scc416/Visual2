@@ -28,6 +28,28 @@ let aboutDialog dispatch =
                        " (F# reimplementation), with special mention to Thomas Carrotti," +
                        " Lorenzo Silvestri, and HLP Team 10")) 
                    (fun _ -> CloseAboutDialog |> dispatch )
+                   
+let aboutDialogUpdate =
+    function
+    | Some x -> Some x
+    | Option.None -> Some AboutDl
+
+let showQuitMessage (callBack : bool -> unit) = //TODO: double check if it works
+    let mess = "You have unsaved changes. Are you sure you want to exit and lose changes?"
+    let buttons = [ "Save"; "Exit without saving" ]
+    Refs.showVexConfirm mess callBack
+    
+let close() = electron.ipcRenderer.send "doClose" |> ignore
+
+/// Display dialog asking for confirmation.
+let ExitIfOK dispatch =
+    //let close() = electron.ipcRenderer.send "doClose" |> ignore
+    let callback (result : bool) =
+        match result with
+        | false -> ()
+        | true -> Exit |> dispatch
+    Browser.console.log("opening the dialog")
+    showQuitMessage callback
 
 /// determine if any dialog box has to be opened
 let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: int)
@@ -45,10 +67,7 @@ let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: in
                        dispatch
     | Some x when x = AboutDl ->
         aboutDialog dispatch
+    | Some x when x = QuitDl ->
+        ExitIfOK dispatch
     | _ -> 
         ()
-
-let aboutDialogUpdate =
-    function
-    | Some x -> Some x
-    | Option.None -> Some AboutDl

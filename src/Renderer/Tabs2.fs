@@ -24,11 +24,7 @@ let blankTab =
         FilePath = None
         Saved = true
     }
-
-let callbackExit (result : bool) =
-    match result with
-    | false -> ()
-    | true -> close()
+    
     
 /// top-level function to delete tab
 let deleteTabUpdate (tabId, editors : Map<int, Editor>, settingsTab) =

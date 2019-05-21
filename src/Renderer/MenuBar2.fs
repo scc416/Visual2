@@ -112,25 +112,7 @@ let loadDemo (editors : Map<int, Editor>) : ( Map<int, Editor> * int) =
     let newId = Refs.uniqueTabId editors
     let newEditors= Map.add newId newEditor editors
     newEditors, newId
-    
-let showQuitMessage (callBack : bool -> unit) =
-    let mess = "You have unsaved changes. Are you sure you want to exit and lose changes?"
-    let buttons = [ "Save"; "Exit without saving" ]
-    Refs.showVexConfirm mess callBack
 
-let close() = electron.ipcRenderer.send "doClose" |> ignore
-/// Check if there is any unsaved info. Display dialog asking for confirmation if there is.
-/// Otherwise exit.
-let ExitIfOK (editors : Map<int, Editor>) =
-    //let close() = electron.ipcRenderer.send "doClose" |> ignore
-    let callback (result : bool) =
-        match result with
-        | false -> ()
-        | true -> close()
-    let anyUnsaved = Map.forall (fun _ value -> value.Saved = true) editors 
-    match anyUnsaved with
-    | false -> showQuitMessage callback
-    | true -> close()
 
 (****************************************************************************************************
  *
@@ -198,7 +180,7 @@ let fileMenu id (dispatch : (Msg -> Unit)) editors =
             menuSeparator
             makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" (fun _ -> Refs.AttemptToDeleteTab id |> dispatch ))
             menuSeparator
-            makeItem "Quit" (Some "CmdOrCtrl+Q") (interlockAction "quit" (fun _ -> ExitIfOK editors))
+            makeItem "Quit" (Some "CmdOrCtrl+Q") (interlockAction "quit" (fun _ -> AttemptToExit |> dispatch ))
         ]
 
 

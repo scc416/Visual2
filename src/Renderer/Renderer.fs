@@ -149,6 +149,17 @@ let update (msg : Msg) (m : Model) =
             { m with DialogBox = newDialog }
         | CloseAboutDialog ->
             { m with DialogBox = None }
+        | AttemptToExit ->
+            let anyUnsaved = Map.forall (fun _ value -> value.Saved = true) m.Editors 
+            match anyUnsaved with
+            | true -> 
+                cmd <- Cmd.ofMsg Exit
+                m
+            | _ -> 
+                { m with DialogBox = Some QuitDl }
+        | Exit ->
+            close()
+            m
     model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
