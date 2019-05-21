@@ -66,6 +66,7 @@ type VSettings = {
 type DialogBox =
     | OpenFileDl
     | SaveAsDl
+    | UnsavedFileDl
 
 type Model =
     { 
@@ -121,7 +122,8 @@ type Msg =
     | ToggleReverseView
     | EditorTextChange of string
     | NewFile
-    | DeleteTab of int
+    | AttemptToDeleteTab of int
+    | DeleteTab
     | SelectFileTab of int
     | OpenFile of Editor list
     | OpenFileDialog
@@ -133,6 +135,20 @@ type Msg =
     | LoadDemoCode
     | IncreaseFontSize
     | DecreaseFontSize
+
+
+/// look in the Editors and find the next unique id
+let uniqueTabId (editor : Map<int, Editor>) =
+    match Map.isEmpty editor with
+    | true -> 
+        0
+    | false -> 
+        let lastid, _ = 
+            editor
+            |> Map.toList
+            |> List.rev
+            |> List.head
+        lastid + 1
 
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries

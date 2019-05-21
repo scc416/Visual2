@@ -10,8 +10,9 @@ open Refs
 open Settings
 open Tabs
 open EEExtensions
-open Files2
-open Tabs2
+//open Files2
+//open Tabs2
+
 
 
 let display runMode =
@@ -108,7 +109,7 @@ let loadDemo (editors : Map<int, Editor>) : ( Map<int, Editor> * int) =
           FilePath = Option.None 
           Saved = true
           EditorText = txt }
-    let newId = uniqueTabId editors
+    let newId = Refs.uniqueTabId editors
     let newEditors= Map.add newId newEditor editors
     newEditors, newId
 
@@ -119,19 +120,19 @@ let showQuitMessage (callBack : bool -> unit) =
     let buttons = [ "Save"; "Exit without saving" ]
     Refs.showVexConfirm mess callBack
 
-
+let close() = electron.ipcRenderer.send "doClose" |> ignore
 /// Check if there is any unsaved info. Display dialog asking for confirmation if there is.
 /// Otherwise exit.
-let ExitIfOK() =
-    let close() = electron.ipcRenderer.send "doClose" |> ignore
+let ExitIfOK (editors : Map<int, Editor>) =
+    //let close() = electron.ipcRenderer.send "doClose" |> ignore
     let callback (result : bool) =
         match result with
         | false -> ()
         | true -> close()
-    let tabL = Tabs.unsavedTabs()
-    if tabL <> [] then
-        showQuitMessage callback
-    else close()
+    let anyUnsaved = Map.forall (fun _ value -> value.Saved = true) editors 
+    match anyUnsaved with
+    | false -> showQuitMessage callback
+    | true -> close()
 
 (****************************************************************************************************
  *
@@ -189,7 +190,7 @@ let makeMenu (name : string) (table : MenuItemOptions list) =
  *                                         MENUS
  *
  ****************************************************************************************************)
-let fileMenu id (dispatch : (Msg -> Unit)) =
+let fileMenu id (dispatch : (Msg -> Unit)) editors =
     makeMenu "File" [
             makeItem "New" (Some "CmdOrCtrl+N") (interlockAction "make new file tab" (fun _ -> Refs.NewFile |> dispatch))
             menuSeparator
@@ -197,9 +198,9 @@ let fileMenu id (dispatch : (Msg -> Unit)) =
             makeItem "Save As" (Some "CmdOrCtrl+Shift+S") (interlockAction "save file" (fun _ -> Refs.SaveAsFileDialog |> dispatch ))
             makeItem "Open" (Some "CmdOrCtrl+O") (interlockAction "open file" (fun _ -> Refs.OpenFileDialog |> dispatch ))
             menuSeparator
-            makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" (fun _ -> Refs.DeleteTab id |> dispatch ))
+            makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" (fun _ -> Refs.AttemptToDeleteTab id |> dispatch ))
             menuSeparator
-            makeItem "Quit" (Some "CmdOrCtrl+Q") ExitIfOK
+            makeItem "Quit" (Some "CmdOrCtrl+Q") (interlockAction "quit" (fun _ -> ExitIfOK editors))
         ]
 
 
@@ -294,10 +295,10 @@ let helpMenu dispatch =
 
 
 /// Make all app menus
-let mainMenu id (dispatch : (Msg -> Unit))=
+let mainMenu id (dispatch : (Msg -> Unit)) editors =
     let template =
         ResizeArray<MenuItemOptions> [
-            fileMenu id dispatch
+            fileMenu id dispatch editors
             editMenu dispatch
             viewMenu()
             helpMenu dispatch

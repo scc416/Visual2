@@ -6,6 +6,7 @@ open Fable.Import
 open Fable.Import.Electron
 open Refs
 open Tabs2
+open MenuBar2
 
 /// merge 2 maps into 1
 /// if key repeated, the ones in the old map are kept
@@ -98,6 +99,18 @@ let dialogBox m dispatch =
         saveFileAs m.Settings.CurrentFilePath 
                    m.Editors.[m.CurrentFileTabId] 
                    dispatch
+    | Some x when x = UnsavedFileDl ->
+        let fileName =
+            match m.Editors.[m.CurrentFileTabId].FileName with
+            | Some x -> x
+            | _ -> "Untitled.s"
+        let bo =
+            Browser.window.confirm (
+                sprintf "You have unsaved changes, are you sure you want to close %s?"
+                        (fileName))
+        match bo with
+        | true -> DeleteTab |> dispatch
+        | _ -> ()
     | _ -> 
         ()
 

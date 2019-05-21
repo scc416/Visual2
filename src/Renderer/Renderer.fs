@@ -53,6 +53,7 @@ let init _ =
     }, Cmd.none
 
 let update (msg : Msg) (m : Model) =
+    let mutable cmd = Cmd.none
     let model = 
         match msg with
         | ChangeView view -> 
@@ -75,13 +76,27 @@ let update (msg : Msg) (m : Model) =
         | SelectFileTab id -> 
             let newTabId = selectFileTabUpdate id m.Editors
             { m with CurrentFileTabId = newTabId }
-        | DeleteTab id -> 
+        | AttemptToDeleteTab id ->
+            match id = m.CurrentFileTabId with
+            | true -> 
+                match m.Editors.[m.CurrentFileTabId].Saved with
+                | true -> 
+                    cmd <- Cmd.ofMsg DeleteTab
+                    m
+                | _ -> 
+                    match m.DialogBox with
+                    | Some _ ->
+                        m
+                    | None ->
+                        { m with DialogBox = Some UnsavedFileDl }
+            | _ -> m
+        | DeleteTab -> 
             let newTabId, newEditors, newSettingsTab = 
                 deleteTabUpdate (m.CurrentFileTabId, m.Editors, m.SettingsTab)
-                                id 
             { m with CurrentFileTabId = newTabId
                      Editors = newEditors 
-                     SettingsTab = newSettingsTab }
+                     SettingsTab = newSettingsTab 
+                     DialogBox = None }
         | OpenFile editors -> 
             let newEditors, newFilePath, newTabId = 
                 openFileUpdate (m.Editors, m.Settings.CurrentFilePath, m.CurrentFileTabId)
@@ -136,10 +151,10 @@ let update (msg : Msg) (m : Model) =
         | DecreaseFontSize ->
             let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) - 2)}
             { m with Settings = newSettings }
-    model, Cmd.none
+    model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
-    mainMenu m.CurrentFileTabId dispatch
+    mainMenu m.CurrentFileTabId dispatch m.Editors
     dialogBox m dispatch
     Browser.console.log(string m.Editors)
     Browser.console.log(string m.CurrentFileTabId)

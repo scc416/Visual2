@@ -114,7 +114,7 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
               DOMAttr.OnClick (fun _ -> SelectFileTab id |> dispatch)] 
             [ span [ ClassName "invisible" ] []
               span [ ClassName "icon icon-cancel icon-close-tab" 
-                     DOMAttr.OnClick (fun _ -> DeleteTab id |> dispatch)] []
+                     DOMAttr.OnClick (fun _ -> AttemptToDeleteTab id |> dispatch)] []
               span [ tabNameClass id settingsTabId
                      tabHeaderTextStyle editor.Saved ] 
                    [ editor.Saved |> fileNameFormat fileName |> str ]]
