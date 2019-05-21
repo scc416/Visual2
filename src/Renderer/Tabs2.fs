@@ -2,6 +2,11 @@
 open EEExtensions
 open Refs
 open MenuBar2
+open Elmish
+open Elmish.React
+open Elmish.HMR
+open Elmish.Debug
+open Elmish.Browser.Navigation
 
 /// return the id of the last editor in the map of editors
 let selectLastTabId editors =
@@ -20,31 +25,11 @@ let blankTab =
         Saved = true
     }
 
-let attemptoDeleteTabUpdate (tabId, editors : Map<int, Editor>, settingsTab)
-                    id =
-    match id = tabId with
-    | true -> 
-        let callback (result : bool) =
-            match result with
-            | false -> ()
-            | true -> close()
-        match editors.[id].Saved with// only remove the tab if it is the current tab
-        | true -> showQuitMessage callback
-        | false -> ()
-        let newEditors = Map.remove id editors
-        let newTabId = 
-            match Map.isEmpty newEditors with
-            | true -> -1
-            | false -> selectLastTabId newEditors
-        let newSettingsTab =
-            match settingsTab with
-            | Some x when x = id -> None
-            | x -> x
-        newTabId, newEditors, newSettingsTab
-    | false -> 
-        id, editors, settingsTab
-
-
+let callbackExit (result : bool) =
+    match result with
+    | false -> ()
+    | true -> close()
+    
 /// top-level function to delete tab
 let deleteTabUpdate (tabId, editors : Map<int, Editor>, settingsTab) =
     let newEditors = Map.remove tabId editors
@@ -72,3 +57,16 @@ let newFileUpdate editors =
     let newTabId = uniqueTabId editors
     let newEditors = Map.add newTabId blankTab editors
     newTabId, newEditors
+
+let attemptToDeleteTabUpdate (tabId, saved, dialogBox)
+                             id =
+    let mutable dialog = dialogBox
+    let mutable cmd = Cmd.none
+    match id = tabId, saved, dialogBox with
+    | true, true, _ -> 
+        cmd <- Cmd.ofMsg DeleteTab
+    | true, false, None -> 
+        dialog <- Some UnsavedFileDl
+    | _ -> 
+        ()
+    dialog, cmd

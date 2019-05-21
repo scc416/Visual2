@@ -285,12 +285,7 @@ let helpMenu dispatch =
                 makeCondItem (debugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" Integration.runTestbench)
                 makeCondItem (debugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" Tests.runAllEmulatorTests)
                 menuSeparator
-                makeItem "About" Core.option.None (fun () ->
-                    printfn "Directory is:%s" (Stats.dirOfSettings())
-                    showVexAlert (sprintf "<h4>VisUAL2 ARM Simulator v%s</h4> " Refs.appVersion +
-                                "(c) 2018, Imperial College <br> Acknowledgements: Salman Arif (VisUAL), HLP 2018 class" +
-                                " (F# reimplementation), with special mention to Thomas Carrotti," +
-                                " Lorenzo Silvestri, and HLP Team 10"))
+                makeItem "About" Core.option.None (fun _ -> AboutDialog |> dispatch)
             ])
 
 

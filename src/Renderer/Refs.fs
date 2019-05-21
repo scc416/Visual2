@@ -67,6 +67,7 @@ type DialogBox =
     | OpenFileDl
     | SaveAsDl
     | UnsavedFileDl
+    | AboutDl
 
 type Model =
     { 
@@ -135,6 +136,8 @@ type Msg =
     | LoadDemoCode
     | IncreaseFontSize
     | DecreaseFontSize
+    | AboutDialog
+    | CloseAboutDialog
 
 
 /// look in the Editors and find the next unique id
@@ -186,6 +189,11 @@ let showVexConfirm (htmlMessage : string) (callBack : bool -> unit) =
 
 let showVexAlert (htmlMessage : string) =
     vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage ])
+    ()
+
+let showVexAlert2 (htmlMessage : string) (callBack : bool -> unit) =
+    vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage 
+                                  "callback" ==> callBack ])
     ()
 
 let showVexPrompt (placeHolder : string) (callBack : string -> unit) (htmlMessage : string) =

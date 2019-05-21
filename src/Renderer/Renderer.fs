@@ -77,19 +77,11 @@ let update (msg : Msg) (m : Model) =
             let newTabId = selectFileTabUpdate id m.Editors
             { m with CurrentFileTabId = newTabId }
         | AttemptToDeleteTab id ->
-            match id = m.CurrentFileTabId with
-            | true -> 
-                match m.Editors.[m.CurrentFileTabId].Saved with
-                | true -> 
-                    cmd <- Cmd.ofMsg DeleteTab
-                    m
-                | _ -> 
-                    match m.DialogBox with
-                    | Some _ ->
-                        m
-                    | None ->
-                        { m with DialogBox = Some UnsavedFileDl }
-            | _ -> m
+            let newDialog, newCmd =
+                attemptToDeleteTabUpdate (m.CurrentFileTabId, m.Editors.[m.CurrentFileTabId].Saved, m.DialogBox) 
+                                         id
+            cmd <- newCmd
+            { m with DialogBox = newDialog }
         | DeleteTab -> 
             let newTabId, newEditors, newSettingsTab = 
                 deleteTabUpdate (m.CurrentFileTabId, m.Editors, m.SettingsTab)
@@ -151,11 +143,18 @@ let update (msg : Msg) (m : Model) =
         | DecreaseFontSize ->
             let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) - 2)}
             { m with Settings = newSettings }
+        | AboutDialog ->
+            match m.DialogBox with
+            | Some _ -> m
+            | None -> { m with DialogBox = Some AboutDl}
+        | CloseAboutDialog ->
+            { m with DialogBox = None}
     model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
     mainMenu m.CurrentFileTabId dispatch m.Editors
-    dialogBox m dispatch
+    dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId)
+              dispatch
     Browser.console.log(string m.Editors)
     Browser.console.log(string m.CurrentFileTabId)
     div [ ClassName "window" ] 

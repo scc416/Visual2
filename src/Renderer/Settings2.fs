@@ -141,14 +141,9 @@ let createSettingsTab editors =
 /// create a setting tab when necessary
 let selectSettingsTabUpdate (settingsTab, editors) =
     match settingsTab with
-    | None -> 
-        // no setting tab, make one
-        let newEditors, newTabId = 
-            createSettingsTab editors
-        newEditors, newTabId
+    | None -> createSettingsTab editors
     // setting tab already exists
-    | Some x -> 
-        editors, x
+    | Some x -> editors, x
 
 /// top-level function to save settings
 let saveSettingsUpdate (settings, editors, settingsTab) = 

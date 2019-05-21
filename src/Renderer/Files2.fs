@@ -89,50 +89,42 @@ let saveFileAs filePathSetting (editor : Editor) dispatch : (unit) =
         let fileInfo = result, fileName result
         fileInfo |> Some |> SaveAsFile |> dispatch
 
-/// determine if any dialog box has to be opened
-let dialogBox m dispatch =
-    match m.DialogBox with
-    | Some x when x = OpenFileDl ->
-        openFile m.Settings.CurrentFilePath 
-                 dispatch
-    | Some x when x = SaveAsDl ->
-        saveFileAs m.Settings.CurrentFilePath 
-                   m.Editors.[m.CurrentFileTabId] 
-                   dispatch
-    | Some x when x = UnsavedFileDl ->
-        let fileName =
-            match m.Editors.[m.CurrentFileTabId].FileName with
-            | Some x -> x
-            | _ -> "Untitled.s"
-        let bo =
-            Browser.window.confirm (
-                sprintf "You have unsaved changes, are you sure you want to close %s?"
-                        (fileName))
-        match bo with
-        | true -> DeleteTab |> dispatch
-        | _ -> ()
-    | _ -> 
-        ()
+let closeTabDialog fileName dispatch= 
+    let fileName =
+        match fileName with
+        | Some x -> x
+        | _ -> "Untitled.s"
+    let dialog =
+        Browser.window.confirm (
+            sprintf "You have unsaved changes, are you sure you want to close %s?"
+                    (fileName))
+    match dialog with
+    | true -> DeleteTab |> dispatch
+    | _ -> ()
+
+
 
 /// top-level function for saving file
 /// open the save dialog when necessary
 let saveFileUpdate (tabId, editors : Map<int, Editor>) =
+    let mutable newDialog = Option.None
+    let mutable newEditors = editors
     match tabId with
     | -1 -> 
-        Option.None, editors
+        ()
     | id -> 
         let filePath = editors.[id].FilePath
         match filePath with
         | Option.None -> 
-            Some SaveAsDl, editors /// open the dialog
+            newDialog <- Some SaveAsDl /// open the dialog
         | Some fPath ->
             let currentEditor = editors.[id]
             writeToFile currentEditor.EditorText fPath
-            let newEditors = 
+            newEditors <- 
                 Map.add id
                         { currentEditor with Saved = true }
                         editors
-            Option.None, newEditors
+    newDialog, newEditors
 
 /// top-level function for save file as
 /// open the save file dialog when necessary

@@ -7,6 +7,7 @@ open Fable.Import.React
 open Tooltips2
 open Editors2
 open Settings2
+open Files2
 
 let dashboardStyle rep =
     let width = 
@@ -284,3 +285,29 @@ let footer (flags : CommonData.Flags) =
                               footerDiv "Z" flags.Z
                               footerDiv "C" flags.C
                               footerDiv "V" flags.V ] ] ]
+
+let aboutDialog dispatch = 
+    (showVexAlert2 (sprintf "<h4>VisUAL2 ARM Simulator v%s</h4> " Refs.appVersion +
+                       "(c) 2018, Imperial College <br> Acknowledgements: Salman Arif (VisUAL), HLP 2018 class" +
+                       " (F# reimplementation), with special mention to Thomas Carrotti," +
+                       " Lorenzo Silvestri, and HLP Team 10")) 
+                   (fun _ -> CloseAboutDialog |> dispatch )
+
+/// determine if any dialog box has to be opened
+let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: int)
+              dispatch =
+    match dialogBox with
+    | Some x when x = OpenFileDl ->
+        openFile currentFilePath 
+                 dispatch
+    | Some x when x = SaveAsDl ->
+        saveFileAs currentFilePath 
+                   editors.[tabId]
+                   dispatch
+    | Some x when x = UnsavedFileDl ->
+        closeTabDialog editors.[tabId].FileName 
+                       dispatch
+    | Some x when x = AboutDl ->
+        aboutDialog dispatch
+    | _ -> 
+        ()
