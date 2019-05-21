@@ -8,6 +8,7 @@ open Fable.Core.JsInterop
 open Fable.Import
 open Fable.Import.Electron
 open Files2
+open Elmish
 
 let closeTabDialog fileName dispatch = 
     let fileName =
@@ -27,7 +28,7 @@ let aboutDialog dispatch =
                        "(c) 2018, Imperial College <br> Acknowledgements: Salman Arif (VisUAL), HLP 2018 class" +
                        " (F# reimplementation), with special mention to Thomas Carrotti," +
                        " Lorenzo Silvestri, and HLP Team 10")) 
-                   (fun _ -> CloseAboutDialog |> dispatch )
+                   (fun _ -> CloseDialog |> dispatch )
                    
 let aboutDialogUpdate =
     function
@@ -46,7 +47,7 @@ let ExitIfOK dispatch =
     //let close() = electron.ipcRenderer.send "doClose" |> ignore
     let callback (result : bool) =
         match result with
-        | false -> ()
+        | false -> CloseDialog |> dispatch
         | true -> Exit |> dispatch
     Browser.console.log("opening the dialog")
     showQuitMessage callback
@@ -71,3 +72,18 @@ let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: in
         ExitIfOK dispatch
     | _ -> 
         ()
+
+let attemptToExitUpdate editors (dialogBox: DialogBox option) =
+    let mutable newDialogBox = dialogBox
+    let mutable newCmd = Cmd.none
+    match dialogBox with
+    | Option.None -> 
+        let anyUnsaved = 
+            editors 
+            |> Map.forall (fun _ value -> value.Saved = true) 
+        match anyUnsaved with
+        | true -> newCmd <- Cmd.ofMsg Exit
+        | _ -> newDialogBox <- Some QuitDl
+    | _ -> 
+        ()
+    newDialogBox, newCmd

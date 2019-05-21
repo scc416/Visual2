@@ -138,7 +138,7 @@ type Msg =
     | IncreaseFontSize
     | DecreaseFontSize
     | AboutDialog
-    | CloseAboutDialog
+    | CloseDialog
     | AttemptToExit
     | Exit
 
