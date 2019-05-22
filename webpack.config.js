@@ -1,6 +1,6 @@
 var path = require("path");
 var webpack = require("webpack");
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+var MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 function resolve(filePath) {
   return path.join(__dirname, filePath)
@@ -8,14 +8,6 @@ function resolve(filePath) {
 
 var babelOptions = {
     presets: ["@babel/preset-react"],
-//    presets: [
-//        ["@babel/preset-env", {
-//            "targets": {
-//                "browsers": ["last 2 versions"]
-//            },
-//        "modules": false
-//        }]
-//    ],
     plugins: ['@babel/plugin-proposal-class-properties']
 };
 
@@ -68,7 +60,7 @@ var mainConfig = Object.assign({
   output: {
     path: resolve("."),
     filename: "main.js"
-  }
+  },
 }, basicConfig);
 
 var rendererConfig = Object.assign({
@@ -85,7 +77,10 @@ var rendererConfig = Object.assign({
         from: 'node_modules/tippy.js/dist/tippy.all.min.js',
         to: 'app/js/tippy.all.min.js',
       }
-    ])
+    ]),
+            new MiniCssExtractPlugin({
+                                     filename: 'style.[hash].css'
+                                     })
   ],
   target: "electron-renderer",
   devtool: "source-map",
