@@ -65,15 +65,14 @@ let update (msg : Msg) (m : Model) =
             { m with ByteView = not m.ByteView }
         | ToggleReverseView -> 
             { m with ReverseDirection = not m.ReverseDirection }
-        | EditorTextChange str -> 
-            let newEditors = 
-                editorTextChangeUpdate (m.CurrentFileTabId, m.Editors) 
-                                       str    
-            { m with Editors = newEditors }
         | NewFile -> 
             let newTabId, newEditors = newFileUpdate m.Editors
             { m with CurrentFileTabId = newTabId
                      Editors = newEditors }
+        | EditorTextChange ->
+            let newEditor = { m.Editors.[m.CurrentFileTabId] with Saved = false }
+            let newEditors = Map.add m.CurrentFileTabId newEditor m.Editors
+            { m with Editors = newEditors }
         | SelectFileTab id -> 
             let newTabId = selectFileTabUpdate id m.Editors
             { m with CurrentFileTabId = newTabId }
@@ -84,6 +83,7 @@ let update (msg : Msg) (m : Model) =
             cmd <- newCmd
             { m with DialogBox = newDialog }
         | DeleteTab -> 
+            m.Editors.[m.CurrentFileTabId].IEditor.Value?dispose () |> ignore
             let newTabId, newEditors, newSettingsTab = 
                 deleteTabUpdate (m.CurrentFileTabId, m.Editors, m.SettingsTab)
             { m with CurrentFileTabId = newTabId
@@ -156,6 +156,27 @@ let update (msg : Msg) (m : Model) =
         | Exit ->
             close()
             { m with DialogBox = None }
+        | UpdateIEditor (x, y) ->
+            let newEditors = Map.add y { m.Editors.[y] with IEditor = Some x } m.Editors
+            { m with Editors = newEditors }
+        | FindEditor ->
+            let action = m.Editors.[m.CurrentFileTabId].IEditor.Value?getAction ("actions.find")
+            action?run ()
+            m
+        | FindAndReplaceEditor ->
+            let action = m.Editors.[m.CurrentFileTabId].IEditor.Value?getAction ("editor.action.startFindReplaceAction")
+            action?run ()
+            m
+        | UndoEditor ->
+            m.Editors.[m.CurrentFileTabId].IEditor.Value?trigger ("Update.fs", "undo") |> ignore
+            m
+        | SelectAllEditor ->
+            m.Editors.[m.CurrentFileTabId].IEditor.Value?trigger ("Update.fs", "selectAll") |> ignore
+            m
+        | RedoEditor ->
+            m.Editors.[m.CurrentFileTabId].IEditor.Value?trigger ("Update.fs", "redo") |> ignore
+            m
+        
     model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =

@@ -39,10 +39,11 @@ let openLstOfFiles (fLst : string list) : Editor List =
         Node.Exports.fs.readFileSync (path, "utf8")
     fLst
     |> List.map (fun x -> 
-        { EditorText = readFile x
+        { DefaultValue = readFile x
           FilePath = Some x
           FileName = x |> fileName |> Some
-          Saved = true })
+          Saved = true
+          IEditor = Option.None })
 
 /// open file dialog
 let openFile currentFilePath (dispatch : Msg -> Unit) =
@@ -85,7 +86,7 @@ let saveFileAs filePathSetting (editor : Editor) dispatch : (unit) =
     | true -> 
         SaveAsFile Option.None |> dispatch
     | false -> 
-        writeToFile editor.EditorText result
+        writeToFile (editor.IEditor?getValue ()) result
         let fileInfo = result, fileName result
         fileInfo |> Some |> SaveAsFile |> dispatch
 
@@ -104,7 +105,7 @@ let saveFileUpdate (tabId, editors : Map<int, Editor>) =
             newDialog <- Some SaveAsDl /// open the dialog
         | Some fPath ->
             let currentEditor = editors.[id]
-            writeToFile currentEditor.EditorText fPath
+            writeToFile (currentEditor.IEditor?getValue ()) fPath
             newEditors <- 
                 Map.add id
                         { currentEditor with Saved = true }

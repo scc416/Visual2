@@ -108,7 +108,8 @@ let loadDemo (editors : Map<int, Editor>) : ( Map<int, Editor> * int) =
         { FileName = Option.None
           FilePath = Option.None 
           Saved = true
-          EditorText = txt }
+          DefaultValue = txt 
+          IEditor = Option.None }
     let newId = Refs.uniqueTabId editors
     let newEditors= Map.add newId newEditor editors
     newEditors, newId
@@ -187,17 +188,17 @@ let fileMenu id (dispatch : (Msg -> Unit)) editors =
 
 let editMenu (dispatch : (Msg -> Unit)) =
     makeMenu "Edit" [
-        //TODO: makeItem "Undo" (Some "CmdOrCtrl+Z") (fun _ -> EditorUndo |> dispatch )
-        //TODO: makeItem "Redo" (Some "CmdOrCtrl+Shift+Z") Files.editorRedo
+        makeItem "Undo" (Some "CmdOrCtrl+Z") (fun _ -> UndoEditor |> dispatch )
+        makeItem "Redo" (Some "CmdOrCtrl+Shift+Z") (fun _ -> RedoEditor |> dispatch )
         menuSeparator
         makeRoleItem "Cut" (Some "CmdOrCtrl+X") MenuItemRole.Cut
         makeRoleItem "Copy" (Some "CmdOrCtrl+C") MenuItemRole.Copy
         makeRoleItem "Paste" (Some "CmdOrCtrl+V") MenuItemRole.Paste
         menuSeparator
-        //TODO: makeRoleItem "Select All" (Some "CmdOrCtrl+A") MenuItemRole.Selectall
-        //menuSeparator
-        //TODO: makeItem "Find" (Some "CmdOrCtrl+F") Files.editorFind
-        //TODO: makeItem "Replace" (Some "CmdOrCtrl+H") Files.editorFindReplace
+        makeItem "Select All" (Some "CmdOrCtrl+A") (fun _ -> SelectAllEditor |> dispatch )
+        menuSeparator
+        makeItem "Find" (Some "CmdOrCtrl+F") (fun _ -> FindEditor |> dispatch)
+        makeItem "Replace" (Some "CmdOrCtrl+H") (fun _ -> FindAndReplaceEditor |> dispatch)
         menuSeparator
         makeItem "Increase Font Size" (Some "CmdOrCtrl+.") (fun _ -> IncreaseFontSize |> dispatch )
         makeItem "Decrease Font Size" (Some "CmdOrCtrl+,") (fun _ -> DecreaseFontSize |> dispatch )

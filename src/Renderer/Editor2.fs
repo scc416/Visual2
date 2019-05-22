@@ -21,7 +21,7 @@ type Props =
     | Options of obj
     //| OnChange of (obj * obj -> unit)
     | EditorWillMount of (Monaco.IExports -> unit)
-    | EditorDidMount of (Monaco.Editor.IEditor * Monaco.IExports -> unit)
+    | EditorDidMount of (Monaco.Editor.IEditor -> unit)
     | RequireConfig of obj
     | OnChange of (string -> unit)
     | Value of string
@@ -68,11 +68,4 @@ let inline editor (props: Props list) : React.ReactElement =
 
 //let inline editor (props: EditorProps list) : React.ReactElement =
     //ofImport "default" "../../app/js/editor.js" (keyValueList CaseRules.LowerFirst props) []
-
-/// top-level function to update editor when text inside changed
-let editorTextChangeUpdate (currentFileTabId : int, editors : Map<int, Editor>)
-                           (str : string) =
-    let newEditor = 
-        { editors.[currentFileTabId] with EditorText = str
-                                          Saved = false }
-    Map.add currentFileTabId newEditor editors 
+    

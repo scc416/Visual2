@@ -94,13 +94,14 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
         | x when x = currentFileTabId -> ClassName "editor" 
         | _ -> ClassName "editor invisible"
 
-    let editor txt = 
+    let editor txt id = 
         editor [ //Value editors.[currentFileTabId].EditorText
-                   OnChange (EditorTextChange >> dispatch)
+                   OnChange (fun _ -> EditorTextChange |> dispatch)
                    settings |> editorOptions |> Options 
-                   DefaultValue txt ]
+                   DefaultValue txt 
+                   EditorDidMount (fun x -> UpdateIEditor (x, id) |> dispatch) ]
     let editorDiv id =
-        div [ editorClass id ; id |> tabNameIdFormatter |> Key ] [ editor editors.[id].EditorText ]
+        div [ editorClass id ; id |> tabNameIdFormatter |> Key ] [ editor editors.[id].DefaultValue id ]
 
     /// return a tab header
     let tabHeaderDiv (id : int) (editor : Editor) : ReactElement =

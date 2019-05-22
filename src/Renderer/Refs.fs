@@ -16,6 +16,7 @@ open Fable.Import.Browser
 open Microsoft.FSharp.Collections
 open Node.Exports
 open EEExtensions
+open Monaco
 
 
 // **********************************************************************************
@@ -32,10 +33,11 @@ let appVersion = "1.06.9"
 
 type Editor = 
     { 
-        EditorText : string
+        DefaultValue : string
         FileName : string Option
         FilePath : string Option
         Saved : bool
+        IEditor : Monaco.Editor.IEditor option
     }
 
 /// Bases to display data in for all Views
@@ -122,7 +124,6 @@ type Msg =
     | ChangeRep of Representations
     | ToggleByteView
     | ToggleReverseView
-    | EditorTextChange of string
     | NewFile
     | AttemptToDeleteTab of int
     | DeleteTab
@@ -141,6 +142,13 @@ type Msg =
     | CloseDialog
     | AttemptToExit
     | Exit
+    | UpdateIEditor of Monaco.Editor.IEditor * int
+    | FindEditor
+    | FindAndReplaceEditor
+    | UndoEditor
+    | SelectAllEditor
+    | RedoEditor
+    | EditorTextChange
 
 
 /// look in the Editors and find the next unique id

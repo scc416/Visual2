@@ -19,10 +19,11 @@ let selectLastTabId editors =
 /// Editor value of a  blank tab
 let blankTab =
     {
-        EditorText = ""
+        DefaultValue = ""
         FileName = None
         FilePath = None
         Saved = true
+        IEditor = None
     }
     
     
