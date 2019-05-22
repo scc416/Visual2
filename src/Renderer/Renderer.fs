@@ -160,21 +160,21 @@ let update (msg : Msg) (m : Model) =
             let newEditors = Map.add y { m.Editors.[y] with IEditor = Some x } m.Editors
             { m with Editors = newEditors }
         | FindEditor ->
-            let action = m.Editors.[m.CurrentFileTabId].IEditor.Value?getAction ("actions.find")
+            let action = m.Editors.[m.CurrentFileTabId].IEditor?getAction ("actions.find")
             action?run ()
             m
         | FindAndReplaceEditor ->
-            let action = m.Editors.[m.CurrentFileTabId].IEditor.Value?getAction ("editor.action.startFindReplaceAction")
+            let action = m.Editors.[m.CurrentFileTabId].IEditor?getAction ("editor.action.startFindReplaceAction")
             action?run ()
             m
         | UndoEditor ->
-            m.Editors.[m.CurrentFileTabId].IEditor.Value?trigger ("Update.fs", "undo") |> ignore
+            m.Editors.[m.CurrentFileTabId].IEditor?trigger ("Update.fs", "undo") |> ignore
             m
         | SelectAllEditor ->
-            m.Editors.[m.CurrentFileTabId].IEditor.Value?trigger ("Update.fs", "selectAll") |> ignore
+            m.Editors.[m.CurrentFileTabId].IEditor?trigger ("Update.fs", "selectAll") |> ignore
             m
         | RedoEditor ->
-            m.Editors.[m.CurrentFileTabId].IEditor.Value?trigger ("Update.fs", "redo") |> ignore
+            m.Editors.[m.CurrentFileTabId].IEditor?trigger ("Update.fs", "redo") |> ignore
             m
         
     model, cmd
