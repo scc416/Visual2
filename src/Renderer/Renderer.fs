@@ -83,7 +83,7 @@ let update (msg : Msg) (m : Model) =
             cmd <- newCmd
             { m with DialogBox = newDialog }
         | DeleteTab -> 
-            m.Editors.[m.CurrentFileTabId].IEditor.Value?dispose () |> ignore
+
             let newTabId, newEditors, newSettingsTab = 
                 deleteTabUpdate (m.CurrentFileTabId, m.Editors, m.SettingsTab)
             { m with CurrentFileTabId = newTabId

@@ -51,9 +51,12 @@ let getFormSettings (settings : VSettings) =
     newSettings
 
 /// React description for the settings menu
-let settingsMenu dispatch (settings : VSettings): ReactElement list =
+let settingsMenu dispatch (settings : VSettings) saved: ReactElement list =
     let onChange =
-        OnChange (fun x -> EditorTextChange |> dispatch)
+        OnChange (fun x -> 
+            match saved with
+            | true -> EditorTextChange |> dispatch
+            | false -> ())
     [ form [ Class "settings-menu editor" ]
            [ div [ Class "float-left" ]
                  [ h4 []

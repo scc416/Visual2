@@ -96,7 +96,10 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
 
     let editor txt id = 
         editor [ //Value editors.[currentFileTabId].EditorText
-                   OnChange (fun _ -> EditorTextChange |> dispatch)
+                   OnChange (fun _ -> 
+                       match editors.[id].Saved with
+                       | true -> EditorTextChange |> dispatch
+                       | false -> ())
                    settings |> editorOptions |> Options 
                    DefaultValue txt 
                    EditorDidMount (fun x -> UpdateIEditor (x, id) |> dispatch) ]
@@ -146,7 +149,7 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
         | -1, _ ->
             []
         | _, Some x when x = currentFileTabId -> 
-            settingsMenu dispatch settings
+            settingsMenu dispatch settings editors.[currentFileTabId].Saved
         | _ -> 
             editors
             |> Map.toList

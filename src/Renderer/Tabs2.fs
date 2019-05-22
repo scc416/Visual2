@@ -3,10 +3,7 @@ open EEExtensions
 open Refs
 open MenuBar2
 open Elmish
-open Elmish.React
-open Elmish.HMR
-open Elmish.Debug
-open Elmish.Browser.Navigation
+open Fable.Core.JsInterop
 
 /// return the id of the last editor in the map of editors
 let selectLastTabId editors =
@@ -37,7 +34,9 @@ let deleteTabUpdate (tabId, editors : Map<int, Editor>, settingsTab) =
     let newSettingsTab =
         match settingsTab with
         | Some x when x = tabId -> None
-        | x -> x
+        | x -> 
+            editors.[tabId].IEditor?dispose () |> ignore
+            x
     newTabId, newEditors, newSettingsTab
 
 /// top-level function to select file tab
