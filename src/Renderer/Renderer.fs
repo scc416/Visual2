@@ -180,6 +180,9 @@ let update (msg : Msg) (m : Model) =
     model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
+    electron.ipcRenderer.on ("closingWindow", (fun event ->
+       AttemptToExit |> dispatch
+        )) |> ignore
     mainMenu m.CurrentFileTabId dispatch m.Editors
     dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId, m.SettingsTab)
               dispatch
