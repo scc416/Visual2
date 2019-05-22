@@ -1,6 +1,6 @@
 var path = require("path");
 var webpack = require("webpack");
-var MiniCssExtractPlugin = require("mini-css-extract-plugin");
+var MonacoWebpackPlugin = require("monaco-editor-webpack-plugin");
 
 function resolve(filePath) {
   return path.join(__dirname, filePath)
@@ -40,12 +40,8 @@ var basicConfig = {
         },
       },
             {
-            test:  /\.(sass|scss|css)$/,
-            use: [
-                  isProduction ? MiniCssExtractPlugin.loader : 'style-loader',
-                  'css-loader',
-                  'sass-loader',
-                  ],
+            test: /\.css$/,
+            use: ['style-loader', 'css-loader' ]
             }
     ]
   }
@@ -78,9 +74,10 @@ var rendererConfig = Object.assign({
         to: 'app/js/tippy.all.min.js',
       }
     ]),
-            new MiniCssExtractPlugin({
-                                     filename: 'style.[hash].css'
-                                     })
+            new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }),
+            new MonacoWebpackPlugin({
+                                    languages: ['javascript']
+                                    })
   ],
   target: "electron-renderer",
   devtool: "source-map",

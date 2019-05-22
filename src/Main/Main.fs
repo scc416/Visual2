@@ -63,7 +63,7 @@ let mutable mainWindow: BrowserWindow option = Option.None
 //                win.restore();
 //            win.focus();
 //        | Core.Option.None -> ())
-     
+
 //if (shouldQuit) then 
     //electron.app.quit()
 
