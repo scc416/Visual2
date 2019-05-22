@@ -2462,10 +2462,10 @@ fable-babel-plugins@^2.2.0:
   resolved "https://registry.yarnpkg.com/fable-babel-plugins/-/fable-babel-plugins-2.2.0.tgz#2c61be1bd1afb1f03da4e66ccaa1bfecf92063a3"
   integrity sha512-4g8CIyXCILk5LLiwNPtvtrPy3YuV5eJV18SYJCZxu3A1BSKNvPGHLSg5YcFJ2zt4qmBvSkBewlQ2bVQYG+TnrQ==
 
-fable-compiler@^2.3.5:
-  version "2.3.5"
-  resolved "https://registry.yarnpkg.com/fable-compiler/-/fable-compiler-2.3.5.tgz#a2ee9dbdc2dba97a52c26dbc424457464bc26dd5"
-  integrity sha512-YGFN9FYefHvFiotfIvYqbPEHzHzRhJGKt9UOacDmcJwhjua6tbS7Grth5i4mpJis0iJnaQC5i45cclM+K2ZgwQ==
+fable-compiler@^2.3.10:
+  version "2.3.10"
+  resolved "https://registry.yarnpkg.com/fable-compiler/-/fable-compiler-2.3.10.tgz#567f8e9371ea7e7db40c6abe38464824147a413e"
+  integrity sha512-l7iP6Dvfa877d3fkPgZrnFRLYGSr9Y+jGIwKt5b8LxaMnPEryY8qXws+4C3Z65kSF8/JAtS4bMJ+NTLd8MYcWg==
 
 fable-loader@^2.1.6:
   version "2.1.6"
@@ -3875,10 +3875,15 @@ monaco-editor-webpack-plugin@^1.7.0:
   dependencies:
     "@types/webpack" "^4.4.19"
 
-monaco-editor@^0.16.0, monaco-editor@^0.16.2:
+monaco-editor@^0.16.0:
   version "0.16.2"
   resolved "https://registry.yarnpkg.com/monaco-editor/-/monaco-editor-0.16.2.tgz#950084ed82eeaef1c8c9d3c1bcab849fe11b2415"
   integrity sha512-NtGrFzf54jADe7qsWh3lazhS7Kj0XHkJUGBq9fA/Jbwc+sgVcyfsYF6z2AQ7hPqDC+JmdOt/OwFjBnRwqXtx6w==
+
+monaco-editor@^0.17.0:
+  version "0.17.0"
+  resolved "https://registry.yarnpkg.com/monaco-editor/-/monaco-editor-0.17.0.tgz#d1d035c6f512ab88503cbee8213cab34b85ab954"
+  integrity sha512-8BQQHCFxy3DF0GYFOy5BmcCWlwm/XaTMPbPbN4gwItFGctZErSfX82uQSBpojJSlPNyudB5Q5qnukoorD3/UuA==
 
 move-concurrently@^1.0.1:
   version "1.0.1"
