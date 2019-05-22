@@ -117,6 +117,7 @@ type Model =
         LastRemindTime : System.TimeSpan option
         Settings : VSettings
         DialogBox : DialogBox option
+        InitClose : bool
     }
 
 type Msg =
@@ -149,6 +150,7 @@ type Msg =
     | SelectAllEditor
     | RedoEditor
     | EditorTextChange
+    | InitiateClose
 
 
 /// look in the Editors and find the next unique id

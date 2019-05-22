@@ -9,11 +9,18 @@ open Node.Base
 open Refs
 open Settings
 open Tabs
-open EEExtensions
 //open Files2
 //open Tabs2
 
-
+let initialClose (dispatch : Msg -> unit) =
+    function
+    | false -> 
+        electron.ipcRenderer.on ("closingWindow", (fun event ->
+           AttemptToExit |> dispatch
+            )) |> ignore
+        InitiateClose |> dispatch
+    | _ ->
+        ()
 
 let display runMode =
     match runMode with

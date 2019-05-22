@@ -51,6 +51,7 @@ let init _ =
         LastRemindTime = None
         Settings = getJSONSettings()
         DialogBox = None
+        InitClose = false
     }, Cmd.none
 
 let update (msg : Msg) (m : Model) =
@@ -176,13 +177,13 @@ let update (msg : Msg) (m : Model) =
         | RedoEditor ->
             m.Editors.[m.CurrentFileTabId].IEditor?trigger ("Update.fs", "redo") |> ignore
             m
+        | InitiateClose ->
+            { m with InitClose = true }
         
     model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
-    electron.ipcRenderer.on ("closingWindow", (fun event ->
-       AttemptToExit |> dispatch
-        )) |> ignore
+    initialClose dispatch m.InitClose
     mainMenu m.CurrentFileTabId dispatch m.Editors
     dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId, m.SettingsTab)
               dispatch
