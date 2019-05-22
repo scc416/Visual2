@@ -162,10 +162,15 @@ let update (msg : Msg) (m : Model) =
             { m with Editors = newEditors }
         | FindEditor ->
             let action = m.Editors.[m.CurrentFileTabId].IEditor?getAction ("actions.find")
+            Browser.console.log(m.Editors.[m.CurrentFileTabId].IEditor.Value?getActions ())
+            Browser.console.log(m.Editors.[m.CurrentFileTabId].IEditor?getActions ())
+            Browser.console.log(m.Editors.[m.CurrentFileTabId].IEditor?getEditorType ())
             action?run ()
             m
         | FindAndReplaceEditor ->
             let action = m.Editors.[m.CurrentFileTabId].IEditor?getAction ("editor.action.startFindReplaceAction")
+            let lst = m.Editors.[m.CurrentFileTabId].IEditor?getActions ()
+            Browser.console.log(lst)
             action?run ()
             m
         | UndoEditor ->
