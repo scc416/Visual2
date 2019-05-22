@@ -51,13 +51,13 @@ let getFormSettings (settings : VSettings) =
     newSettings
 
 /// React description for the settings menu
-let settingsMenu dispatch (settings : VSettings) saved: ReactElement list =
+let settingsMenu dispatch (settings : VSettings) saved: ReactElement =
     let onChange =
         OnChange (fun x -> 
             match saved with
             | true -> EditorTextChange |> dispatch
             | false -> ())
-    [ form [ Class "settings-menu editor" ]
+    form [ Class "settings-menu editor" ]
            [ div [ Class "float-left" ]
                  [ h4 []
                       [ str "Editor" ]
@@ -126,7 +126,7 @@ let settingsMenu dispatch (settings : VSettings) saved: ReactElement list =
                  []
              div [ DOMAttr.OnClick (fun _ -> SaveSettings |> dispatch)]
                  [ div [ Class "btn btn-default" ]
-                       [ str "Save and Close Settings" ] ] ] ]
+                       [ str "Save and Close Settings" ] ] ] 
 
 /// create new setting tab and return new editors map & tab id
 let createSettingsTab editors =

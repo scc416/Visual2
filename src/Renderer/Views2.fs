@@ -149,7 +149,10 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
         | -1, _ ->
             []
         | _, Some x when x = currentFileTabId -> 
-            settingsMenu dispatch settings editors.[currentFileTabId].Saved
+            (settingsMenu dispatch settings editors.[currentFileTabId].Saved)::
+            (editors
+            |> Map.toList
+            |> List.map (fun (key, _) -> editorDiv key))
         | _ -> 
             editors
             |> Map.toList
