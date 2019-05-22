@@ -181,7 +181,7 @@ let update (msg : Msg) (m : Model) =
 
 let view (m : Model) (dispatch : Msg -> unit) =
     mainMenu m.CurrentFileTabId dispatch m.Editors
-    dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId)
+    dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId, m.SettingsTab)
               dispatch
     Browser.console.log(string m.Editors)
     Browser.console.log(string m.CurrentFileTabId)

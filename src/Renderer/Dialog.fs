@@ -10,15 +10,19 @@ open Fable.Import.Electron
 open Files2
 open Elmish
 
-let closeTabDialog fileName dispatch = 
-    let fileName =
+let closeTabDialog (fileName : string option, settingTab : int option, currentId)
+                   dispatch = 
+    let showFileName =
         match fileName with
-        | Some x -> x
+        | Some x -> 
+            match settingTab with
+            | Some y when y = currentId -> "Settings"
+            | _ -> x
         | _ -> "Untitled.s"
     let dialog =
         Browser.window.confirm (
             sprintf "You have unsaved changes, are you sure you want to close %s?"
-                    (fileName))
+                    (showFileName))
     match dialog with
     | true -> DeleteTab |> dispatch
     | _ -> CloseDialog |> dispatch
@@ -53,7 +57,7 @@ let ExitIfOK dispatch =
     showQuitMessage callback
 
 /// determine if any dialog box has to be opened
-let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: int)
+let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: int, settingTab : int option)
               dispatch =
     match dialogBox with
     | Some x when x = OpenFileDl ->
@@ -64,7 +68,7 @@ let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: in
                    editors.[tabId]
                    dispatch
     | Some x when x = UnsavedFileDl ->
-        closeTabDialog editors.[tabId].FileName 
+        closeTabDialog (editors.[tabId].FileName, settingTab, tabId)
                        dispatch
     | Some x when x = AboutDl ->
         aboutDialog dispatch

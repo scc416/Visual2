@@ -55,14 +55,14 @@ let hasDebugArgs() = argFlagIsOn ["--debug";"-d"]
 let mutable mainWindow: BrowserWindow option = Option.None
 
 /// ensure that if app is started again the first instance is focussed and the second quits
-//let shouldQuit = electron.app.makeSingleInstance( fun _ _ ->
-//        // Someone tried to run a second instance, we should focus our window.
-//        match  mainWindow with
-//        | Some win ->  
-//            if (win.isMinimized()) then
-//                win.restore();
-//            win.focus();
-//        | Core.Option.None -> ())
+let shouldQuit = electron.app.makeSingleInstance( fun _ _ ->
+        // Someone tried to run a second instance, we should focus our window.
+        match  mainWindow with
+        | Some win ->  
+            if (win.isMinimized()) then
+                win.restore();
+            win.focus();
+        | Core.Option.None -> ())
 
 //if (shouldQuit) then 
     //electron.app.quit()
