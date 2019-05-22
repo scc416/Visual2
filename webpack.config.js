@@ -64,16 +64,16 @@ var rendererConfig = Object.assign({
 
     //new UglifyJSPlugin(),
 
-    new CopyWebpackPlugin([
-      {
-        from: 'node_modules/monaco-editor/min/vs',
-        to: 'vs',
-      },
-      {
-        from: 'node_modules/tippy.js/dist/tippy.all.min.js',
-        to: 'app/js/tippy.all.min.js',
-      }
-    ]),
+//    new CopyWebpackPlugin([
+//      {
+//        from: 'node_modules/monaco-editor/min/vs',
+//        to: 'vs',
+//      },
+//      {
+//        from: 'node_modules/monaco-editor/esm/vs/editor/editor.worker.js',
+//        to: '',
+//      }
+//    ]),
             new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }),
             new MonacoWebpackPlugin({
                                     languages: ['javascript']

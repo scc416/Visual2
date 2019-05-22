@@ -21,7 +21,7 @@ let closeTabDialog fileName dispatch =
                     (fileName))
     match dialog with
     | true -> DeleteTab |> dispatch
-    | _ -> ()
+    | _ -> CloseDialog |> dispatch
 
 let aboutDialog dispatch = 
     (showVexAlert2 (sprintf "<h4>VisUAL2 ARM Simulator v%s</h4> " Refs.appVersion +
