@@ -56,7 +56,7 @@ let getFormSettings() =
         }
     let vs1 = checkSettings vs
     printfn "Checked settings are: %A" vs1
-    vSettings <- vs1
+    vSettings <- vs1 vSettings
     printfn "Saving settings: %A" vSettings
     setJSONSettings()
 
@@ -201,7 +201,7 @@ let createSettingsTab() =
 let alterFontSize (n : int) =
     let fontSize = int64 Refs.vSettings.EditorFontSize
     let newSize = fontSize + int64 n
-    Refs.vSettings <- checkSettings
+    Refs.vSettings <- checkSettings vSettings
         { Refs.vSettings with
             EditorFontSize = (int64 newSize).ToString()
         }

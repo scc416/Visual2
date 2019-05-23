@@ -24,8 +24,24 @@ open Files2
 open Settings2
 open Editors2
 open Dialog
+open Stats2
+open Integration2
 
 let init _ =
+    let debugLevel =
+        let argV =
+            electron.remote.``process``.argv
+            |> Seq.toList
+            |> List.tail
+            |> List.map (fun s -> s.ToLower())
+        let isArg s = List.contains s argV
+        if isArg "--debug" || isArg "-d" then 2
+        elif isArg "-w" then 1
+        else 0
+    let initSettings = checkSettings (getJSONSettings()) initSettings
+    let initLastRemindTime, initOnlineFetchText =
+        readOnlineInfo (None, initSettings.OnlineFetchText, debugLevel)
+                       Startup
     { 
         CurrentFileTabId = 0
         TestbenchTab = None
@@ -44,12 +60,12 @@ let init _ =
         SymbolMap = Map.empty
         DisplayedSymbolMap = Map.empty
         RunMode = ExecutionTop.ResetMode
-        DebugLevel = 0
-        LastOnlineFetchTime = Result.Error System.DateTime.Now
+        DebugLevel = debugLevel
+        //LastOnlineFetchTime = initLastOnlineFetchTime
         Activity = true
         Sleeping = false
-        LastRemindTime = None
-        Settings = getJSONSettings()
+        LastRemindTime = initLastRemindTime
+        Settings = { initSettings with OnlineFetchText = initOnlineFetchText }
         DialogBox = None
         InitClose = false
     }, Cmd.none
@@ -180,7 +196,17 @@ let update (msg : Msg) (m : Model) =
         | InitiateClose ->
             { m with InitClose = true }
         | RunSimulation ->
-            m
+            runCode ExecutionTop.NoBreak 
+                    m.CurrentFileTabId 
+                    m.Editors 
+                    m.RunMode 
+                    m.Settings.SimulatorMaxSteps |> ignore
+            let newLastRemindTime, newOnlineFetchText =
+                readOnlineInfo (m.LastRemindTime, m.Settings.OnlineFetchText, m.DebugLevel)
+                               RunningCode
+            let newSettings = { m.Settings with OnlineFetchText = newOnlineFetchText}
+            { m with Settings = newSettings
+                     LastRemindTime = newLastRemindTime }
     model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
@@ -188,8 +214,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
     mainMenu m.CurrentFileTabId dispatch m.Editors
     dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId, m.SettingsTab)
               dispatch
-    Browser.console.log(string m.Editors)
-    Browser.console.log(string m.CurrentFileTabId)
+    //Browser.console.log(string m.LastOnlineFetchTime)
     div [ ClassName "window" ] 
         [ header [ ClassName "toolbar toolbar-header" ] 
                  [ div [ ClassName "toolbar-actions" ] 
@@ -200,7 +225,8 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                button [ ClassName "btn btn-default"
                                         DOMAttr.OnClick (fun _ -> SaveFile |> dispatch) ]
                                       [ span [ ClassName "icon icon-floppy" ] [] ] ]
-                         button [ ClassName "btn btn-fixed btn-default button-run" ]
+                         button [ ClassName "btn btn-fixed btn-default button-run"
+                                  DOMAttr.OnClick (fun _ -> RunSimulation |> dispatch) ]
                                 [ str "Run" ]
                          button [ ClassName "btn btn-default" ]
                                 [ str "Reset" ]
