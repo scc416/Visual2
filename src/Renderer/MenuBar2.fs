@@ -60,63 +60,17 @@ let interlockAction (actionName : string) (action : Unit -> Unit) = (fun () ->
  ****************************************************************************************************)
 
 
- // Popup windows
-
-let makePrefsWindow() =
-    let url = "prefs.html"
-    let mutable prefsWindow = (Core.Option.None : BrowserWindow option)
-
-    // Register click on the About menu
-
-    let options = createEmpty<BrowserWindowOptions>
-    let webPrefs = createEmpty<WebPreferences>
-    webPrefs?nativeWindowOpen <- Some true
-    options?toolbar <- Some false
-    options.resizable <- Some false
-    options.show <- Some true
-    options.height <- Some 600.
-    options.width <- Some 400.
-    options.modal <- Some true
-    options.parent <- Some(electron.remote.getCurrentWindow())
-    options.webPreferences <- Some webPrefs
-
-
-    let prefs = electron.remote.BrowserWindow.Create(options)
-    // For to remove the menu of the window
-    prefs.setMenu (unbox null)
-
-    prefs.on ("closed", unbox (fun () ->
-        // Dereference the about window object.
-        prefsWindow <- Option.None
-    )) |> ignore
-
-    prefs.loadURL (Node.Exports.path.join ("file://", Node.Globals.__dirname, url))
-
-    prefsWindow <- prefs |> Some
-
-
-
- /// Load the node Buffer into the specified tab
-let loadFileIntoTab tId (fileData : Node.Buffer.Buffer) =
-    if currentFileTabId = tId then
-        Integration.resetEmulator()
-    let editor = editors.[tId]
-    editor?setValue (fileData.toString ("utf8")) |> ignore
-    setTabSaved tId
-
-    
-
 
 let loadDemo (editors : Map<int, Editor>) : ( Map<int, Editor> * int) =
     let sampleFileName = Tests.sampleDir + "karatsuba.s"
     let txt = 
         Node.Exports.fs.readFileSync (sampleFileName, "utf8")
     let newEditor = 
-        { FileName = Option.None
+        { DefaultValue = txt 
+          FileName = Option.None
           FilePath = Option.None 
-          Saved = true
-          DefaultValue = txt 
-          IEditor = Option.None }
+          IEditor = Option.None
+          Saved = true }
     let newId = Refs.uniqueTabId editors
     let newEditors= Map.add newId newEditor editors
     newEditors, newId
@@ -147,13 +101,6 @@ let makeItem (label : string) (accelerator : string option) (iAction : unit -> u
 let makeRoleItem label accelerator role =
     let item = makeItem label accelerator id
     item.role <- U2.Case1 role |> Some
-    item
-
-/// make conditional menu item from condition, name, opt key to trigger, and role
-let makeCondRoleItem cond label accelerator role =
-    let item = makeItem label accelerator id
-    item.role <- U2.Case1 role |> Some
-    item.visible <- Some cond
     item
 
 /// make conditional menu item from condition, name, opt key to trigger, and action

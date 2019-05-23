@@ -42,8 +42,8 @@ let openLstOfFiles (fLst : string list) : Editor List =
         { DefaultValue = readFile x
           FilePath = Some x
           FileName = x |> fileName |> Some
-          Saved = true
-          IEditor = Option.None })
+          IEditor = Option.None
+          Saved = true })
 
 /// open file dialog
 let openFile currentFilePath (dispatch : Msg -> Unit) =

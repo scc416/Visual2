@@ -15,15 +15,12 @@ let selectLastTabId editors =
 
 /// Editor value of a  blank tab
 let blankTab =
-    {
-        DefaultValue = ""
-        FileName = None
-        FilePath = None
-        Saved = true
-        IEditor = None
-    }
-    
-    
+    { DefaultValue = ""
+      FileName = None
+      FilePath = None
+      IEditor = None
+      Saved = true }
+
 /// top-level function to delete tab
 let deleteTabUpdate (tabId, editors : Map<int, Editor>, settingsTab) =
     let newEditors = Map.remove tabId editors

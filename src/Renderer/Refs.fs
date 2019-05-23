@@ -36,8 +36,8 @@ type Editor =
         DefaultValue : string
         FileName : string Option
         FilePath : string Option
-        Saved : bool
         IEditor : Monaco.Editor.IEditor option
+        Saved : bool
     }
 
 /// Bases to display data in for all Views
@@ -151,7 +151,6 @@ type Msg =
     | RedoEditor
     | EditorTextChange
     | InitiateClose
-
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =

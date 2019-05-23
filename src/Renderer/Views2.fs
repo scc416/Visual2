@@ -45,7 +45,7 @@ let repButtons (currentRep : Representations)
                   Placement "bottom" :: 
                   defaultTooltipsPropsLst)
                  [ button [ currentRepButtonsClass rep
-                            DOMAttr.OnClick (fun _ -> rep |> ChangeRep |> dispatch)]
+                            DOMAttr.OnClick (fun _ -> rep |> ChangeRep |> dispatch) ]
                           [ rep |> string |> str ] ]
 
     div [ ClassName "btn-group pull-right" ] 
@@ -53,111 +53,8 @@ let repButtons (currentRep : Representations)
           repButton Bin
           repButton Dec
           repButton UDec ]
-         
-// ***********************************************************************************
-//                     Functions Relating to Editor Panel
-// ***********************************************************************************
 
-/// decide whether this file name is gonna be bold or not (in the tab header)
-/// bold if it is unsaved
-let tabHeaderTextStyle =
-    function
-    | true  -> Style []
-    | false -> Style [ FontWeight "bold" ]
 
-/// decide whether this file name is gonna be ending with "*" (in the tab header)
-/// ending with "*" if it is unsaved
-let fileNameFormat (fileName : string) 
-                   (saved : bool) : string =
-    match saved with
-    | true -> fileName
-    | false -> fileName + " *"
-
-let tabNameClass id =
-    function
-    | Some x when x = id -> ClassName "tab-file-name icon icon-cog" 
-    | _ -> ClassName "tab-file-name" 
-
-/// return all the react elements in the editor panel (including the react monaco editor)
-let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, settings) 
-                dispatch =
-
-    /// return the class of the tab header
-    /// "active" if it is the current tab
-    let tabHeaderClass (id : int) : HTMLAttr =
-        match id with
-        | x when x = currentFileTabId -> ClassName "tab-item tab-file active" 
-        | _ -> ClassName "tab-item tab-file"   
-
-    let editorClass (id : int) : HTMLAttr =
-        match id with
-        | x when x = currentFileTabId -> ClassName "editor" 
-        | _ -> ClassName "editor invisible"
-
-    let editor txt id = 
-        editor [ //Value editors.[currentFileTabId].EditorText
-                   OnChange (fun _ -> 
-                       match editors.[id].Saved with
-                       | true -> EditorTextChange |> dispatch
-                       | false -> ())
-                   settings |> editorOptions |> Options 
-                   DefaultValue txt 
-                   EditorDidMount (fun x -> UpdateIEditor (x, id) |> dispatch) ]
-    let editorDiv id =
-        div [ editorClass id ; id |> tabNameIdFormatter |> Key ] [ editor editors.[id].DefaultValue id ]
-
-    /// return a tab header
-    let tabHeaderDiv (id : int) (editor : Editor) : ReactElement =
-
-        /// return "untitled.s" if the tab has no filename
-        let fileName =
-            match editor.FileName with
-            | Some x -> x
-            | _ -> "Untitled.s"
-
-        div [ tabHeaderClass id
-              DOMAttr.OnClick (fun _ -> SelectFileTab id |> dispatch)] 
-            [ span [ ClassName "invisible" ] []
-              span [ ClassName "icon icon-cancel icon-close-tab" 
-                     DOMAttr.OnClick (fun _ -> AttemptToDeleteTab id |> dispatch)] []
-              span [ tabNameClass id settingsTabId
-                     tabHeaderTextStyle editor.Saved ] 
-                   [ editor.Saved |> fileNameFormat fileName |> str ]]
-    /// button (actually is a clickable div) that add new tab
-    let addNewTabDiv =
-        [ div [ ClassName "tab-item tab-item-fixed" 
-                DOMAttr.OnClick (fun _ -> NewFile |> dispatch) ]
-              [ span [ ClassName "icon icon-plus"] []]]
-
-    /// all tab headers plus the add new tab button
-    let tabHeaders =
-        let filesHeader = 
-            editors
-            |> Map.map (fun id editor -> tabHeaderDiv id editor)
-            |> Map.toList
-            |> List.map (fun (_, name) -> name)
-
-        addNewTabDiv 
-        |> List.append filesHeader
-        |> div [ ClassName "tab-group tabs-files" ]
-
-    let overlay =
-        div [ ClassName "invisible darken-overlay" ] []
-    /// the editor
-    let editorViewDiv =
-        match currentFileTabId, settingsTabId with
-        | -1, _ ->
-            []
-        | _, Some x when x = currentFileTabId -> 
-            (settingsMenu dispatch settings editors.[currentFileTabId].Saved)::
-            (editors
-            |> Map.toList
-            |> List.map (fun (key, _) -> editorDiv key))
-        | _ -> 
-            editors
-            |> Map.toList
-            |> List.map (fun (key, _) -> editorDiv key)
-    tabHeaders :: editorViewDiv
 
 // ***********************************************************************************
 //                   Functions Relating to View Panel (on the right)

@@ -56,7 +56,7 @@ let settingsMenu dispatch (settings : VSettings) saved: ReactElement =
         OnChange (fun x -> 
             match saved with
             | true -> EditorTextChange |> dispatch
-            | false -> ())
+            | false -> () )
     form [ Class "settings-menu editor" ]
            [ div [ Class "float-left" ]
                  [ h4 []
@@ -135,8 +135,8 @@ let createSettingsTab editors =
         { DefaultValue = ""
           FileName = Some "            Settings"
           FilePath = None
-          Saved = true
-          IEditor = None }
+          IEditor = None 
+          Saved = true }
     let newEditors =
         Map.add id newSettingTab editors
     newEditors, id
