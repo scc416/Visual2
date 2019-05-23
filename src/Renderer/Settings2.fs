@@ -46,7 +46,7 @@ let getFormSettings (settings : VSettings) =
             RegisteredKey = settings.RegisteredKey
             OnlineFetchText = settings.OnlineFetchText
         }
-    let newSettings = checkSettings vs
+    let newSettings = checkSettings vs settings
     setJSONSettings newSettings
     newSettings
 

@@ -29,7 +29,7 @@ let init _ =
     { 
         CurrentFileTabId = 0
         TestbenchTab = None
-        Editors = Map.ofList [ (0, blankTab)]
+        Editors = Map.ofList [ (0, blankTab) ]
         CurrentTabWidgets = Map.empty
         SettingsTab = None
         CurrentRep = Hex
@@ -179,6 +179,8 @@ let update (msg : Msg) (m : Model) =
             m
         | InitiateClose ->
             { m with InitClose = true }
+        | RunSimulation ->
+            m
     model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
