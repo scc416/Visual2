@@ -76,7 +76,8 @@ var rendererConfig = Object.assign({
 //    ]),
             new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }),
             new MonacoWebpackPlugin({
-                                    languages: ['javascript']
+                                    languages:["javascript","css","html","json"],
+                                    features:["coreCommands","find"]
                                     })
   ],
   target: "electron-renderer",
