@@ -273,8 +273,8 @@ let UpdateGUIFromRunState(pInfo : RunInfo) =
 let imageOfTId = textOfTId >> reLoadProgram
 
 /// Return true if program in current editor tab has changed from that in pInfo
-let currentFileTabProgramIsChanged (pInfo : RunInfo) tabId =
-    let txt = textOfTId tabId
+let currentFileTabProgramIsChanged (pInfo : RunInfo) =
+    let txt = textOfTId currentFileTabId
     let txt' = pInfo.EditorText
     txt.Length <> txt'.Length ||
     List.zip txt txt'
@@ -418,12 +418,12 @@ let rec asmStepDisplay (breakc : BreakCondition) steps ri' =
 
 
 /// If program has changed reset execution
-let prepareModeForExecution runMode tabId =
+let prepareModeForExecution() =
     match runMode with
     | FinishedMode ri
     | RunErrorMode ri
     | ActiveMode(_, ri) ->
-        if currentFileTabProgramIsChanged ri tabId then //TODO:
+        if currentFileTabProgramIsChanged ri then
             showVexAlert "Resetting emulator for new execution" |> ignore
             resetEmulator()
     | _ -> ()
@@ -431,12 +431,12 @@ let prepareModeForExecution runMode tabId =
 /// Parses and runs the assembler program in the current tab
 /// Aborts after steps instructions, unless steps is 0, or
 /// if breackCondition happens
-let runEditorTab breakCondition tabId runMode steps =
-    if tabId = -1 then
+let runEditorTab breakCondition steps =
+    if currentFileTabId = -1 then
         showVexAlert "No file tab in editor to run!"
         ()
     else
-        prepareModeForExecution runMode tabId
+        prepareModeForExecution()
         match runMode with
         | ResetMode
         | ParseErrorMode _ ->
@@ -458,19 +458,19 @@ let runEditorTab breakCondition tabId runMode steps =
 
 
 /// Step simulation forward by 1
-let stepCode tabId editors runMode =
-    match currentTabIsTB tabId editors with
-    | false -> runEditorTab NoBreak tabId runMode 1L
+let stepCode() =
+    match currentTabIsTB() with
+    | false -> runEditorTab NoBreak 1L
     | true -> showVexAlert "Current file is a testbench: switch to an assembly tab"
 
 /// Step simulation back by numSteps
-let stepCodeBackBy numSteps tabId =
+let stepCodeBackBy numSteps =
     match runMode with
     | ActiveMode(Paused, ri')
     | RunErrorMode ri'
     | FinishedMode ri' ->
         let ri = { ri' with BreakCond = NoBreak }
-        if currentFileTabProgramIsChanged ri tabId then
+        if currentFileTabProgramIsChanged ri then
             showVexAlert "can't step backwards because execution state is no longer valid"
         else
             //printf "Stepping back with done=%d  PC=%A" ri.StepsDone ri.dpCurrent
@@ -503,10 +503,10 @@ let stepCodeBackBy numSteps tabId =
 let stepCodeBack() = stepCodeBackBy 1L
 
 
-let runEditorTabOnTests (tests : Test list) tabId =
+let runEditorTabOnTests (tests : Test list) =
         if tests = [] then showVexAlert "There are no Tests to run in the testbench!"
         let runT() = runTests false tests (asmStepDisplay NoBreak)
-        prepareModeForExecution runMode tabId
+        prepareModeForExecution()
         match runMode with
         | ResetMode
         | ParseErrorMode _ ->
@@ -519,19 +519,18 @@ let runEditorTabOnTests (tests : Test list) tabId =
             resetEmulator();
             runT()
 
-let runTestbench tabId =
+let runTestbench() =
     match getParsedTests 0x80000000u with
     | Error(mess) ->
         showVexAlert mess
-    | Ok(tabid, tests) when Refs.currentFileTabId = tabid ->
+    | Ok(tabId, tests) when Refs.currentFileTabId = tabId ->
         showVexAlert "Please select the program tab which you want to test - not the testbench"
     | Ok(_, tests) ->
         printfn "Running %d Tests" tests.Length
-        runEditorTabOnTests tests Refs.currentFileTabId
+        runEditorTabOnTests tests
 
-let runTestbenchOnCode tabId =
-    runTestbench
-    |> runThingOnCode
+let runTestbenchOnCode() =
+    runThingOnCode runTestbench
 
 
 let startTest test =
@@ -539,19 +538,19 @@ let startTest test =
 
 /// Top-level simulation execute
 /// If current tab is TB run TB if this is possible
-let runCode breakCondition tabId editors runMode (maxSteps:string) () =
-    match currentTabIsTB tabId editors with
-    | true -> runTestbenchOnCode() // TODO:
+let runCode breakCondition () =
+    match currentTabIsTB() with
+    | true -> runTestbenchOnCode()
     | false ->
         match runMode with
         | FinishedMode _
-        | RunErrorMode _ -> resetEmulator() // TODO:
+        | RunErrorMode _ -> resetEmulator()
         | _ -> ()
         match runMode with
-        | ActiveMode(RunState.Running, ri) -> setCurrentModeActiveFromInfo (RunState.Stopping) ri // TODO:
+        | ActiveMode(RunState.Running, ri) -> setCurrentModeActiveFromInfo (RunState.Stopping) ri
         | _ ->
-            runEditorTab breakCondition tabId runMode <| // TODO:
-                match int64 maxSteps with
+            runEditorTab breakCondition <|
+                match int64 Refs.vSettings.SimulatorMaxSteps with
                 | 0L -> System.Int64.MaxValue
                 | n when n > 0L -> n
                 | _ -> System.Int64.MaxValue
