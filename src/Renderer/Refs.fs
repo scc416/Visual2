@@ -109,10 +109,10 @@ type Model = {
     /// Global debug level set from main process.
     /// 0 => production. 1 => development. 2 => debug parameter.
     DebugLevel : int
-    LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
+    //LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
     Activity : bool
     Sleeping : bool
-    LastRemindTime : System.TimeSpan option
+    //LastRemindTime : System.TimeSpan option
     Settings : VSettings
     DialogBox : DialogBox option
     InitClose : bool

@@ -39,9 +39,9 @@ let init _ =
         elif isArg "-w" then 1
         else 0
     let initSettings = checkSettings (getJSONSettings()) initSettings
-    let initLastRemindTime, initOnlineFetchText =
-        readOnlineInfo (None, initSettings.OnlineFetchText, debugLevel)
-                       Startup
+    //let initLastRemindTime, initOnlineFetchText =
+        //readOnlineInfo (None, initSettings.OnlineFetchText, debugLevel)
+                       //Startup
     { 
         CurrentFileTabId = 0
         TestbenchTab = None
@@ -64,8 +64,8 @@ let init _ =
         //LastOnlineFetchTime = initLastOnlineFetchTime
         Activity = true
         Sleeping = false
-        LastRemindTime = initLastRemindTime
-        Settings = { initSettings with OnlineFetchText = initOnlineFetchText }
+        //LastRemindTime = initLastRemindTime
+        Settings = initSettings //with OnlineFetchText = initOnlineFetchText }
         DialogBox = None
         InitClose = false
     }, Cmd.none
@@ -196,17 +196,18 @@ let update (msg : Msg) (m : Model) =
         | InitiateClose ->
             { m with InitClose = true }
         | RunSimulation ->
-            runCode ExecutionTop.NoBreak 
-                    m.CurrentFileTabId 
-                    m.Editors 
-                    m.RunMode 
-                    m.Settings.SimulatorMaxSteps |> ignore
-            let newLastRemindTime, newOnlineFetchText =
-                readOnlineInfo (m.LastRemindTime, m.Settings.OnlineFetchText, m.DebugLevel)
-                               RunningCode
-            let newSettings = { m.Settings with OnlineFetchText = newOnlineFetchText}
-            { m with Settings = newSettings
-                     LastRemindTime = newLastRemindTime }
+            runCode ExecutionTop.NoBreak |> ignore
+                    //m.CurrentFileTabId 
+                    //m.Editors 
+                    //m.RunMode 
+                    //m.Settings.SimulatorMaxSteps |> ignore
+            //let newLastRemindTime, newOnlineFetchText =
+            //    readOnlineInfo (m.LastRemindTime, m.Settings.OnlineFetchText, m.DebugLevel)
+            //                   RunningCode
+            //let newSettings = { m.Settings with OnlineFetchText = newOnlineFetchText}
+            //{ m with Settings = newSettings
+                     //LastRemindTime = newLastRemindTime }
+            m
     model, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
