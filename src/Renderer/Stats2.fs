@@ -214,7 +214,8 @@ let doFetch (onlineFetchText, ve, lastRemindTime) =
         txt
     )
 
-let readOnlineInfo (ve: VisualEvent) lastOnlineFetchTime lastRemindTime onlineFetchText =
+let readOnlineInfo (lastOnlineFetchTime, lastRemindTime, onlineFetchText)
+                   (ve: VisualEvent) =
     let doFetchBl =
         match lastOnlineFetchTime with
         | Error tim  -> doIfHoursLaterThan (if ve = Startup then 0. else 0.1) tim
@@ -231,7 +232,12 @@ let readOnlineInfo (ve: VisualEvent) lastOnlineFetchTime lastRemindTime onlineFe
     | false -> 
         Cmd.none
 
+let readOnlineInfoFailUpdate onlineFetchText ve lastRemindTime = 
+    let newLastOnlineFetchTime = Error System.DateTime.Now
+    let newLastRemindTime = checkActions onlineFetchText ve lastRemindTime
+    newLastOnlineFetchTime, newLastRemindTime
 
-
-
-
+let readOnlineInfoSuccessUpdate onlineFetchText ve lastRemindTime =
+    let newLastOnlineFetchTime = Ok System.DateTime.Now
+    let newLastRemindTime = checkActions onlineFetchText ve lastRemindTime
+    newLastOnlineFetchTime, newLastRemindTime

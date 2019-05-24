@@ -69,7 +69,10 @@ let init _ =
             Decorations = []
             EditorEnable = true
         }
-    let cmd = readOnlineInfo Startup m.LastOnlineFetchTime m.LastRemindTime m.Settings.OnlineFetchText
+    let cmd = 
+        readOnlineInfo (m.LastOnlineFetchTime, m.LastRemindTime, m.Settings.OnlineFetchText) 
+                       Startup
+                                
     m, cmd
 
 let update (msg : Msg) (m : Model) =
@@ -194,21 +197,21 @@ let update (msg : Msg) (m : Model) =
     | InitiateClose ->
         { m with InitClose = true }, Cmd.none
     | RunSimulation ->
-        runCode ExecutionTop.NoBreak 
-                m.CurrentFileTabId
-                m.Editors |> ignore
-        let cmd = readOnlineInfo RunningCode m.LastOnlineFetchTime m.LastRemindTime m.Settings.OnlineFetchText
+        runCode |> ignore
+        let cmd = 
+            readOnlineInfo (m.LastOnlineFetchTime, m.LastRemindTime, m.Settings.OnlineFetchText)
+                           RunningCode
         m, cmd
     | ReadOnlineInfoSuccess (newOnlineFetchText, ve) -> 
-        let newLastOnlineFetchTime = Ok System.DateTime.Now
-        let newLastRemindTime = checkActions newOnlineFetchText ve m.LastRemindTime
+        let newLastOnlineFetchTime, newLastRemindTime = 
+            readOnlineInfoSuccessUpdate newOnlineFetchText ve m.LastRemindTime
         let newSettings = { m.Settings with OnlineFetchText = newOnlineFetchText }
         { m with LastOnlineFetchTime = Ok System.DateTime.Now 
                  LastRemindTime = newLastRemindTime
                  Settings = newSettings }, Cmd.none
     | ReadOnlineInfoFail ve -> 
-        let newLastOnlineFetchTime = Error System.DateTime.Now
-        let newLastRemindTime = checkActions m.Settings.OnlineFetchText ve m.LastRemindTime
+        let newLastOnlineFetchTime, newLastRemindTime = 
+            readOnlineInfoFailUpdate m.Settings.OnlineFetchText ve m.LastRemindTime
         { m with LastOnlineFetchTime = newLastOnlineFetchTime 
                  LastRemindTime = newLastRemindTime}, Cmd.none
 
