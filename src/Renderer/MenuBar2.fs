@@ -173,11 +173,11 @@ let popupMenu (items) =
     menu.popup (electron.remote.getCurrentWindow())
     ()
 
-let testMenu editors tabId =
+let testMenu editors tabId debugLevel =
         let runToBranch() = ()
         let menu = electron.remote.Menu.Create()
         let runSteps() =
-            showVexValidatedPrompt "steps forward" validPosInt (int64 >> (runEditorTab ExecutionTop.NoBreak editors tabId)) "Number of steps forward"
+            showVexValidatedPrompt "steps forward" validPosInt (int64 >> (runEditorTab ExecutionTop.NoBreak editors tabId debugLevel)) "Number of steps forward"
         let runStepsBack() =
             showVexValidatedPrompt "steps back" validPosInt (int64 >> (stepCodeBackBy editors)) "Number of steps back"
         let runSingleTest() =
@@ -187,10 +187,10 @@ let testMenu editors tabId =
                         let name = sprintf "Step code with initial data from Test %d" test.TNum
                         let actFun = fun () -> startTest test editors |> ignore
                         makeItem name Core.None actFun) lst)
-        let runTo cond () = runEditorTab cond editors tabId System.Int64.MaxValue
+        let runTo cond () = runEditorTab cond editors tabId debugLevel System.Int64.MaxValue
         makeMenu "Test" [
             makeItem "Step <-" (Some "F3") (stepCodeBack editors)
-            makeItem "Step ->" (Some "F4") (stepCode tabId editors)
+            makeItem "Step ->" (Some "F4") (stepCode tabId editors debugLevel)
             makeItem "Step to next call" (Some "F5") (runTo ExecutionTop.ToSubroutine)
             makeItem "Step to next return" (Some "F6") (runTo ExecutionTop.ToReturn)
             makeItem "Step forward by" Core.Option.None runSteps
@@ -218,14 +218,14 @@ let helpMenu dispatch editors tabId =
 
 
 /// Make all app menus
-let mainMenu id (dispatch : (Msg -> Unit)) editors =
+let mainMenu id (dispatch : (Msg -> Unit)) editors debugLevel=
     let template =
         ResizeArray<MenuItemOptions> [
             fileMenu id dispatch editors
             editMenu dispatch
             viewMenu()
             helpMenu dispatch editors id
-            testMenu editors id
+            testMenu editors id debugLevel
         ]
     template
     |> electron.remote.Menu.buildFromTemplate

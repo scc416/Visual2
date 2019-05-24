@@ -214,7 +214,7 @@ let update (msg : Msg) (m : Model) =
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
-    mainMenu m.CurrentFileTabId dispatch m.Editors
+    mainMenu m.CurrentFileTabId dispatch m.Editors m.DebugLevel
     dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId, m.SettingsTab)
               dispatch
     //Browser.console.log(string m.LastOnlineFetchTime)
