@@ -39,35 +39,38 @@ let init _ =
         elif isArg "-w" then 1
         else 0
     let initSettings = checkSettings (getJSONSettings()) initSettings
-    { 
-        CurrentFileTabId = 0
-        TestbenchTab = None
-        Editors = Map.ofList [ (0, blankTab) ]
-        CurrentTabWidgets = Map.empty
-        SettingsTab = None
-        CurrentRep = Hex
-        DisplayedCurrentRep = Hex
-        CurrentView = Registers
-        ByteView = false
-        ReverseDirection = false
-        MaxStepsToRun = 50000
-        MemoryMap = Map.empty
-        RegMap = ExecutionTop.initialRegMap
-        Flags = initialFlags
-        SymbolMap = Map.empty
-        DisplayedSymbolMap = Map.empty
-        RunMode = ExecutionTop.ResetMode
-        DebugLevel = debugLevel
-        LastOnlineFetchTime = Result.Error System.DateTime.Now
-        Activity = true
-        Sleeping = false
-        LastRemindTime = None
-        Settings = initSettings
-        DialogBox = None
-        InitClose = false
-        Decorations = []
-        EditorEnable = true
-    }, Cmd.none
+    let m =
+        { 
+            CurrentFileTabId = 0
+            TestbenchTab = None
+            Editors = Map.ofList [ (0, blankTab) ]
+            CurrentTabWidgets = Map.empty
+            SettingsTab = None
+            CurrentRep = Hex
+            DisplayedCurrentRep = Hex
+            CurrentView = Registers
+            ByteView = false
+            ReverseDirection = false
+            MaxStepsToRun = 50000
+            MemoryMap = Map.empty
+            RegMap = ExecutionTop.initialRegMap
+            Flags = initialFlags
+            SymbolMap = Map.empty
+            DisplayedSymbolMap = Map.empty
+            RunMode = ExecutionTop.ResetMode
+            DebugLevel = debugLevel
+            LastOnlineFetchTime = Result.Error System.DateTime.Now
+            Activity = true
+            Sleeping = false
+            LastRemindTime = None
+            Settings = initSettings
+            DialogBox = None
+            InitClose = false
+            Decorations = []
+            EditorEnable = true
+        }
+    let cmd = readOnlineInfo Startup m.LastOnlineFetchTime m.LastRemindTime m.Settings.OnlineFetchText
+    m, cmd
 
 let update (msg : Msg) (m : Model) =
     match msg with
@@ -194,21 +197,20 @@ let update (msg : Msg) (m : Model) =
         runCode ExecutionTop.NoBreak 
                 m.CurrentFileTabId
                 m.Editors |> ignore
-                //m.CurrentFileTabId 
-                //m.Editors 
-                //m.RunMode 
-                //m.Settings.SimulatorMaxSteps |> ignore
-        //let newLastRemindTime, newOnlineFetchText, newLastOnlineFetchTime, promise =
-            //readOnlineInfo (m.LastRemindTime, m.Settings.OnlineFetchText, m.DebugLevel, m.LastOnlineFetchTime)
-                           //RunningCode
-        //let newSettings = { m.Settings with OnlineFetchText = newOnlineFetchText}
-        //cmd <- Cmd.ofPromise doFetch (doFetch)
-        //{ m with Settings = newSettings
-                 //LastRemindTime = newLastRemindTime 
-                 //LastOnlineFetchTime = newLastOnlineFetchTime}, Cmd.none //ofPromise doFetch (lastRemindTime onlineFetchText lastOnlineFetchTime ve)
-        m, Cmd.none
-    | ReadOnlineInfoSuccess
-    | ReadOnlineInfoFail -> m, Cmd.none
+        let cmd = readOnlineInfo RunningCode m.LastOnlineFetchTime m.LastRemindTime m.Settings.OnlineFetchText
+        m, cmd
+    | ReadOnlineInfoSuccess (newOnlineFetchText, ve) -> 
+        let newLastOnlineFetchTime = Ok System.DateTime.Now
+        let newLastRemindTime = checkActions newOnlineFetchText ve m.LastRemindTime
+        let newSettings = { m.Settings with OnlineFetchText = newOnlineFetchText }
+        { m with LastOnlineFetchTime = Ok System.DateTime.Now 
+                 LastRemindTime = newLastRemindTime
+                 Settings = newSettings }, Cmd.none
+    | ReadOnlineInfoFail ve -> 
+        let newLastOnlineFetchTime = Error System.DateTime.Now
+        let newLastRemindTime = checkActions m.Settings.OnlineFetchText ve m.LastRemindTime
+        { m with LastOnlineFetchTime = newLastOnlineFetchTime 
+                 LastRemindTime = newLastRemindTime}, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose

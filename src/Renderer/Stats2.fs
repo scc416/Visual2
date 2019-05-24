@@ -14,6 +14,11 @@ open Fable.Core
 open EEExtensions
 open Node.Exports
 open Refs
+open Elmish
+open Elmish.React
+open Elmish.HMR
+open Elmish.Debug
+open Elmish.Browser.Navigation
 
 open Fable.PowerPack
 open Fable.PowerPack.Fetch
@@ -27,9 +32,7 @@ let mutable activity: bool = true
 let mutable sleeping: bool = false
 
 
-type VisualEvent =
-    | Startup
-    | RunningCode
+
     
 
 
@@ -135,7 +138,6 @@ let (|MatchVersion|_|) txt =
        | _, None -> None
        | _, x -> None
 
-
 let remindNewVersion txt =
     printfn "Remind new version if needed!"
     txt 
@@ -146,15 +148,14 @@ let remindNewVersion txt =
             | _ -> ()
     )
 
-let mutable lastRemindTime: System.TimeSpan option = None
-
-let remindInExams txt =
+let remindInExams txt (lastRemindTime : System.TimeSpan option ) =
     printfn "Remind in exams every 5 min!"
+    let mutable newRemindTime = lastRemindTime
     let remind() = 
-        lastRemindTime <- Some DateTime.Now.TimeOfDay
         infoBox ("WARNING: an assessed Test is scheduled now." +
                 "If you are currently doing this you are not allowed to use Visual2. " +
                 "Please exit Visual2 immediately")
+        Some DateTime.Now.TimeOfDay
     txt 
     |> String.splitRemoveEmptyEntries [|'\n';'\r'|]
     |> Array.iter (
@@ -162,64 +163,73 @@ let remindInExams txt =
             | MatchDate (date, t1, t2) -> 
                 let tim = DateTime.Now
                 let inExam = tim.TimeOfDay > t1 && tim.TimeOfDay < t2 && tim.Date = date.Date
-                match inExam,lastRemindTime with
-                | true, None -> remind()
-                | true, Some tt when tt.Add (TimeSpan.FromMinutes 5.) < tim.TimeOfDay -> remind()                            
+                match inExam, lastRemindTime with
+                | true, None -> newRemindTime <- remind()
+                | true, Some tt when tt.Add (TimeSpan.FromMinutes 5.) < tim.TimeOfDay -> newRemindTime <- remind()                            
                 | _ -> ()
             | _ -> ()
         )
+    newRemindTime
 
 
-let doIfHoursLaterThan hours (tim:System.DateTime) func =
-    if System.DateTime.Now > tim.Add (System.TimeSpan.FromHours hours)
-    then func()
+let doIfHoursLaterThan hours (tim:System.DateTime) =
+    System.DateTime.Now > tim.Add (System.TimeSpan.FromHours hours)
 
 
-let readOnlineInfo (ve: VisualEvent) =
-    let checkActions txt =
-        match ve with
-            | Startup -> 
-                remindNewVersion txt
-                remindInExams txt
-            | RunningCode -> 
-                remindInExams txt
+let checkActions txt ve lastRemindTime =
+    match ve with
+        | Startup -> remindNewVersion txt
+        | RunningCode -> ()
+    remindInExams txt lastRemindTime
 
-    let doFetch() =
-        //new IHttpRequestHeaders
-        //hdrs?append("pragma","no-cache") |> ignore
-        //hdrs?append("cache-control","no-cache") |> ignore
-        fetch ("http://intranet.ee.ic.ac.uk/t.clarke/tom/info.txt?" + DateTime.Now.Ticks.ToString())  [ 
-            Cache RequestCache.Nostore
-            ]
-        |> Promise.map (
-            fun res ->
-                 if res.Ok 
-                 then 
-                     Ok res 
-                 else 
-                     if debugLevel > 0 then printfn "can't read internet data"
-                     Refs.lastOnlineFetchTime <- Error System.DateTime.Now
-                     checkActions vSettings.OnlineFetchText
-                     Error "can't read internet data"
-            )
-        |> Promise.bindResult (fun res -> res.text())
-        |> Promise.mapResult (fun txt -> 
-            //if debugLevel > 0 then printf "----%s----%s----" txt vSettings.OnlineFetchText
-            Refs.lastOnlineFetchTime <- Ok System.DateTime.Now
-            checkActions txt
-            if vSettings.OnlineFetchText <> txt
-            then
-                vSettings <- {vSettings with OnlineFetchText = txt}
-                Refs.setJSONSettings()
-                printfn "-----updating online text to-----\n%s\n------------------------" txt
+let doFetch (onlineFetchText, ve, lastRemindTime) =
+    //new IHttpRequestHeaders
+    //hdrs?append("pragma","no-cache") |> ignore
+    //hdrs?append("cache-control","no-cache") |> ignore
+    fetch ("http://intranet.ee.ic.ac.uk/t.clarke/tom/info.txt?" + DateTime.Now.Ticks.ToString())  [ 
+        Cache RequestCache.Nostore
+        ]
+    |> Promise.map (
+        fun res ->
+             if res.Ok 
+             then 
+                 Ok res 
+             else 
+                 if debugLevel > 0 then printfn "can't read internet data"
+                 let newLastOnlineFetchTime = Error System.DateTime.Now
+                 let newLastRemindTime = checkActions onlineFetchText ve lastRemindTime
+                 let newOnlineFetchText = onlineFetchText
+                 Error "can't read internet data"
         )
-        |> ignore
-        
-    match Refs.lastOnlineFetchTime with
-    | Error tim  -> doIfHoursLaterThan (if ve = Startup then 0. else 0.1) tim doFetch
-    | Ok tim -> doIfHoursLaterThan (if debugLevel > 0 then 0.001 else 24.) tim doFetch
-           
-  
+    |> Promise.bindResult (fun res -> res.text())
+    |> Promise.mapResult (fun txt -> 
+        //if debugLevel > 0 then printf "----%s----%s----" txt vSettings.OnlineFetchText
+        let newLastOnlineFetchTime = Ok System.DateTime.Now
+        let newLastRemindTime = checkActions txt ve lastRemindTime
+        let newOnlineFetchText = txt
+        if onlineFetchText <> txt
+        then
+            Refs.setJSONSettings()
+            printfn "-----updating online text to-----\n%s\n------------------------" txt
+        txt
+    )
+
+let readOnlineInfo (ve: VisualEvent) lastOnlineFetchTime lastRemindTime onlineFetchText =
+    let doFetchBl =
+        match lastOnlineFetchTime with
+        | Error tim  -> doIfHoursLaterThan (if ve = Startup then 0. else 0.1) tim
+        | Ok tim -> doIfHoursLaterThan (if debugLevel > 0 then 0.001 else 24.) tim
+    match doFetchBl with       
+    | true -> 
+        Cmd.ofPromise doFetch 
+                      (onlineFetchText, ve, lastRemindTime) 
+                      (fun x -> 
+                          match x with
+                          | Ok x -> (x, ve) |> ReadOnlineInfoSuccess
+                          | _ -> ReadOnlineInfoFail ve) 
+                      (fun _ -> ReadOnlineInfoFail ve)
+    | false -> 
+        Cmd.none
 
 
 

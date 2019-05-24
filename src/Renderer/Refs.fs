@@ -120,6 +120,10 @@ type Model = {
     EditorEnable : bool
     }
 
+type VisualEvent =
+    | Startup
+    | RunningCode
+
 type Msg =
     | ChangeView of Views
     | ChangeRep of Representations
@@ -152,8 +156,8 @@ type Msg =
     | EditorTextChange
     | InitiateClose
     | RunSimulation
-    | ReadOnlineInfoSuccess
-    | ReadOnlineInfoFail
+    | ReadOnlineInfoSuccess of string * VisualEvent
+    | ReadOnlineInfoFail of VisualEvent
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
