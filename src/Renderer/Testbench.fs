@@ -71,17 +71,17 @@ let addResultsToTestbench (test : Test) (dp : DataPath) =
 /// Top-level testbench parse. Locate loaded testbench, generate pair of testbench tab ID
 /// and Test list, or Error message. If testbench lines contain errors these are highlighted in buffer.
 /// Previous error highlights are removed from buffer.
-let getParsedTests dStart =
+let getParsedTests dStart (m : Model) =
 
     let processParseErrors (eLst : Result<Test, (int * string) list> list) =
         let highlightErrors tab =
             List.iter (fun (lNum, mess) ->
                 printfn "Testbench error %d %s." lNum mess
-                Editors.highlightLine tab lNum "editor-line-error")
+                Editors.highlightLine tab m.Editors lNum "editor-line-error")
         match getTBWithTab() with
         | Error mess -> Error mess
         | Ok(tab, _) ->
-            Editors.removeEditorDecorations tab
+            let newDecorations = Editors.removeEditorDecorations tab m.Decorations m.Editors
             List.iter (Result.mapError (highlightErrors tab) >> ignore) eLst
             match List.errorList eLst with
             | [] -> List.okList eLst |> Ok
@@ -101,8 +101,8 @@ let getParsedTests dStart =
                 |> processParseErrors
                 |> Result.map (fun x -> tab, x))
 
-let getTestList() =
-    getParsedTests 0x10000000u
+let getTestList m =
+    getParsedTests 0x10000000u m
     |> function
         | Error e -> showVexAlert e; []
         | Ok(_, tests) ->

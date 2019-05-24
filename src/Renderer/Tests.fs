@@ -278,7 +278,7 @@ let processTestResults (fn : string) (res : Map<TestT, (TestT * TestSetup * RunI
     else Result.Ok "Passed"
 
 /// on small test files print more info
-let RunEmulatorTest allowed ts =
+let RunEmulatorTest (m : Refs.Model) allowed ts =
     let maxSteps = 1000L
 
     //let more = size < 4
@@ -293,7 +293,7 @@ let RunEmulatorTest allowed ts =
 
     if more then printfn "\n\nIndented ASM:\n%s\n" (lim.EditorText |> String.concat "\n")
 
-    let ri = lim |> getRunInfoFromImage NoBreak
+    let ri = lim |> getRunInfoFromImage NoBreak m
 
     if lim.Errors <> [] then
         match ts.After with
@@ -321,12 +321,12 @@ let RunEmulatorTest allowed ts =
         | _ ->
             ErrorTests, ts, ri', sprintf "Test code timed out after %d Visual2 instructions" maxSteps
 
-let runEmulatorTestFile allowed fn =
+let runEmulatorTestFile (m : Refs.Model) allowed fn  =
     let testF = Refs.appDirName + @"/test-data/" + fn
     let results = loadStateFile testF
     let resultsBySuccess =
         results
-        |> List.map (RunEmulatorTest allowed)
+        |> List.map (RunEmulatorTest m allowed)
         |> List.groupBy (fun (rt, _, _, _) -> rt)
         |> Map.ofList
     let resultSummary = processTestResults fn resultsBySuccess allowed
@@ -336,7 +336,7 @@ let runEmulatorTestFile allowed fn =
     | Result.Error s -> s
     |> printfn "%s with %d tests...%s" (fnWithoutSuffix fn) results.Length
 
-let runAllEmulatorTests() =
+let runAllEmulatorTests (m : Refs.Model) =
     let allowed = readAllowedTests()
     printfn "Errors allowed in tests: %A" allowed
     let contents = electron.remote.getCurrentWebContents()
@@ -353,7 +353,7 @@ let runAllEmulatorTests() =
                 else lis)
         |> List.filter (String.startsWith "ALLOWED" >> not)
 
-    List.iter (runEmulatorTestFile allowed) files
+    List.iter (runEmulatorTestFile m allowed) files
     printfn "Finished. See './test-results' for result files"
 
 //*************************************************************************************

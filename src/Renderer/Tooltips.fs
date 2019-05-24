@@ -408,8 +408,8 @@ let deleteAllContentWidgets (m : Model) () =
     |> Map.ofList
 
 /// work out tippy theme with opposite background to editor
-let tippyTheme() =
-    match vSettings.EditorTheme with
+let tippyTheme =
+    function
     | "one-light-pro" | "solarised-light" -> "dark"
     | _ -> "light"
 
@@ -462,7 +462,7 @@ let makeEditorInfoButtonWithTheme theme (clickable : bool) (h, v, orientation) (
     makeTooltip theme orientation clickable false domID tooltip
 
 /// Make an editor tooltip info button with correct theme
-let makeEditorInfoButton clickable (h, v, orientation) = makeEditorInfoButtonWithTheme (tippyTheme()) clickable (h, v, orientation)
+let makeEditorInfoButton clickable settingtheme (h, v, orientation) = makeEditorInfoButtonWithTheme (tippyTheme settingtheme) clickable (h, v, orientation)
 
 /// Add all the static tooltip information on the editor
 let addFixedToolTips() =

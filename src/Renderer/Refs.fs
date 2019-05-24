@@ -159,6 +159,7 @@ type Msg =
     | RunSimulation
     | ReadOnlineInfoSuccess of string * VisualEvent
     | ReadOnlineInfoFail of VisualEvent
+    | UpdateModel of Model
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =

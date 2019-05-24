@@ -129,9 +129,9 @@ let highlightLine tId (editors : Map<int, Editor>) number className =
         ])
         None
 
-let highlightGlyph tId number glyphClassName =
+let highlightGlyph number glyphClassName editor =
     editorLineDecorate
-        Refs.editors.[tId]
+        editor
         number
         (createObj [
             "isWholeLine" ==> true
@@ -139,8 +139,8 @@ let highlightGlyph tId number glyphClassName =
         ])
         None
 
-let highlightNextInstruction tId number =
-    if number > 0 then highlightGlyph tId number "editor-glyph-margin-arrow"
+let highlightNextInstruction number editor =
+    if number > 0 then highlightGlyph number "editor-glyph-margin-arrow" editor
 
 /// <summary>
 /// Decorate a line with an error indication and set up a hover message.
@@ -179,8 +179,8 @@ let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : strin
         ])
         None
 
-let revealLineInWindow tId (lineNumber : int) =
-    Refs.editors.[tId]?revealLineInCenterIfOutsideViewport (lineNumber) |> ignore
+let revealLineInWindow tId (lineNumber : int) (editors : Map<int, Editor>) =
+    editors.[tId].IEditor?revealLineInCenterIfOutsideViewport (lineNumber) |> ignore
 
 //*************************************************************************************
 //                              EDITOR CONTENT WIDGETS
@@ -189,11 +189,12 @@ let revealLineInWindow tId (lineNumber : int) =
 type MemDirection = | MemRead | MemWrite
 
 /// find editor Horizontal char position after end of code (ignoring comment)
-let findCodeEnd (lineCol : int) =
+let findCodeEnd (lineCol : int) tId (editors: Map<int, Editor>) =
     let tabSize = 6
-    match Refs.currentTabText() with
-    | None -> 0
-    | Some text ->
+    match tId with
+    | -1 -> 0
+    | x ->
+        let text = formatText tId editors
         if text.Length <= lineCol then
             0
         else
@@ -234,12 +235,12 @@ let toolTipInfo (v : int, orientation : string)
                 let regRows =
                     locs
                     |> List.map (makeRegRow >> TROWS)
-                (findCodeEnd v, "Stack"), TABLE [] [
+                (findCodeEnd v m.CurrentFileTabId m.Editors, "Stack"), TABLE [] [ //TODO: HTML ELEMENT MIGHT NOT WORK
                     DIV [] [
                         TROWS [ sprintf "Pointer (%s)" (ins.Rn.ToString()); sprintf "0x%08X" sp ]
                         TROWS [ "Increment"; increment |> sprintf "%d" ]
                     ]
-                    DIV [ "tooltip-stack-regs-" + tippyTheme() + "-theme" ] regRows ]
+                    DIV [ "tooltip-stack-regs-" + tippyTheme m.Settings.EditorTheme + "-theme" ] regRows ]
 
 
             let memPointerInfo (ins : Memory.InstrMemSingle) (dir : MemDirection) (dp : DataPath) =
@@ -251,7 +252,7 @@ let toolTipInfo (v : int, orientation : string)
                 let ea = match ins.MemMode with | Memory.PreIndex | Memory.NoIndex -> (baseAddrU + uint32 offset) | _ -> baseAddrU
                 let mData = (match ins.MemSize with | MWord -> Memory.getDataMemWord | MByte -> Memory.getDataMemByte) ea dp
                 let isIncr = match ins.MemMode with | Memory.NoIndex -> false | _ -> true
-                (findCodeEnd v, "Pointer"), TABLE [] [
+                (findCodeEnd v m.CurrentFileTabId m.Editors, "Pointer"), TABLE [] [
                     TROWS [ sprintf "Base (%s)" (ins.Rb.ToString()); sprintf "0x%08X" baseAddrU ]
                     TROWS [ "Address"; ea |> sprintf "0x%08X" ]
                     TROWS <| if isIncr then [] else [ "Offset"; (offset |> sprintf "%+d") ]
@@ -267,7 +268,12 @@ let toolTipInfo (v : int, orientation : string)
 
             let makeTip memInfo =
                 let (hOffset, label), tipDom = memInfo dp
-                makeEditorInfoButton Tooltips.lineTipsClickable (hOffset, (v + 1), orientation) label tipDom m
+                makeEditorInfoButton Tooltips.lineTipsClickable 
+                                     m.Settings.EditorTheme
+                                     (hOffset, (v + 1), orientation) 
+                                     label 
+                                     tipDom 
+                                     m
             match ins with
             | Memory.LDR ins -> makeTip <| memPointerInfo ins MemRead
             | Memory.STR ins -> makeTip <| memPointerInfo ins MemWrite
@@ -276,7 +282,7 @@ let toolTipInfo (v : int, orientation : string)
             | _ -> ()
     | true, ParseTop.IDP(exec, op2) ->
         let alu = ExecutionTop.isArithmeticOpCode opc
-        let pos = findCodeEnd v, v, orientation
+        let pos = findCodeEnd v m.CurrentFileTabId m.Editors, v, orientation
         match exec dp with
         | Error _ -> ()
         | Ok(dp', uF') ->

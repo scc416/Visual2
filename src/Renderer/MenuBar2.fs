@@ -173,34 +173,34 @@ let popupMenu (items) =
     menu.popup (electron.remote.getCurrentWindow())
     ()
 
-let testMenu() =
+let testMenu (m : Model) (dispatch : (Msg -> Unit)) =
         let runToBranch() = ()
         let menu = electron.remote.Menu.Create()
         let runSteps() =
-            showVexValidatedPrompt "steps forward" validPosInt (int64 >> (Integration.runEditorTab ExecutionTop.NoBreak)) "Number of steps forward"
+            showVexValidatedPrompt "steps forward" validPosInt (fun x -> Integration.runEditorTab ExecutionTop.NoBreak m (int64 x) |> UpdateModel |> dispatch) "Number of steps forward"
         let runStepsBack() =
-            showVexValidatedPrompt "steps back" validPosInt (int64 >> (Integration.stepCodeBackBy)) "Number of steps back"
+            showVexValidatedPrompt "steps back" validPosInt (fun x -> Integration.stepCodeBackBy m (int64 x)) "Number of steps back"
         let runSingleTest() =
-            match Testbench.getTestList() with
+            match Testbench.getTestList m with
             | [] -> showVexAlert "Can't find any tests. Have you loaded a valid testbench?"
             | lst -> popupMenu (List.map (fun (test : ExecutionTop.Test) ->
                         let name = sprintf "Step code with initial data from Test %d" test.TNum
-                        let actFun = fun () -> Integration.startTest test
+                        let actFun = fun () -> Integration.startTest test m
                         makeItem name Core.None actFun) lst)
-        let runTo cond () = Integration.runEditorTab cond System.Int64.MaxValue
+        let runTo cond = Integration.runEditorTab cond m System.Int64.MaxValue
         makeMenu "Test" [
-            makeItem "Step <-" (Some "F3") Integration.stepCodeBack
-            makeItem "Step ->" (Some "F4") Integration.stepCode
-            makeItem "Step to next call" (Some "F5") (runTo ExecutionTop.ToSubroutine)
-            makeItem "Step to next return" (Some "F6") (runTo ExecutionTop.ToReturn)
+            makeItem "Step <-" (Some "F3") (fun () -> Integration.stepCodeBack m )
+            makeItem "Step ->" (Some "F4") (fun () -> Integration.stepCode m.CurrentFileTabId m.Editors m |> UpdateModel |> dispatch )
+            makeItem "Step to next call" (Some "F5") (fun () -> runTo ExecutionTop.ToSubroutine |> UpdateModel |> dispatch )
+            makeItem "Step to next return" (Some "F6") (fun () -> runTo ExecutionTop.ToReturn |> UpdateModel |> dispatch )
             makeItem "Step forward by" Core.Option.None runSteps
             makeItem "Step back by" Core.Option.None runStepsBack
             menuSeparator
             makeItem "Step into test" Core.Option.None (interlockAction "Test" runSingleTest)
-            makeItem "Run all tests" Core.Option.None (interlockAction "Testbench" Integration.runTestbenchOnCode)
+            makeItem "Run all tests" Core.Option.None (interlockAction "Testbench" (fun () -> Integration.runTestbenchOnCode m))
         ]
 
-let helpMenu dispatch editors tabId decorations =
+let helpMenu dispatch m =
         makeMenu "Help" (
             [
                 makeItem "UAL instruction guide" Core.Option.None (runExtPage <| visualDocsPage "guide#content")
@@ -209,22 +209,22 @@ let helpMenu dispatch editors tabId decorations =
                 makeItem "Official ARM documentation" Core.Option.None (runExtPage "http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0234b/i1010871.html")
                 menuSeparator
                 makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" (fun _ -> Refs.LoadDemoCode |> dispatch))
-                makeCondItem (debugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (runTestbench))
-                makeCondItem (debugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" Tests.runAllEmulatorTests)
+                makeCondItem (debugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (fun () -> runTestbench m))
+                makeCondItem (debugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" (fun () -> Tests.runAllEmulatorTests m))
                 menuSeparator
                 makeItem "About" Core.option.None (fun _ -> AboutDialog |> dispatch)
             ])
 
 
 /// Make all app menus
-let mainMenu id (dispatch : (Msg -> Unit)) editors debugLevel decorations=
+let mainMenu (dispatch : (Msg -> Unit)) (m : Model) =
     let template =
         ResizeArray<MenuItemOptions> [
-            fileMenu id dispatch editors
+            fileMenu m.CurrentFileTabId dispatch m.Editors
             editMenu dispatch
             viewMenu()
-            helpMenu dispatch editors id decorations
-            testMenu()
+            helpMenu dispatch m
+            testMenu m dispatch
         ]
     template
     |> electron.remote.Menu.buildFromTemplate

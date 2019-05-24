@@ -198,11 +198,11 @@ let update (msg : Msg) (m : Model) =
     | InitiateClose ->
         { m with InitClose = true }, Cmd.none
     | RunSimulation ->
-        runCode |> ignore
         let cmd = 
             readOnlineInfo (m.LastOnlineFetchTime, m.LastRemindTime, m.Settings.OnlineFetchText)
                            RunningCode
-        m, cmd
+        let newM = runCode ExecutionTop.NoBreak m
+        newM, cmd
     | ReadOnlineInfoSuccess (newOnlineFetchText, ve) -> 
         let newLastOnlineFetchTime, newLastRemindTime = 
             readOnlineInfoSuccessUpdate newOnlineFetchText ve m.LastRemindTime
@@ -215,10 +215,12 @@ let update (msg : Msg) (m : Model) =
             readOnlineInfoFailUpdate m.Settings.OnlineFetchText ve m.LastRemindTime
         { m with LastOnlineFetchTime = newLastOnlineFetchTime 
                  LastRemindTime = newLastRemindTime}, Cmd.none
+    | UpdateModel m ->
+        m, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
-    mainMenu m.CurrentFileTabId dispatch m.Editors m.DebugLevel m.Decorations
+    mainMenu dispatch m
     dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId, m.SettingsTab)
               dispatch
     Browser.console.log(string m.LastOnlineFetchTime)

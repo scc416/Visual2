@@ -147,10 +147,10 @@ let resetEmulator() =
     updateClockTime (0uL, 0uL)
 
 /// Display current execution state in GUI from stored runMode
-let showInfoFromCurrentMode() =
-    let isStopped = match runMode with | ActiveMode(Running, _) -> true | _ -> false
-    match runMode with
-    | FinishedMode ri
+let showInfoFromCurrentMode (m : Model) =
+    let isStopped = match m.RunMode with | ActiveMode(Running, _) -> true | _ -> false
+    match m.RunMode with
+    | FinishedMode ri //TODO: **5
     | ActiveMode(_, ri)
     | RunErrorMode ri ->
         symbolMap <- ri.st
@@ -177,8 +177,8 @@ let highlightCurrentAndNextIns classname pInfo tId (m : Model) =
         match Map.tryFind (WA dp.Regs.[R15]) pInfo.IMem with
         | Some(condInstr, lineNo) ->
             highlightLine tId m.Editors lineNo classname 
-            Editors.revealLineInWindow tId lineNo //TODO: **4
-            Editors.toolTipInfo (lineNo - 1, "top") dp condInstr m
+            Editors.revealLineInWindow tId lineNo m.Editors 
+            Editors.toolTipInfo (lineNo - 1, "top") dp condInstr m 
         | Option.None
         | Some _ ->
             if dp.Regs.[R15] <> 0xFFFFFFFCu then
@@ -188,7 +188,7 @@ let highlightCurrentAndNextIns classname pInfo tId (m : Model) =
     let pc = (fst pInfo.dpCurrent).Regs.[R15]
     match Map.tryFind (WA pc) pInfo.IMem with
     | Some(condInstr, lineNo) ->
-        highlightNextInstruction tId lineNo
+        highlightNextInstruction lineNo m.Editors.[tId].IEditor 
         Editors.toolTipInfo (lineNo - 1, "bottom") (fst pInfo.dpCurrent) condInstr m
     | _ -> ()
 
@@ -266,7 +266,7 @@ let UpdateGUIFromRunState(pInfo : RunInfo) (m : Model)=
         showVexAlert (sprintf "What? Undefined symbols: %A" undefs)
         setMode (RunMode.RunErrorMode pInfo)
     | PSRunning -> failwithf "What? Invalid pInfo.State=PSRunning. Can't update GUI here if still running"
-    showInfoFromCurrentMode()
+    showInfoFromCurrentMode m
 
 
 
@@ -375,11 +375,11 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
     let displayState ri' running =
             match ri'.State with
             | PSRunning -> // simulation stopped without error or exit
-                highlightCurrentAndNextIns "editor-line-highlight" ri' m.CurrentFileTabId m //TODO::*3
-                showInfoFromCurrentMode()
+                highlightCurrentAndNextIns "editor-line-highlight" ri' m.CurrentFileTabId m 
+                showInfoFromCurrentMode m//TODO::*3
                 if ri.StepsDone < slowDisplayThreshold || (ri.StepsDone - lastDisplayStepsDone) > maxStepsBeforeSlowDisplay then
                     lastDisplayStepsDone <- ri.StepsDone
-                    showInfoFromCurrentMode()
+                    showInfoFromCurrentMode m
                 if running && (int64 Refs.vSettings.SimulatorMaxSteps) <> 0L then showVexAlert (loopMessage())
             | PSError e -> // Something went wrong causing a run-time error
                 UpdateGUIFromRunState ri' m
@@ -390,7 +390,7 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
     match runMode with
     | ActiveMode(Stopping, ri') -> // pause execution from GUI button
         setCurrentModeActiveFromInfo RunState.Paused ri'
-        showInfoFromCurrentMode()
+        showInfoFromCurrentMode m
         highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId m
     | ResetMode -> () // stop everything after reset
     | _ -> // actually do some simulation
@@ -407,7 +407,7 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
              // if indefinitely, we could stop on display update timeout, or error, or end of program exit
             let ri' = asmStep (stepsMax + ri.StepsDone - 1L) ri // finally run the simulator!
             setCurrentModeActiveFromInfo RunState.Running ri' // mark the fact that we are running
-            showInfoFromCurrentMode() // main function to update GUI
+            showInfoFromCurrentMode m // main function to update GUI
             match ri'.State with
             | PSRunning -> //
                  Browser.window.setTimeout ((fun () ->
@@ -458,7 +458,7 @@ let runEditorTab breakCondition (m : Model) steps : Model =
             let limStr, m4 = tryParseAndIndentCode tId m
             match limStr with 
             | Some(lim, _) ->
-                disableEditors()//TODO:
+                //TODO: disableEditors()//TODO:
                 let ri = lim |> getRunInfoFromImage breakCondition m
                 let m5 = { m4 with RunMode = ActiveMode(RunState.Running, ri) }
                 asmStepDisplay breakCondition m5 steps ri //TODO::*3
@@ -483,7 +483,7 @@ let stepCode tabId editors (m : Model) : Model =
         m
 
 /// Step simulation back by numSteps
-let stepCodeBackBy numSteps (m : Model) =
+let stepCodeBackBy (m : Model) numSteps =
     match m.RunMode with
     | ActiveMode(Paused, ri')
     | RunErrorMode ri'
@@ -503,24 +503,24 @@ let stepCodeBackBy numSteps (m : Model) =
                 resetEmulator()
                 let newDecorations = 
                     removeEditorDecorations currentFileTabId m.Decorations m.Editors
-                showInfoFromCurrentMode()
+                showInfoFromCurrentMode m
             else
                 printfn "Stepping back to step %d" target
                 setCurrentModeActiveFromInfo RunState.Paused ri
                 let ri' = asmStep target ri
                 setCurrentModeActiveFromInfo Paused ri'
-                disableEditors()
+                //TODO: disableEditors()
                 match ri'.State with
                 | PSRunning ->
                     highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId m
                 | PSError _ | PSExit | PSBreak -> failwithf "What? Error can't happen when stepping backwards!"
-                showInfoFromCurrentMode()
+                showInfoFromCurrentMode m
     | ParseErrorMode -> showVexAlert (sprintf "Can't execute when code has errors")
     | ResetMode -> showVexAlert (sprintf "Execution has not started")
     | _ -> ()
 
 /// Step simulation back by 1 instruction
-let stepCodeBack() = stepCodeBackBy 1L
+let stepCodeBack (m : Model) = stepCodeBackBy m 1L
 
 
 let runEditorTabOnTests (tests : Test list) (m : Model) =
@@ -540,7 +540,7 @@ let runEditorTabOnTests (tests : Test list) (m : Model) =
             runT()
 
 let runTestbench (m : Model) =
-    match getParsedTests 0x80000000u with
+    match getParsedTests 0x80000000u m with
     | Error(mess) ->
         showVexAlert mess
     | Ok(tabId, tests) when Refs.currentFileTabId = tabId ->

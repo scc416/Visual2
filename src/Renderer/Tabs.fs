@@ -78,7 +78,8 @@ let setMode (rm : ExecutionTop.RunMode) =
     | ExecutionTop.RunErrorMode _ -> setErrorStatus "Runtime Error"
     | ExecutionTop.ResetMode ->
         setNoStatus()
-        Tooltips.deleteAllContentWidgets()
+        let newContenWidgets = Tooltips.deleteAllContentWidgets
+        ()
     | ExecutionTop.ActiveMode(_, _) -> setStepExecutionStatus()
     | _ -> () 
     setRunButton rm
