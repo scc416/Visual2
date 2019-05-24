@@ -38,7 +38,7 @@ let init _ =
         if isArg "--debug" || isArg "-d" then 2
         elif isArg "-w" then 1
         else 0
-    let initSettings = checkSettings (getJSONSettings()) initSettings
+    let settings = checkSettings (getJSONSettings()) initSettings
     let m =
         { 
             CurrentFileTabId = 0
@@ -63,7 +63,7 @@ let init _ =
             Activity = true
             Sleeping = false
             LastRemindTime = None
-            Settings = initSettings
+            Settings = settings
             DialogBox = None
             InitClose = false
             Decorations = []

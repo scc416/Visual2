@@ -67,7 +67,7 @@ let updateAllEditors readOnly =
 
 
 // Disable the editor and tab selection during execution
-let disableEditors() = //TODO:
+let disableEditors() =
     Refs.fileTabMenu.classList.add ("disabled-click")
     Refs.fileTabMenu.onclick <- (fun _ ->
         showVexAlert ("Cannot change tabs during execution")
@@ -85,7 +85,7 @@ let enableEditors() =
     Refs.darkenOverlay.classList.add ([| "invisible" |])
 
 let mutable decorations : obj list = []
-//let mutable lineDecorations : obj list = []
+let mutable lineDecorations : obj list = []
 
 [<Emit "new monaco.Range($0,$1,$2,$3)">]
 let monacoRange _ _ _ _ = jsNative
@@ -105,19 +105,19 @@ let removeEditorDecorations tId =
         List.iter (fun x -> removeDecorations Refs.editors.[tId] x) decorations
         decorations <- []
 
-let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) decorations =
+let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) =
     let model = editor?getModel ()
     let lineWidth = model?getLineMaxColumn (number)
     let posStart = match rangeOpt with | None -> 1 | Some(n, _) -> n
     let posEnd = match rangeOpt with | None -> lineWidth | Some(_, n) -> n
-    let newDecs = lineDecoration editor//TODO:
+    let newDecs = lineDecoration editor
                     decorations
                     (monacoRange number posStart number posEnd)
                     decoration
-    List.append decorations [ newDecs ]
+    decorations <- List.append decorations [ newDecs ]
 
 // highlight a particular line
-let highlightLine tId number className decorations =
+let highlightLine tId number className =
     editorLineDecorate
         Refs.editors.[tId]
         number
@@ -127,22 +127,19 @@ let highlightLine tId number className decorations =
             "inlineClassName" ==> className
         ])
         None
-        decorations
 
-let highlightGlyph tId number glyphClassName (editors : Map<int, Editor>) decorations =
+let highlightGlyph tId number glyphClassName =
     editorLineDecorate
-        editors.[tId].IEditor
+        Refs.editors.[tId]
         number
         (createObj [
             "isWholeLine" ==> true
             "glyphMarginClassName" ==> glyphClassName
         ])
         None
-        decorations
 
-let highlightNextInstruction tId number decorations editors =
-    if number > 0 then highlightGlyph tId number "editor-glyph-margin-arrow" editors decorations
-        else decorations
+let highlightNextInstruction tId number =
+    if number > 0 then highlightGlyph tId number "editor-glyph-margin-arrow"
 
 /// <summary>
 /// Decorate a line with an error indication and set up a hover message.
@@ -152,24 +149,22 @@ let highlightNextInstruction tId number decorations editors =
 /// lineNumber: int - line to decorate, starting at 1.
 /// hoverLst: hover attached to line.
 /// gHoverLst: hover attached to margin glyph.</summary>
-let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) (editors : Map<int, Editor>) decorations =
+let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) =
     let makeMarkDown textLst =
         textLst
         |> List.toArray
         |> Array.map (fun txt -> createObj [ "isTrusted" ==> true; "value" ==> txt ])
     // decorate the line
-    let newDecorations =
-        editorLineDecorate //TODO:
-            editors.[tId].IEditor
-            lineNumber
-            (createObj [
-                "isWholeLine" ==> true
-                "isTrusted" ==> true
-                "inlineClassName" ==> "editor-line-error"
-                "hoverMessage" ==> makeMarkDown hoverLst
-             ])
-            None
-            decorations
+    editorLineDecorate
+        Refs.editors.[tId]
+        lineNumber
+        (createObj [
+            "isWholeLine" ==> true
+            "isTrusted" ==> true
+            "inlineClassName" ==> "editor-line-error"
+            "hoverMessage" ==> makeMarkDown hoverLst
+         ])
+        None
     // decorate the margin
     editorLineDecorate
         Refs.editors.[tId]
@@ -182,7 +177,6 @@ let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : strin
             "overviewRuler" ==> createObj [ "position" ==> 4 ]
         ])
         None
-        newDecorations
 
 let revealLineInWindow tId (lineNumber : int) =
     Refs.editors.[tId]?revealLineInCenterIfOutsideViewport (lineNumber) |> ignore
@@ -194,9 +188,9 @@ let revealLineInWindow tId (lineNumber : int) =
 type MemDirection = | MemRead | MemWrite
 
 /// find editor Horizontal char position after end of code (ignoring comment)
-let findCodeEnd (lineCol : int) editors =
+let findCodeEnd (lineCol : int) =
     let tabSize = 6
-    match Refs.currentTabText editors () with
+    match Refs.currentTabText() with
     | None -> 0
     | Some text ->
         if text.Length <= lineCol then
@@ -208,12 +202,11 @@ let findCodeEnd (lineCol : int) editors =
             | [] -> 0
 
 
-///// Make execution tooltip info for the given instruction and line v, dp before instruction dp.
-///// Does nothing if opcode is not documented with execution tooltip
+/// Make execution tooltip info for the given instruction and line v, dp before instruction dp.
+/// Does nothing if opcode is not documented with execution tooltip
 let toolTipInfo (v : int, orientation : string)
                 (dp : DataPath)
-                ({ Cond = cond; InsExec = instruction; InsOpCode = opc } : ParseTop.CondInstr) 
-                editors =
+                ({ Cond = cond; InsExec = instruction; InsOpCode = opc } : ParseTop.CondInstr) =
     match Helpers.condExecute cond dp, instruction with
     | false, _ -> ()
     | true, ParseTop.IMEM ins ->
@@ -239,7 +232,7 @@ let toolTipInfo (v : int, orientation : string)
                 let regRows =
                     locs
                     |> List.map (makeRegRow >> TROWS)
-                (findCodeEnd v editors, "Stack"), TABLE [] [
+                (findCodeEnd v, "Stack"), TABLE [] [
                     DIV [] [
                         TROWS [ sprintf "Pointer (%s)" (ins.Rn.ToString()); sprintf "0x%08X" sp ]
                         TROWS [ "Increment"; increment |> sprintf "%d" ]
@@ -256,7 +249,7 @@ let toolTipInfo (v : int, orientation : string)
                 let ea = match ins.MemMode with | Memory.PreIndex | Memory.NoIndex -> (baseAddrU + uint32 offset) | _ -> baseAddrU
                 let mData = (match ins.MemSize with | MWord -> Memory.getDataMemWord | MByte -> Memory.getDataMemByte) ea dp
                 let isIncr = match ins.MemMode with | Memory.NoIndex -> false | _ -> true
-                (findCodeEnd v editors, "Pointer"), TABLE [] [
+                (findCodeEnd v, "Pointer"), TABLE [] [
                     TROWS [ sprintf "Base (%s)" (ins.Rb.ToString()); sprintf "0x%08X" baseAddrU ]
                     TROWS [ "Address"; ea |> sprintf "0x%08X" ]
                     TROWS <| if isIncr then [] else [ "Offset"; (offset |> sprintf "%+d") ]
@@ -281,7 +274,7 @@ let toolTipInfo (v : int, orientation : string)
             | _ -> ()
     | true, ParseTop.IDP(exec, op2) ->
         let alu = ExecutionTop.isArithmeticOpCode opc
-        let pos = findCodeEnd v editors, v, orientation
+        let pos = findCodeEnd v, v, orientation
         match exec dp with
         | Error _ -> ()
         | Ok(dp', uF') ->
@@ -290,10 +283,9 @@ let toolTipInfo (v : int, orientation : string)
             | DP.Op2.RegisterWithShift(_, _, 0u) -> ()
             | DP.Op2.RegisterWithShift(rn, shiftT, shiftAmt) ->
                     makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) shiftAmt op2
-
+                    
             | DP.Op2.RegisterWithRegisterShift(rn, shiftT, sRn) ->
                     makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) (dp.Regs.[sRn] % 32u) op2
-
+                    
             | DP.Op2.RegisterWithRRX rn -> makeShiftTooltip pos (dp, dp', uF') rn (None, alu) 1u op2
     | _ -> ()
-

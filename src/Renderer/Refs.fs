@@ -221,17 +221,17 @@ let showVexAlert (htmlMessage : string) =
     vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage ])
     ()
 
-let showVexAlert2 (htmlMessage : string) (callBack : bool -> unit) =
-    vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage 
-                                  "callback" ==> callBack ])
-    ()
-
 let showVexPrompt (placeHolder : string) (callBack : string -> unit) (htmlMessage : string) =
     vex?dialog?prompt (createObj [
         "unsafeMessage" ==> htmlMessage
         "placeholder" ==> placeHolder
         "callback" ==> callBack
         ])
+    ()
+
+let showVexAlert2 (htmlMessage : string) (callBack : bool -> unit) =
+    vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage 
+                                  "callback" ==> callBack ])
     ()
 
 let validPosInt s =
@@ -476,6 +476,10 @@ let cacheLastWithActionIfChanged actionFunc =
             cache <- Some inDat
             actionFunc inDat
 
+
+
+
+
 /// A reference to the settings for the app
 /// persistent using electron-settings
 let settings : obj = electron.remote.require "electron-settings"
@@ -546,10 +550,6 @@ let checkSettings (vs : VSettings) vso =
     with
         | _ -> printf "Error parsing stored settings: %A" vs
                vs
-
-
-
-
 
 
 
@@ -658,7 +658,7 @@ let runExtPage url () =
     electron.shell.openExternal url |> ignore
 
 
-let writeToFile (str : string) (path:string) =
+let writeToFile str path =
     let errorHandler _err = // TODO: figure out how to handle errors which can occur
         ()
     fs.writeFile (path, str, errorHandler)
@@ -723,21 +723,21 @@ let mutable lastOnlineFetchTime : Result<System.DateTime, System.DateTime> =
 
 
 /// Return the text in tab id tId as a string
-let getCode tId (editors : Map<int, Editor>) : string =
+let getCode tId : string =
     if tId < 0 then failwithf "No current Editor!"
-    let editor = editors.[tId].IEditor
+    let editor = editors.[tId]
     editor?getValue ()
 
 /// Return list of lines in editor tab tId
-let textOfTId tId editors =
-    getCode tId editors
+let textOfTId tId =
+    getCode tId
     |> (fun (x : string) -> x.Split [| '\n' |])
     |> Array.toList
 
-let currentTabText editors () =
+let currentTabText() =
     if currentFileTabId < 0 then None
     else
-        Some(textOfTId currentFileTabId editors)
+        Some(textOfTId currentFileTabId)
 
 
 
@@ -756,4 +756,3 @@ let resetRegs() =
             | 13 -> 0xFF000000u
             | _ -> 0u))
     |> ignore
-
