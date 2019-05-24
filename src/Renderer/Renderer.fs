@@ -25,7 +25,7 @@ open Settings2
 open Editors2
 open Dialog
 open Stats2
-open Integration2
+open Integration
 
 let init _ =
     let debugLevel =

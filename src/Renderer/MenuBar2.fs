@@ -9,7 +9,7 @@ open Node.Base
 open Refs
 open Settings
 open Tabs
-open Integration2
+open Integration
 //open Files2
 //open Tabs2
 
@@ -33,7 +33,7 @@ let interlock (actionName : string) (action : Unit -> Unit) = (
             printf "button %A" buttonNum
             match buttonNum with
             | false -> ()
-            | _ -> Integration2.resetEmulator(); action()
+            | _ -> resetEmulator(); action()
         match Refs.runMode with
         | ExecutionTop.ResetMode
         | ExecutionTop.ParseErrorMode -> action() :> obj
