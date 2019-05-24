@@ -735,6 +735,11 @@ let textOfTId tId =
     |> (fun (x : string) -> x.Split [| '\n' |])
     |> Array.toList
 
+let formatText txt =
+    txt
+    |> (fun (x : string) -> x.Split [| '\n' |])
+    |> Array.toList
+
 let currentTabText() =
     if currentFileTabId < 0 then None
     else

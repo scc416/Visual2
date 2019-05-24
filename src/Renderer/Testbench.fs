@@ -28,10 +28,10 @@ let getTB() =
     getTBWithTab()
     |> Result.map snd
 
-let currentTabIsTB() =
-    match Refs.currentFileTabId with
+let currentTabIsTB tabId (editors : Map<int, Editor>) =
+    match tabId with
     | -1 -> false
-    | tab -> getCode tab
+    | tab -> editors.[tab].IEditor?getValue ()
              |> String.trim |> String.startsWith "##TESTBENCH"
 
 /// Write test Checklines to the buffer containing the testbench file

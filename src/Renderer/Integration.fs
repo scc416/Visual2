@@ -458,8 +458,8 @@ let runEditorTab breakCondition steps =
 
 
 /// Step simulation forward by 1
-let stepCode() =
-    match currentTabIsTB() with
+let stepCode tabId editors =
+    match currentTabIsTB tabId editors with
     | false -> runEditorTab NoBreak 1L
     | true -> showVexAlert "Current file is a testbench: switch to an assembly tab"
 
@@ -538,19 +538,26 @@ let startTest test =
 
 /// Top-level simulation execute
 /// If current tab is TB run TB if this is possible
-let runCode breakCondition () =
-    match currentTabIsTB() with
-    | true -> runTestbenchOnCode()
+let runCode breakCondition (m : Model) : Model =
+    match currentTabIsTB m.CurrentFileTabId m.Editors with
+    | true -> m//TODO: runTestbenchOnCode()
     | false ->
-        match runMode with
-        | FinishedMode _
-        | RunErrorMode _ -> resetEmulator()
-        | _ -> ()
-        match runMode with
-        | ActiveMode(RunState.Running, ri) -> setCurrentModeActiveFromInfo (RunState.Stopping) ri
+        match m.RunMode with
+        | ActiveMode(RunState.Running, ri) -> 
+            { m with RunMode = ActiveMode((RunState.Stopping), ri) }
         | _ ->
-            runEditorTab breakCondition <|
-                match int64 Refs.vSettings.SimulatorMaxSteps with
+            let m2 = 
+                match m.RunMode with
+                | FinishedMode _
+                | RunErrorMode _ -> { m with MemoryMap = Map.empty
+                                             SymbolMap = Map.empty
+                                             RegMap = initialRegMap
+                                             RunMode = ResetMode
+                                             ClockTime = (0uL, 0uL)}//TODO: resetEmulator()
+                | _ -> m
+            runEditorTab breakCondition <| //TODO: **1
+                match int64 m.Settings.SimulatorMaxSteps with
                 | 0L -> System.Int64.MaxValue
                 | n when n > 0L -> n
                 | _ -> System.Int64.MaxValue
+            m2 
