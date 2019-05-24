@@ -117,6 +117,7 @@ type Model = {
     DialogBox : DialogBox option
     InitClose : bool
     Decorations : obj list
+    EditorEnable : bool
     }
 
 type Msg =

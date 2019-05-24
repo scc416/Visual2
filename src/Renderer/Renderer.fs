@@ -69,6 +69,7 @@ let init _ =
         DialogBox = None
         InitClose = false
         Decorations = []
+        EditorEnable = true
     }, Cmd.none
 
 let update (msg : Msg) (m : Model) =

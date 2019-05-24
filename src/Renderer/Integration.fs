@@ -321,16 +321,17 @@ let mutable lastDisplayStepsDone = 0L
 
 let getTestRunInfo test codeTid breakCond editors debugLevel =
     let limstr, runModeOpt, decorations = tryParseAndIndentCode codeTid editors debugLevel
+    let mutable editorEnable = true
     let resultOpt =
         match limstr with 
         | Some(lim, _) ->
             let dp = initTestDP (lim.Mem, lim.SymInf.SymTab) test
-            Editors.disableEditors() //TODO:
+            editorEnable <- false //TODO:REACT ELEMENT
             match dp with
             | Ok dp -> getRunInfoFromImageWithInits breakCond lim dp.Regs dp.Fl Map.empty dp.MM |> Ok |> Some 
             | Error e -> Error e |> Some
         | None -> None
-    resultOpt, runModeOpt, decorations
+    resultOpt, runModeOpt, decorations, editorEnable
 
 let runThingOnCode thing editors dispatch =
     match Testbench.getTBWithTab editors with
@@ -348,15 +349,17 @@ let runTests startTest tests stepFunc tabId editors debugLevel =
     match tests with
     | test :: _ ->
         printfn "Running tests"
-        let limstr, runModeOpt, decorations = getTestRunInfo test tabId NoBreak editors debugLevel
-        match limstr with //TODO:4*
+        let limstr, runModeOpt, decorations, editorEnable = getTestRunInfo test tabId NoBreak editors debugLevel
+        let mutable newRunModeOpt = runModeOpt
+        match limstr with 
         | Some(Ok ri) ->
             let ri' = { ri with TestState = if startTest then NoTest else Testing tests }
-            setCurrentModeActiveFromInfo RunState.Running ri'
+            newRunModeOpt <- (RunState.Running, ri') |> ActiveMode |> Some 
             stepFunc (if startTest then 1L else System.Int64.MaxValue) ri'
         | Some(Error eMess) -> showVexAlert eMess
         | _ -> showVexAlert "Can't run tests: current tab must have valid assembler"
-    | [] -> ()
+        Some (limstr, runModeOpt.Value, decorations, editorEnable) // %%% might cause error
+    | [] -> None
 
 
 /// Run the simulation from state ri for steps instructions.
@@ -418,7 +421,8 @@ let rec asmStepDisplay (breakc : BreakCondition) (editors : Map<int, Editor>) (t
                 highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors decorations
                 match handleTest ri' editors with
                 | [] -> ()
-                | tests -> runTests false tests (asmStepDisplay NoBreak editors tabId debugLevel decorations) tabId editors debugLevel 
+                | tests -> runTests false tests (asmStepDisplay NoBreak editors tabId debugLevel decorations) tabId editors debugLevel  |> ignore 
+                // %%%%% IMPORTANT INFO HERE
 
 
 
@@ -446,12 +450,13 @@ let runEditorTab breakCondition editors tabId debugLevel decorations steps =
         | ResetMode
         | ParseErrorMode _ ->
             removeEditorDecorations tabId
-            let limstr, runModeOpt, decorations = tryParseAndIndentCode tabId editors debugLevel //TODO:
+            let limstr, runModeOpt, decorations = tryParseAndIndentCode tabId editors debugLevel 
+            let mutable newRunModeOpt = runModeOpt
             match limstr with
             | Some(lim, _) ->
                 disableEditors()
                 let ri = lim |> getRunInfoFromImage breakCondition
-                setCurrentModeActiveFromInfo RunState.Running ri
+                newRunModeOpt <- (RunState.Running, ri) |> ActiveMode |> Some //TODO:
                 asmStepDisplay breakCondition editors tabId debugLevel decorations steps ri 
             | _ -> ()
         | ActiveMode(RunState.Paused, ri) ->
@@ -539,7 +544,8 @@ let runTestbenchOnCode editors dispatch tabId =
 
 
 let startTest test editors tabId debugLevel =
-    runThingOnCode (fun () -> runTests true [ test ] (asmStepDisplay NoBreak editors tabId debugLevel decorations) tabId editors debugLevel)
+    runThingOnCode (fun () -> runTests true [ test ] (asmStepDisplay NoBreak editors tabId debugLevel decorations) tabId editors debugLevel |> ignore ) 
+    // %%%%%%%% important info here
 
 /// Top-level simulation execute
 /// If current tab is TB run TB if this is possible
