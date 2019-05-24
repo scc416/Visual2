@@ -10,7 +10,7 @@
 module Tests
 open System
 open ExecutionTop
-open Integration
+open Integration2
 open Errors
 open EEExtensions
 open Fable.Core

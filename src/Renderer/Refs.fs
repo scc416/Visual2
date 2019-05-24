@@ -715,21 +715,21 @@ let mutable lastOnlineFetchTime : Result<System.DateTime, System.DateTime> =
 
 
 /// Return the text in tab id tId as a string
-let getCode tId : string =
+let getCode tId (editors : Map<int, Editor>) : string =
     if tId < 0 then failwithf "No current Editor!"
-    let editor = editors.[tId]
+    let editor = editors.[tId].IEditor
     editor?getValue ()
 
 /// Return list of lines in editor tab tId
-let textOfTId tId =
-    getCode tId
+let textOfTId tId editors =
+    getCode tId editors
     |> (fun (x : string) -> x.Split [| '\n' |])
     |> Array.toList
 
-let currentTabText() =
+let currentTabText editors () =
     if currentFileTabId < 0 then None
     else
-        Some(textOfTId currentFileTabId)
+        Some(textOfTId currentFileTabId editors)
 
 
 

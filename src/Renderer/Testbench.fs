@@ -16,27 +16,28 @@ open CommonData
 open ExecutionTop
 open TestLib
 
-let getTBWithTab() =
-    Refs.fileTabList
-    |> List.map (fun tab -> tab, getCode tab)
+let getTBWithTab (editors : Map<int, Editor>) =
+    editors
+    |> Map.toList
+    |> List.map (fun (id, editor) -> id, editor.IEditor?getValue ())
     |> List.filter (snd >> String.trim >> String.startsWith "##TESTBENCH")
     |> function | [ tab, tb ] -> Ok(tab, tb)
                 | [] -> Error "No testbench is loaded"
                 | _ -> Error "More than one testbench is loaded"
 
-let getTB() =
-    getTBWithTab()
+let getTB editors =
+    getTBWithTab editors
     |> Result.map snd
 
-let currentTabIsTB() =
-    match Refs.currentFileTabId with
+let currentTabIsTB tabId (editors : Map<int, Editor>) =
+    match tabId with
     | -1 -> false
-    | tab -> getCode tab
+    | tab -> editors.[tabId].IEditor?getValue ()
              |> String.trim |> String.startsWith "##TESTBENCH"
 
 /// Write test Checklines to the buffer containing the testbench file
-let writeTest (test : Test) =
-        getTBWithTab()
+let writeTest (test : Test) editors =
+        getTBWithTab editors
         |> Result.map (fun (tabId, dat) ->
             dat
             |> String.splitString [| "\n" |]
@@ -63,22 +64,22 @@ let writeTest (test : Test) =
 /// test: test to add (one of those in the testbench).
 /// dp: DataPath after test simulation ends.
 /// Returns true if test has passed.
-let addResultsToTestbench (test : Test) (dp : DataPath) =
+let addResultsToTestbench (test : Test) (dp : DataPath) editors =
     let goodParse, resultLines = computeTestResults test dp
-    writeTest { test with CheckLines = resultLines }
+    writeTest { test with CheckLines = resultLines } editors
     goodParse
 
 /// Top-level testbench parse. Locate loaded testbench, generate pair of testbench tab ID
 /// and Test list, or Error message. If testbench lines contain errors these are highlighted in buffer.
 /// Previous error highlights are removed from buffer.
-let getParsedTests dStart =
+let getParsedTests dStart editors =
 
-    let processParseErrors (eLst : Result<Test, (int * string) list> list) =
+    let processParseErrors editors (eLst : Result<Test, (int * string) list> list) =
         let highlightErrors tab =
             List.iter (fun (lNum, mess) ->
                 printfn "Testbench error %d %s." lNum mess
                 Editors.highlightLine tab lNum "editor-line-error")
-        match getTBWithTab() with
+        match getTBWithTab editors with
         | Error mess -> Error mess
         | Ok(tab, _) ->
             Editors.removeEditorDecorations tab
@@ -91,18 +92,19 @@ let getParsedTests dStart =
                 Error "Parse errors in testbench"
 
     let initStack = 0xFF000000u
-    getTBWithTab()
+    editors
+    |> getTBWithTab 
     |> Result.bind (
             fun (tab, tb) ->
                 String.toUpper tb
                 |> String.splitString [| "\n" |]
                 |> Array.toList
                 |> parseTests initStack dStart
-                |> processParseErrors
+                |> processParseErrors editors
                 |> Result.map (fun x -> tab, x))
 
-let getTestList() =
-    getParsedTests 0x10000000u
+let getTestList editors =
+    getParsedTests 0x10000000u editors
     |> function
         | Error e -> showVexAlert e; []
         | Ok(_, tests) ->

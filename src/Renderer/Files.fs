@@ -106,7 +106,7 @@ let updateCurrentPathFromList (res : string list) =
 
 
 
-let writeCurrentCodeToFile path = (Refs.writeToFile (getCode currentFileTabId) path)
+//let writeCurrentCodeToFile path = (Refs.writeToFile (getCode currentFileTabId) path)
 
 let filterBadName isSave path =
     path
@@ -124,59 +124,59 @@ let filterBadName isSave path =
             else [ path ])
 
 
-let rec saveFileAs() =
-    // Don't do anything if the user tries to save as the settings tab
-    match settingsTab with
-    | Some x when x = currentFileTabId -> ()
-    | _ ->
-        let options = createEmpty<SaveDialogOptions>
-        options.filters <- fileFilterOpts
-        let currentPath = getTabFilePath currentFileTabId
+//let rec saveFileAs() =
+    //// Don't do anything if the user tries to save as the settings tab
+    //match settingsTab with
+    //| Some x when x = currentFileTabId -> ()
+    //| _ ->
+        //let options = createEmpty<SaveDialogOptions>
+        //options.filters <- fileFilterOpts
+        //let currentPath = getTabFilePath currentFileTabId
 
-        // If a path already exists for this file, open it
-        match currentPath with
-        | "" -> ()
-        | _ -> options.defaultPath <- Some currentPath
+        //// If a path already exists for this file, open it
+        //match currentPath with
+        //| "" -> ()
+        //| _ -> options.defaultPath <- Some currentPath
 
-        let result = electron.remote.dialog.showSaveDialog (options)
+        //let result = electron.remote.dialog.showSaveDialog (options)
 
-        // Performs op on resPart if x is Ok resPart, then returns x
-        let resultIter op x =
-            Result.map op x |> ignore
-            x
-        let filterUntitled res =
-            match res with
-            | Result.Ok path ->
-                match filterBadName true path with
-                | [] -> Result.Error(saveFileAs(); ())
-                | [ path ] -> Result.Ok path
-                | _ -> failwithf "What? multiple paths not allowed"
-            | e -> e
+        //// Performs op on resPart if x is Ok resPart, then returns x
+        //let resultIter op x =
+        //    Result.map op x |> ignore
+        //    x
+        //let filterUntitled res =
+        //    match res with
+        //    | Result.Ok path ->
+        //        match filterBadName true path with
+        //        | [] -> Result.Error(saveFileAs(); ())
+        //        | [ path ] -> Result.Ok path
+        //        | _ -> failwithf "What? multiple paths not allowed"
+        //    | e -> e
 
-        result
-        |> resultUndefined()
-        |> filterUntitled
-        |> resultIter writeCurrentCodeToFile
-        |> resultIter (setTabFilePath currentFileTabId)
-        |> resultIter updateCurrentPath
-        |> Result.map baseFilePath
-        |> Result.map (setTabName currentFileTabId)
-        |> Result.map (fun _ -> setTabSaved (currentFileTabId))
-        |> ignore
+        //result
+        //|> resultUndefined()
+        //|> filterUntitled
+        //|> resultIter writeCurrentCodeToFile
+        //|> resultIter (setTabFilePath currentFileTabId)
+        //|> resultIter updateCurrentPath
+        //|> Result.map baseFilePath
+        //|> Result.map (setTabName currentFileTabId)
+        //|> Result.map (fun _ -> setTabSaved (currentFileTabId))
+        //|> ignore
 
 // If a path already exists for a file, write it straight to disk without the dialog
-let saveFile() =
-    // Save the settings if the current tab is the settings tab
-    match settingsTab with
-    | Some x when x = currentFileTabId ->
-        getFormSettings()
-        setTabSaved (currentFileTabId)
-    | _ ->
-        match getTabFilePath currentFileTabId with
-        | "" -> saveFileAs() // No current path exists
-        | path ->
-            writeCurrentCodeToFile path
-            setTabSaved (currentFileTabId)
+//let saveFile() =
+    //// Save the settings if the current tab is the settings tab
+    //match settingsTab with
+    //| Some x when x = currentFileTabId ->
+    //    getFormSettings()
+    //    setTabSaved (currentFileTabId)
+    //| _ ->
+        //match getTabFilePath currentFileTabId with
+        //| "" -> saveFileAs() // No current path exists
+        //| path ->
+            //writeCurrentCodeToFile path
+            //setTabSaved (currentFileTabId)
 // Figure out if any of the tabs are unsaved
 
 

@@ -188,9 +188,9 @@ let revealLineInWindow tId (lineNumber : int) =
 type MemDirection = | MemRead | MemWrite
 
 /// find editor Horizontal char position after end of code (ignoring comment)
-let findCodeEnd (lineCol : int) =
+let findCodeEnd (lineCol : int) editors =
     let tabSize = 6
-    match Refs.currentTabText() with
+    match Refs.currentTabText editors () with
     | None -> 0
     | Some text ->
         if text.Length <= lineCol then
@@ -202,11 +202,12 @@ let findCodeEnd (lineCol : int) =
             | [] -> 0
 
 
-/// Make execution tooltip info for the given instruction and line v, dp before instruction dp.
-/// Does nothing if opcode is not documented with execution tooltip
+///// Make execution tooltip info for the given instruction and line v, dp before instruction dp.
+///// Does nothing if opcode is not documented with execution tooltip
 let toolTipInfo (v : int, orientation : string)
                 (dp : DataPath)
-                ({ Cond = cond; InsExec = instruction; InsOpCode = opc } : ParseTop.CondInstr) =
+                ({ Cond = cond; InsExec = instruction; InsOpCode = opc } : ParseTop.CondInstr) 
+                editors =
     match Helpers.condExecute cond dp, instruction with
     | false, _ -> ()
     | true, ParseTop.IMEM ins ->
@@ -232,7 +233,7 @@ let toolTipInfo (v : int, orientation : string)
                 let regRows =
                     locs
                     |> List.map (makeRegRow >> TROWS)
-                (findCodeEnd v, "Stack"), TABLE [] [
+                (findCodeEnd v editors, "Stack"), TABLE [] [
                     DIV [] [
                         TROWS [ sprintf "Pointer (%s)" (ins.Rn.ToString()); sprintf "0x%08X" sp ]
                         TROWS [ "Increment"; increment |> sprintf "%d" ]
@@ -249,7 +250,7 @@ let toolTipInfo (v : int, orientation : string)
                 let ea = match ins.MemMode with | Memory.PreIndex | Memory.NoIndex -> (baseAddrU + uint32 offset) | _ -> baseAddrU
                 let mData = (match ins.MemSize with | MWord -> Memory.getDataMemWord | MByte -> Memory.getDataMemByte) ea dp
                 let isIncr = match ins.MemMode with | Memory.NoIndex -> false | _ -> true
-                (findCodeEnd v, "Pointer"), TABLE [] [
+                (findCodeEnd v editors, "Pointer"), TABLE [] [
                     TROWS [ sprintf "Base (%s)" (ins.Rb.ToString()); sprintf "0x%08X" baseAddrU ]
                     TROWS [ "Address"; ea |> sprintf "0x%08X" ]
                     TROWS <| if isIncr then [] else [ "Offset"; (offset |> sprintf "%+d") ]
@@ -274,7 +275,7 @@ let toolTipInfo (v : int, orientation : string)
             | _ -> ()
     | true, ParseTop.IDP(exec, op2) ->
         let alu = ExecutionTop.isArithmeticOpCode opc
-        let pos = findCodeEnd v, v, orientation
+        let pos = findCodeEnd v editors, v, orientation
         match exec dp with
         | Error _ -> ()
         | Ok(dp', uF') ->
@@ -283,10 +284,10 @@ let toolTipInfo (v : int, orientation : string)
             | DP.Op2.RegisterWithShift(_, _, 0u) -> ()
             | DP.Op2.RegisterWithShift(rn, shiftT, shiftAmt) ->
                     makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) shiftAmt op2
-                    
+
             | DP.Op2.RegisterWithRegisterShift(rn, shiftT, sRn) ->
                     makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) (dp.Regs.[sRn] % 32u) op2
-                    
+
             | DP.Op2.RegisterWithRRX rn -> makeShiftTooltip pos (dp, dp', uF') rn (None, alu) 1u op2
     | _ -> ()
 

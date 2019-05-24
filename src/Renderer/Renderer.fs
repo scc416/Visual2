@@ -196,7 +196,9 @@ let update (msg : Msg) (m : Model) =
         | InitiateClose ->
             { m with InitClose = true }
         | RunSimulation ->
-            runCode ExecutionTop.NoBreak |> ignore
+            runCode ExecutionTop.NoBreak 
+                    m.CurrentFileTabId
+                    m.Editors |> ignore
                     //m.CurrentFileTabId 
                     //m.Editors 
                     //m.RunMode 
