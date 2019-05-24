@@ -39,12 +39,12 @@ let dpAndInfo (dp, _, dpi) = dp, dpi
 
 
 /// Process an editor line parse error. Generate a hover message and line decoration. Set Parse Error Mode
-let highlightErrorParse ((err : ParseError), lineNo) tId opc =
+let highlightErrorParse ((err : ParseError), lineNo) tId opc (m : Model) =
     let ML = EEExtensions.String.split [| '\n' |] >> Array.toList
-    let codeLines = Refs.getCode tId |> EEExtensions.String.split [| '\n' |]
+    let codeLines = m.Editors.[tId].IEditor?getValue () |> EEExtensions.String.split [| '\n' |]
     let (gHover, range) =
         if opc <> "" then
-            ErrorDocs.getOpcHover "" opc codeLines.[lineNo - 1]
+            ErrorDocs.getOpcHover "" opc codeLines.[lineNo - 1] 
         else ([], (1, 1))
     let link, hover =
         match err with
@@ -79,10 +79,10 @@ let highlightErrorParse ((err : ParseError), lineNo) tId opc =
     let mLink = [ sprintf "[more](%s)" (Refs.visualDocsPage link) ]
     let mHover = hover @ [ "More: see \u26a0" ]
     match err with
-    | ``Duplicate symbol`` (sym, lines) -> makeErrorInEditor tId lineNo hover hover
-    | _ -> makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink)
+    | ``Duplicate symbol`` (sym, lines) -> makeErrorInEditor tId lineNo hover hover m.Editors
+    | _ -> makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink) m.Editors
 
-    setMode ParseErrorMode
+
 
 /// Make map of all data memory locs
 let makeDataLocMemoryMap mm =
@@ -270,7 +270,10 @@ let UpdateGUIFromRunState(pInfo : RunInfo) (m : Model)=
 
 
 /// Return executable image of program in editor tab
-let imageOfTId = textOfTId >> reLoadProgram
+let imageOfTId tabId editors = 
+    editors
+    |> formatText tabId
+    |> reLoadProgram
 
 /// Return true if program in current editor tab has changed from that in pInfo
 let currentFileTabProgramIsChanged (pInfo : RunInfo) tabId (editors : Map<int, Editor>) =
@@ -285,40 +288,41 @@ let currentFileTabProgramIsChanged (pInfo : RunInfo) tabId (editors : Map<int, E
 /// Parse text in tId as program. If parse is OK, indent the program.
 /// If parse fails decorate the buffer with error info.
 /// Return LoadImage on parse success or None.
-let tryParseAndIndentCode tId =
-    let lim = imageOfTId tId //TODO: **3
+let tryParseAndIndentCode tId (m : Model) =
+    let lim = imageOfTId tId m.Editors
     let editorASM = lim.EditorText
     // See if any errors exist, if they do display them
     match lim with
     | { Errors = [] } as lim ->
         //Browser.console.log(sprintf "%A" lim)
-        let editor = editors.[tId]
+        let editor = m.Editors.[tId].IEditor
         let trimmed line = String.trimEnd [| '\r'; '\n' |] line
         let newCode = List.map trimmed lim.Source
-        let oldCode = List.map trimmed (Refs.textOfTId tId)
+        let oldCode = List.map trimmed (formatText tId m.Editors)
         if oldCode <> newCode then
-            if debugLevel > 0 then
+            if m.DebugLevel > 0 then
                 if oldCode.Length <> newCode.Length then
                     printfn "Lengths of indented and old code do not match!"
             (editor?setValue (String.concat "\n" newCode)) |> ignore
-        (lim, lim.Source) |> Some
+        (lim, lim.Source) |> Some, m
     | lim ->
-        let processParseError (pe, lineNo, opCode) =
+        let processParseError (pe, lineNo, opCode) = 
             highlightErrorParse (pe, lineNo) tId opCode
-        List.map processParseError lim.Errors |> ignore
-        Core.Option.None
+        let error = List.map processParseError lim.Errors |> ignore
+        Core.Option.None, { m with RunMode = ParseErrorMode }
 
 
 
-let getRunInfoFromImage bc (lim : LoadImage) =
-    getRunInfoFromImageWithInits bc lim (getRegs()) (getFlags()) memoryMap lim.Mem
+let getRunInfoFromImage bc (m : Model) (lim : LoadImage) =
+    getRunInfoFromImageWithInits bc lim (m.RegMap) (m.Flags) m.MemoryMap lim.Mem 
 
 
 /// Execution Step number at which GUI was last updated
 let mutable lastDisplayStepsDone = 0L
 
-let getTestRunInfo test codeTid breakCond =
-    match tryParseAndIndentCode codeTid with
+let getTestRunInfo test codeTid breakCond m =
+    let loadIm, m2 = tryParseAndIndentCode codeTid m
+    match loadIm with
     | Some(lim, _) ->
         let dp = initTestDP (lim.Mem, lim.SymInf.SymTab) test
         Editors.disableEditors()
@@ -339,12 +343,12 @@ let runThingOnCode thing =
     | Error e -> showVexAlert e
 
 
-let runTests startTest tests stepFunc =
+let runTests startTest tests stepFunc m =
     let codeTid = Refs.currentFileTabId
     match tests with
     | test :: _ ->
         printfn "Running tests"
-        match getTestRunInfo test codeTid NoBreak with
+        match getTestRunInfo test codeTid NoBreak m with
         | Some(Ok ri) ->
             let ri' = { ri with TestState = if startTest then NoTest else Testing tests }
             setCurrentModeActiveFromInfo RunState.Running ri'
@@ -413,7 +417,7 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
                 highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId m
                 match handleTest ri' with
                 | [] -> ()
-                | tests -> runTests false tests (asmStepDisplay NoBreak m)
+                | tests -> runTests false tests (asmStepDisplay NoBreak m) m
 
 
 
@@ -450,14 +454,15 @@ let runEditorTab breakCondition (m : Model) steps : Model =
             let tId = m2.CurrentFileTabId
             let decorations2 = removeEditorDecorations tId m.Decorations m2.Editors 
             let m3 = { m2 with Decorations = decorations2 }
-            match tryParseAndIndentCode tId with //TODO: **2
+            let limStr, m4 = tryParseAndIndentCode tId m
+            match limStr with 
             | Some(lim, _) ->
-                disableEditors()
-                let ri = lim |> getRunInfoFromImage breakCondition
-                setCurrentModeActiveFromInfo RunState.Running ri
+                disableEditors()//TODO
+                let ri = lim |> getRunInfoFromImage breakCondition m
+                setCurrentModeActiveFromInfo RunState.Running ri //TODO::*3
                 asmStepDisplay breakCondition m steps ri 
-                m2
-            | _ -> m2
+                m4
+            | _ -> m4
         | ActiveMode(RunState.Paused, ri) ->
             asmStepDisplay breakCondition m (steps + ri.StepsDone) ri
             m2
@@ -519,7 +524,7 @@ let stepCodeBack() = stepCodeBackBy 1L
 
 let runEditorTabOnTests (tests : Test list) (m : Model) =
         if tests = [] then showVexAlert "There are no Tests to run in the testbench!"
-        let runT() = runTests false tests (asmStepDisplay NoBreak m)
+        let runT() = runTests false tests (asmStepDisplay NoBreak m) m
         let m2 = prepareModeForExecution m
         match m2.RunMode with
         | ResetMode
@@ -533,7 +538,7 @@ let runEditorTabOnTests (tests : Test list) (m : Model) =
             resetEmulator();
             runT()
 
-let runTestbench m =
+let runTestbench (m : Model) =
     match getParsedTests 0x80000000u with
     | Error(mess) ->
         showVexAlert mess
@@ -548,7 +553,7 @@ let runTestbenchOnCode m =
 
 
 let startTest test (m : Model) =
-    runThingOnCode (fun () -> runTests true [ test ] (asmStepDisplay NoBreak m))
+    runThingOnCode (fun () -> runTests true [ test ] (asmStepDisplay NoBreak m) m) 
 
 /// Top-level simulation execute
 /// If current tab is TB run TB if this is possible

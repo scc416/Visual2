@@ -150,14 +150,14 @@ let highlightNextInstruction tId number =
 /// lineNumber: int - line to decorate, starting at 1.
 /// hoverLst: hover attached to line.
 /// gHoverLst: hover attached to margin glyph.</summary>
-let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) =
+let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) (editors : Map<int, Editor>)=
     let makeMarkDown textLst =
         textLst
         |> List.toArray
         |> Array.map (fun txt -> createObj [ "isTrusted" ==> true; "value" ==> txt ])
     // decorate the line
     editorLineDecorate
-        Refs.editors.[tId]
+        editors.[tId].IEditor
         lineNumber
         (createObj [
             "isWholeLine" ==> true
@@ -168,7 +168,7 @@ let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : strin
         None
     // decorate the margin
     editorLineDecorate
-        Refs.editors.[tId]
+        editors.[tId].IEditor
         lineNumber
         (createObj [
             "isWholeLine" ==> true
