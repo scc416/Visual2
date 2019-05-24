@@ -132,7 +132,7 @@ let setCurrentModeActiveFromInfo runState ri =
 
 let resetEmulator() =
     printfn "Resetting..."
-    Tooltips.deleteAllContentWidgets()
+    //Tooltips.deleteAllContentWidgets() INCLUDE THIS
     //let newDecorations = ,///Editors.removeEditorDecorations currentFileTabId
     Editors.enableEditors()
     memoryMap <- Map.empty
@@ -167,17 +167,18 @@ let showInfoFromCurrentMode() =
 
 /// Apply GUI decorations to instruction line of last PC and current PC.
 /// Move current instruction line to middle of window if not visible.
-let highlightCurrentAndNextIns classname pInfo tId (m : Model) =
-    let newdeocrations = removeEditorDecorations tId m.Decorations m.Editors
-    Tooltips.deleteAllContentWidgets()
+let highlightCurrentAndNextIns classname pInfo tId (m : Model) = 
+    let m2 = 
+        { m with Decorations = removeEditorDecorations tId m.Decorations m.Editors 
+                 CurrentTabWidgets = Tooltips.deleteAllContentWidgets m () }
     match pInfo.LastDP with
     | None -> ()
     | Some(dp, _uFl) ->
         match Map.tryFind (WA dp.Regs.[R15]) pInfo.IMem with
         | Some(condInstr, lineNo) ->
-            highlightLine tId lineNo classname
-            Editors.revealLineInWindow tId lineNo
-            Editors.toolTipInfo (lineNo - 1, "top") dp condInstr
+            highlightLine tId m.Editors lineNo classname 
+            Editors.revealLineInWindow tId lineNo //TODO: **4
+            Editors.toolTipInfo (lineNo - 1, "top") dp condInstr m
         | Option.None
         | Some _ ->
             if dp.Regs.[R15] <> 0xFFFFFFFCu then
@@ -188,7 +189,7 @@ let highlightCurrentAndNextIns classname pInfo tId (m : Model) =
     match Map.tryFind (WA pc) pInfo.IMem with
     | Some(condInstr, lineNo) ->
         highlightNextInstruction tId lineNo
-        Editors.toolTipInfo (lineNo - 1, "bottom") (fst pInfo.dpCurrent) condInstr
+        Editors.toolTipInfo (lineNo - 1, "bottom") (fst pInfo.dpCurrent) condInstr m
     | _ -> ()
 
 
@@ -366,7 +367,7 @@ let runTests startTest tests stepFunc m =
 let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
     let ri = { ri' with BreakCond = breakc }
     let loopMessage() =
-        let steps = Refs.vSettings.SimulatorMaxSteps
+        let steps = m.Settings.SimulatorMaxSteps
         sprintf "WARNING Possible infinite loop: max number of steps (%s) exceeded. To disable this warning use Edit -> Preferences" steps
     /// Main subfunction that updates GUI after a bit of simulation.
     /// running: true if trying to run program to end, false if pausing or single stepping.
@@ -374,7 +375,7 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
     let displayState ri' running =
             match ri'.State with
             | PSRunning -> // simulation stopped without error or exit
-                highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId m
+                highlightCurrentAndNextIns "editor-line-highlight" ri' m.CurrentFileTabId m //TODO::*3
                 showInfoFromCurrentMode()
                 if ri.StepsDone < slowDisplayThreshold || (ri.StepsDone - lastDisplayStepsDone) > maxStepsBeforeSlowDisplay then
                     lastDisplayStepsDone <- ri.StepsDone
@@ -457,11 +458,11 @@ let runEditorTab breakCondition (m : Model) steps : Model =
             let limStr, m4 = tryParseAndIndentCode tId m
             match limStr with 
             | Some(lim, _) ->
-                disableEditors()//TODO
+                disableEditors()//TODO:
                 let ri = lim |> getRunInfoFromImage breakCondition m
-                setCurrentModeActiveFromInfo RunState.Running ri //TODO::*3
-                asmStepDisplay breakCondition m steps ri 
-                m4
+                let m5 = { m4 with RunMode = ActiveMode(RunState.Running, ri) }
+                asmStepDisplay breakCondition m5 steps ri //TODO::*3
+                m5
             | _ -> m4
         | ActiveMode(RunState.Paused, ri) ->
             asmStepDisplay breakCondition m (steps + ri.StepsDone) ri
@@ -571,11 +572,15 @@ let runCode breakCondition (m : Model) : Model =
                 | RunErrorMode _ -> 
                     let newDecorations = 
                         removeEditorDecorations m.CurrentFileTabId m.Decorations m.Editors
+                    let newCurrentWidgets =
+                        Tooltips.deleteAllContentWidgets m
                     { m with MemoryMap = Map.empty
                                          SymbolMap = Map.empty
                                          RegMap = initialRegMap
                                          RunMode = ResetMode
-                                         ClockTime = (0uL, 0uL)}//TODO: resetEmulator()
+                                         ClockTime = (0uL, 0uL)
+                                         Decorations = newDecorations
+                                         CurrentTabWidgets = newCurrentWidgets() }//TODO: resetEmulator()
                 | _ -> m
             runEditorTab breakCondition m2 <| //TODO: **1
                 match int64 m.Settings.SimulatorMaxSteps with

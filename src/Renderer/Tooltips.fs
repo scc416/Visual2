@@ -392,15 +392,20 @@ let makeContentWidget (name : string) (dom : HTMLElement) (pos : WidgetPlace) =
     currentTabWidgets <- Map.add name widget currentTabWidgets
 
 /// delete content widget with ID = name on current editor.
-let deleteContentWidget name =
-    match Map.tryFind name currentTabWidgets with
-    | None -> ()
+let deleteContentWidget (m : Model) name =
+    match Map.tryFind name m.CurrentTabWidgets with
+    | None -> Some name
     | Some w ->
-        editors.[currentFileTabId]?removeContentWidget w |> ignore
-        currentTabWidgets <- Map.remove name currentTabWidgets
+        m.Editors.[m.CurrentFileTabId].IEditor?removeContentWidget w |> ignore
+        None
 /// delete all content widgets
-let deleteAllContentWidgets () =
-    Array.iter deleteContentWidget (Map.keys currentTabWidgets)
+let deleteAllContentWidgets (m : Model) () =
+    m.CurrentTabWidgets
+    |> Map.toList
+    |> List.map (fun (key, value) -> deleteContentWidget m key, value)
+    |> List.filter (fun (key, value) -> key <> None)
+    |> List.map (fun (key, value) -> key.Value, value)
+    |> Map.ofList
 
 /// work out tippy theme with opposite background to editor
 let tippyTheme() =
@@ -436,7 +441,7 @@ let makeTooltip (theme : string) (placement : string) (clickable : bool) (button
 /// <param name="v"> line number in editor buffer on which to place button (starting from 0 = top)</param>
 /// <param name="buttonText"> label on button</param>
 /// <param name="toolTipDOM"> DOM to display inside tooltip box </param>
-let makeEditorInfoButtonWithTheme theme (clickable : bool) (h, v, orientation) (buttonText : string) (toolTipDOM : HTMLElement) =
+let makeEditorInfoButtonWithTheme theme (clickable : bool) (h, v, orientation) (buttonText : string) (toolTipDOM : HTMLElement) (m : Model) =
     /// Ratio of char width / char size for editor buffer font.
     /// TODO: work this out properly from a test
     let editorFontWidthRatio = 0.6 // works OK for Fira Code Mono
@@ -451,7 +456,8 @@ let makeEditorInfoButtonWithTheme theme (clickable : bool) (h, v, orientation) (
     dom.addEventListener_click (fun _ ->
         Browser.console.log (sprintf "Clicking button %s" buttonText) |> (fun _ -> createObj [])
         )
-    deleteContentWidget domID // in some cases we may be updating an existing widget
+    deleteContentWidget m domID |> ignore // in some cases we may be updating an existing widget
+    let newTabWidgets = Map.remove domID m.CurrentTabWidgets
     makeContentWidget domID dom <| Exact(0, v)
     makeTooltip theme orientation clickable false domID tooltip
 
@@ -496,7 +502,7 @@ Visual2 to facilitate  use of stacks"""
 open CommonData
 
 /// Drive the displayShiftDiagram function from a tooltip with correct parameters for given line
-let makeShiftTooltip (h, v, orientation) (dp : DataPath, dpAfter : DataPath, uFAfter : DP.UFlags) (rn : RName) (shiftT : DP.ArmShiftType Option, alu : bool) (shiftAmt : uint32) (op2 : DP.Op2) =
+let makeShiftTooltip (h, v, orientation) (dp : DataPath, dpAfter : DataPath, uFAfter : DP.UFlags) (rn : RName) (shiftT : DP.ArmShiftType Option, alu : bool) (shiftAmt : uint32) (op2 : DP.Op2) (m : Model)=
     let bToi = function | true -> 1 | false -> 0
     let before = dp.Regs.[rn]
     let (after, uF) = DP.evalOp2 op2 dp
@@ -507,7 +513,7 @@ let makeShiftTooltip (h, v, orientation) (dp : DataPath, dpAfter : DataPath, uFA
     printfn "After': %d,%d" after after'
     printfn "Making shift tooltip"
     let diagram = displayShiftDiagram rn (before, bToi dp.Fl.C) (after', final, bToi uF.Ca, finalC, finalFWrite, alu) shiftT (shiftAmt |> int)
-    makeEditorInfoButtonWithTheme "light" lineTipsClickable (h, (v + 1), orientation) "Shift" diagram
+    makeEditorInfoButtonWithTheme "light" lineTipsClickable (h, (v + 1), orientation) "Shift" diagram m
 
 
 
