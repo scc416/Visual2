@@ -78,16 +78,13 @@ let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: in
         ()
 
 let attemptToExitUpdate editors (dialogBox: DialogBox option) =
-    let mutable newDialogBox = dialogBox
-    let mutable newCmd = Cmd.none
     match dialogBox with
     | Option.None -> 
         let anyUnsaved = 
             editors 
             |> Map.forall (fun _ value -> value.Saved = true) 
         match anyUnsaved with
-        | true -> newCmd <- Cmd.ofMsg Exit
-        | _ -> newDialogBox <- Some QuitDl
+        | true -> dialogBox, Cmd.ofMsg Exit
+        | _ -> Some QuitDl, Cmd.none
     | _ -> 
-        ()
-    newDialogBox, newCmd
+        dialogBox, Cmd.none

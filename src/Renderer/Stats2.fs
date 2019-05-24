@@ -146,13 +146,12 @@ let remindNewVersion txt =
             | _ -> ()
     )
 
-//let mutable lastRemindTime: System.TimeSpan option = None
+let mutable lastRemindTime: System.TimeSpan option = None
 
-let remindInExams txt lastRemindTime =
-    let mutable newLastRemindTime = lastRemindTime
+let remindInExams txt =
     printfn "Remind in exams every 5 min!"
     let remind() = 
-        newLastRemindTime <- Some DateTime.Now.TimeOfDay
+        lastRemindTime <- Some DateTime.Now.TimeOfDay
         infoBox ("WARNING: an assessed Test is scheduled now." +
                 "If you are currently doing this you are not allowed to use Visual2. " +
                 "Please exit Visual2 immediately")
@@ -163,13 +162,12 @@ let remindInExams txt lastRemindTime =
             | MatchDate (date, t1, t2) -> 
                 let tim = DateTime.Now
                 let inExam = tim.TimeOfDay > t1 && tim.TimeOfDay < t2 && tim.Date = date.Date
-                match inExam, newLastRemindTime with
+                match inExam,lastRemindTime with
                 | true, None -> remind()
                 | true, Some tt when tt.Add (TimeSpan.FromMinutes 5.) < tim.TimeOfDay -> remind()                            
                 | _ -> ()
             | _ -> ()
         )
-    newLastRemindTime
 
 
 let doIfHoursLaterThan hours (tim:System.DateTime) func =
@@ -177,15 +175,14 @@ let doIfHoursLaterThan hours (tim:System.DateTime) func =
     then func()
 
 
-let readOnlineInfo  (lastRemindTime, onlineFetchText, debugLevel)
-                    (ve: VisualEvent) =
-    let mutable newLastRemindTime = lastRemindTime
-    let mutable newOnlineFetchText = onlineFetchText
+let readOnlineInfo (ve: VisualEvent) =
     let checkActions txt =
         match ve with
-            | Startup -> remindNewVersion txt
-            | RunningCode -> ()
-        newLastRemindTime <- remindInExams txt newLastRemindTime
+            | Startup -> 
+                remindNewVersion txt
+                remindInExams txt
+            | RunningCode -> 
+                remindInExams txt
 
     let doFetch() =
         //new IHttpRequestHeaders
@@ -201,23 +198,30 @@ let readOnlineInfo  (lastRemindTime, onlineFetchText, debugLevel)
                      Ok res 
                  else 
                      if debugLevel > 0 then printfn "can't read internet data"
-                     lastOnlineFetchTime <- Error System.DateTime.Now
-                     checkActions newOnlineFetchText
+                     Refs.lastOnlineFetchTime <- Error System.DateTime.Now
+                     checkActions vSettings.OnlineFetchText
                      Error "can't read internet data"
             )
         |> Promise.bindResult (fun res -> res.text())
         |> Promise.mapResult (fun txt -> 
             //if debugLevel > 0 then printf "----%s----%s----" txt vSettings.OnlineFetchText
-            lastOnlineFetchTime <- Ok System.DateTime.Now
+            Refs.lastOnlineFetchTime <- Ok System.DateTime.Now
             checkActions txt
-            if newOnlineFetchText <> txt
+            if vSettings.OnlineFetchText <> txt
             then
-                newOnlineFetchText <- txt
+                vSettings <- {vSettings with OnlineFetchText = txt}
                 Refs.setJSONSettings()
                 printfn "-----updating online text to-----\n%s\n------------------------" txt
         )
         |> ignore
-    match lastOnlineFetchTime with
+        
+    match Refs.lastOnlineFetchTime with
     | Error tim  -> doIfHoursLaterThan (if ve = Startup then 0. else 0.1) tim doFetch
     | Ok tim -> doIfHoursLaterThan (if debugLevel > 0 then 0.001 else 24.) tim doFetch
-    newLastRemindTime, newOnlineFetchText
+           
+  
+
+
+
+
+

@@ -93,24 +93,22 @@ let saveFileAs filePathSetting (editor : Editor) dispatch : (unit) =
 /// top-level function for saving file
 /// open the save dialog when necessary
 let saveFileUpdate (tabId, editors : Map<int, Editor>) =
-    let mutable newDialog = Option.None
-    let mutable newEditors = editors
     match tabId with
     | -1 -> 
-        ()
+        Option.None, editors
     | id -> 
         let filePath = editors.[id].FilePath
         match filePath with
         | Option.None -> 
-            newDialog <- Some SaveAsDl /// open the dialog
+            Some SaveAsDl, editors /// open the dialog
         | Some fPath ->
             let currentEditor = editors.[id]
             writeToFile (currentEditor.IEditor?getValue ()) fPath
-            newEditors <- 
+            let newEditors = 
                 Map.add id
                         { currentEditor with Saved = true }
                         editors
-    newDialog, newEditors
+            Option.None, newEditors    
 
 /// top-level function for save file as
 /// open the save file dialog when necessary
