@@ -118,6 +118,7 @@ type Model = {
     InitClose : bool
     Decorations : obj list
     EditorEnable : bool
+    ClockTime : uint64 * uint64
     }
 
 type VisualEvent =
@@ -738,8 +739,6 @@ let currentTabText() =
     if currentFileTabId < 0 then None
     else
         Some(textOfTId currentFileTabId)
-
-
 
 let setRegister (id : CommonData.RName) (value : uint32) =
     let el = register id.RegNum

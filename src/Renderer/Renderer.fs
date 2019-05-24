@@ -68,6 +68,7 @@ let init _ =
             InitClose = false
             Decorations = []
             EditorEnable = true
+            ClockTime = (0uL, 0uL)
         }
     let cmd = 
         readOnlineInfo (m.LastOnlineFetchTime, m.LastRemindTime, m.Settings.OnlineFetchText) 
