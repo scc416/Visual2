@@ -179,7 +179,7 @@ let testMenu (m : Model) (dispatch : (Msg -> Unit)) =
         let runSteps() =
             showVexValidatedPrompt "steps forward" validPosInt (fun x -> Integration.runEditorTab ExecutionTop.NoBreak m (int64 x) |> UpdateModel |> dispatch) "Number of steps forward"
         let runStepsBack() =
-            showVexValidatedPrompt "steps back" validPosInt (fun x -> Integration.stepCodeBackBy m (int64 x)) "Number of steps back"
+            showVexValidatedPrompt "steps back" validPosInt (fun x -> Integration.stepCodeBackBy m (int64 x) |> UpdateModel |> dispatch) "Number of steps back"
         let runSingleTest() =
             match Testbench.getTestList m with
             | [] -> showVexAlert "Can't find any tests. Have you loaded a valid testbench?"
@@ -189,7 +189,7 @@ let testMenu (m : Model) (dispatch : (Msg -> Unit)) =
                         makeItem name Core.None actFun) lst)
         let runTo cond = Integration.runEditorTab cond m System.Int64.MaxValue
         makeMenu "Test" [
-            makeItem "Step <-" (Some "F3") (fun () -> Integration.stepCodeBack m )
+            makeItem "Step <-" (Some "F3") (fun () -> Integration.stepCodeBack m |> UpdateModel |> dispatch)
             makeItem "Step ->" (Some "F4") (fun () -> Integration.stepCode m.CurrentFileTabId m.Editors m |> UpdateModel |> dispatch )
             makeItem "Step to next call" (Some "F5") (fun () -> runTo ExecutionTop.ToSubroutine |> UpdateModel |> dispatch )
             makeItem "Step to next return" (Some "F6") (fun () -> runTo ExecutionTop.ToReturn |> UpdateModel |> dispatch )
