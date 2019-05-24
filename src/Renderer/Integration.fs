@@ -83,9 +83,9 @@ let highlightErrorParse ((err : ParseError), lineNo) tId opc editors =
         | ``Duplicate symbol`` (sym, lines) -> makeErrorInEditor tId lineNo hover hover editors decorations
         | _ -> makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink) editors decorations
 
-    ParseErrorMode, newDecorations
+    newDecorations
 
-/// Make map of all data memory locs
+/// Make map of all data memory locss
 let makeDataLocMemoryMap mm =
     Map.toList mm
     |> List.map (fun ((WA addr), value) ->
@@ -303,12 +303,12 @@ let tryParseAndIndentCode tId editors debugLevel =
                 if oldCode.Length <> newCode.Length then
                     printfn "Lengths of indented and old code do not match!"
             (editor?setValue (String.concat "\n" newCode)) |> ignore
-        (lim, lim.Source) |> Some
+        (lim, lim.Source) |> Some, None, []
     | lim ->
         let processParseError (pe, lineNo, opCode) =
-            highlightErrorParse (pe, lineNo) tId opCode//TODO:6*
-        List.map processParseError lim.Errors |> ignore
-        Core.Option.None
+            highlightErrorParse (pe, lineNo) tId opCode
+         //|> ignore//TODO:6*
+        Core.Option.None, Some ParseErrorMode, List.map processParseError lim.Errors
 
 
 
@@ -319,15 +319,18 @@ let getRunInfoFromImage bc (lim : LoadImage) =
 /// Execution Step number at which GUI was last updated
 let mutable lastDisplayStepsDone = 0L
 
-let getTestRunInfo test codeTid breakCond editors debugLevel=
-    match tryParseAndIndentCode codeTid editors debugLevel with //TODO:5*
-    | Some(lim, _) ->
-        let dp = initTestDP (lim.Mem, lim.SymInf.SymTab) test
-        Editors.disableEditors()
-        match dp with
-        | Ok dp -> getRunInfoFromImageWithInits breakCond lim dp.Regs dp.Fl Map.empty dp.MM |> Ok |> Some 
-        | Error e -> Error e |> Some
-    | None -> None
+let getTestRunInfo test codeTid breakCond editors debugLevel =
+    let limstr, runModeOpt, decorations = tryParseAndIndentCode codeTid editors debugLevel
+    let resultOpt =
+        match limstr with 
+        | Some(lim, _) ->
+            let dp = initTestDP (lim.Mem, lim.SymInf.SymTab) test
+            Editors.disableEditors() //TODO:
+            match dp with
+            | Ok dp -> getRunInfoFromImageWithInits breakCond lim dp.Regs dp.Fl Map.empty dp.MM |> Ok |> Some 
+            | Error e -> Error e |> Some
+        | None -> None
+    resultOpt, runModeOpt, decorations
 
 let runThingOnCode thing editors dispatch =
     match Testbench.getTBWithTab editors with
@@ -345,7 +348,8 @@ let runTests startTest tests stepFunc tabId editors debugLevel =
     match tests with
     | test :: _ ->
         printfn "Running tests"
-        match getTestRunInfo test tabId NoBreak editors debugLevel with //TODO:4*
+        let limstr, runModeOpt, decorations = getTestRunInfo test tabId NoBreak editors debugLevel
+        match limstr with //TODO:4*
         | Some(Ok ri) ->
             let ri' = { ri with TestState = if startTest then NoTest else Testing tests }
             setCurrentModeActiveFromInfo RunState.Running ri'
@@ -442,7 +446,8 @@ let runEditorTab breakCondition editors tabId debugLevel decorations steps =
         | ResetMode
         | ParseErrorMode _ ->
             removeEditorDecorations tabId
-            match tryParseAndIndentCode tabId editors debugLevel with
+            let limstr, runModeOpt, decorations = tryParseAndIndentCode tabId editors debugLevel //TODO:
+            match limstr with
             | Some(lim, _) ->
                 disableEditors()
                 let ri = lim |> getRunInfoFromImage breakCondition

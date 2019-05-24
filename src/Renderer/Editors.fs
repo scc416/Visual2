@@ -67,7 +67,7 @@ let updateAllEditors readOnly =
 
 
 // Disable the editor and tab selection during execution
-let disableEditors() =
+let disableEditors() = //TODO:
     Refs.fileTabMenu.classList.add ("disabled-click")
     Refs.fileTabMenu.onclick <- (fun _ ->
         showVexAlert ("Cannot change tabs during execution")
