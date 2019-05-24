@@ -100,10 +100,11 @@ let removeDecorations _editor _decorations =
     jsNative
 
 // Remove all text decorations associated with an editor
-let removeEditorDecorations tId =
+let removeEditorDecorations tId decorations (editors : Map<int, Editor>) : obj list =
     if tId <> -1 then
-        List.iter (fun x -> removeDecorations Refs.editors.[tId] x) decorations
-        decorations <- []
+        List.iter (fun x -> removeDecorations editors.[tId].IEditor x) decorations
+        []
+        else decorations
 
 let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) =
     let model = editor?getModel ()

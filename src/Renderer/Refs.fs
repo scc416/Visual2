@@ -735,10 +735,12 @@ let textOfTId tId =
     |> (fun (x : string) -> x.Split [| '\n' |])
     |> Array.toList
 
-let formatText txt =
-    txt
+let formatText tId (editors : Map<int, Editor>) =
+    editors.[tId].IEditor?getValue ()
     |> (fun (x : string) -> x.Split [| '\n' |])
     |> Array.toList
+
+
 
 let currentTabText() =
     if currentFileTabId < 0 then None
