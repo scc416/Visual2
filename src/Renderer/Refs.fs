@@ -160,6 +160,7 @@ type Msg =
     | ReadOnlineInfoSuccess of string * VisualEvent
     | ReadOnlineInfoFail of VisualEvent
     | UpdateModel of Model
+    | ResetEmulator
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =

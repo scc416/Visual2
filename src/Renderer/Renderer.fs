@@ -217,6 +217,18 @@ let update (msg : Msg) (m : Model) =
                  LastRemindTime = newLastRemindTime}, Cmd.none
     | UpdateModel m ->
         m, Cmd.none
+    | ResetEmulator ->
+        let newDecorations = 
+            Editors.removeEditorDecorations m.CurrentFileTabId m.Decorations m.Editors
+        let newCurrentWidgets =
+            Tooltips.deleteAllContentWidgets m
+        { m with MemoryMap = Map.empty
+                             SymbolMap = Map.empty
+                             RegMap = ExecutionTop.initialRegMap
+                             RunMode = ExecutionTop.ResetMode
+                             ClockTime = (0uL, 0uL)
+                             Decorations = newDecorations
+                             CurrentTabWidgets = newCurrentWidgets() }, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
@@ -224,6 +236,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
     dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId, m.SettingsTab)
               dispatch
     Browser.console.log(string m.LastOnlineFetchTime)
+    Browser.console.log(string m.RegMap)
     div [ ClassName "window" ] 
         [ header [ ClassName "toolbar toolbar-header" ] 
                  [ div [ ClassName "toolbar-actions" ] 
