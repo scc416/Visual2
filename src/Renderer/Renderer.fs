@@ -68,6 +68,7 @@ let init _ =
         Settings = initSettings //with OnlineFetchText = initOnlineFetchText }
         DialogBox = None
         InitClose = false
+        Decorations = []
     }, Cmd.none
 
 let update (msg : Msg) (m : Model) =
@@ -100,13 +101,13 @@ let update (msg : Msg) (m : Model) =
             cmd <- newCmd
             { m with DialogBox = newDialog }
         | DeleteTab -> 
-
             let newTabId, newEditors, newSettingsTab = 
                 deleteTabUpdate (m.CurrentFileTabId, m.Editors, m.SettingsTab)
             { m with CurrentFileTabId = newTabId
                      Editors = newEditors 
                      SettingsTab = newSettingsTab 
-                     DialogBox = None }
+                     DialogBox = None 
+                     CurrentTabWidgets = Map.empty}
         | OpenFile editors -> 
             let newEditors, newFilePath, newTabId = 
                 openFileUpdate (m.Editors, m.Settings.CurrentFilePath, m.CurrentFileTabId)
@@ -214,7 +215,7 @@ let update (msg : Msg) (m : Model) =
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
-    mainMenu m.CurrentFileTabId dispatch m.Editors m.DebugLevel
+    mainMenu m.CurrentFileTabId dispatch m.Editors m.DebugLevel m.Decorations
     dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId, m.SettingsTab)
               dispatch
     //Browser.console.log(string m.LastOnlineFetchTime)

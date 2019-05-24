@@ -173,24 +173,24 @@ let popupMenu (items) =
     menu.popup (electron.remote.getCurrentWindow())
     ()
 
-let testMenu editors tabId debugLevel =
+let testMenu editors tabId debugLevel decorations =
         let runToBranch() = ()
         let menu = electron.remote.Menu.Create()
         let runSteps() =
-            showVexValidatedPrompt "steps forward" validPosInt (int64 >> (runEditorTab ExecutionTop.NoBreak editors tabId debugLevel)) "Number of steps forward"
+            showVexValidatedPrompt "steps forward" validPosInt (int64 >> (runEditorTab ExecutionTop.NoBreak editors tabId debugLevel decorations)) "Number of steps forward"
         let runStepsBack() =
             showVexValidatedPrompt "steps back" validPosInt (int64 >> (stepCodeBackBy editors)) "Number of steps back"
         let runSingleTest() =
-            match Testbench.getTestList editors with
+            match Testbench.getTestList editors decorations with
             | [] -> showVexAlert "Can't find any tests. Have you loaded a valid testbench?"
             | lst -> popupMenu (List.map (fun (test : ExecutionTop.Test) ->
                         let name = sprintf "Step code with initial data from Test %d" test.TNum
                         let actFun = fun () -> startTest test editors |> ignore
                         makeItem name Core.None actFun) lst)
-        let runTo cond () = runEditorTab cond editors tabId debugLevel System.Int64.MaxValue
+        let runTo cond () = runEditorTab cond editors tabId debugLevel decorations System.Int64.MaxValue
         makeMenu "Test" [
             makeItem "Step <-" (Some "F3") (stepCodeBack editors)
-            makeItem "Step ->" (Some "F4") (stepCode tabId editors debugLevel)
+            makeItem "Step ->" (Some "F4") (stepCode tabId editors debugLevel decorations)
             makeItem "Step to next call" (Some "F5") (runTo ExecutionTop.ToSubroutine)
             makeItem "Step to next return" (Some "F6") (runTo ExecutionTop.ToReturn)
             makeItem "Step forward by" Core.Option.None runSteps
@@ -201,7 +201,7 @@ let testMenu editors tabId debugLevel =
         ]
 
 
-let helpMenu dispatch editors tabId =
+let helpMenu dispatch editors tabId decorations =
         makeMenu "Help" (
             [
                 makeItem "UAL instruction guide" Core.Option.None (runExtPage <| visualDocsPage "guide#content")
@@ -210,7 +210,7 @@ let helpMenu dispatch editors tabId =
                 makeItem "Official ARM documentation" Core.Option.None (runExtPage "http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0234b/i1010871.html")
                 menuSeparator
                 makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" (fun _ -> Refs.LoadDemoCode |> dispatch))
-                makeCondItem (debugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (runTestbench editors tabId))
+                makeCondItem (debugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (runTestbench editors tabId decorations))
                 makeCondItem (debugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" Tests.runAllEmulatorTests)
                 menuSeparator
                 makeItem "About" Core.option.None (fun _ -> AboutDialog |> dispatch)
@@ -218,14 +218,14 @@ let helpMenu dispatch editors tabId =
 
 
 /// Make all app menus
-let mainMenu id (dispatch : (Msg -> Unit)) editors debugLevel=
+let mainMenu id (dispatch : (Msg -> Unit)) editors debugLevel decorations=
     let template =
         ResizeArray<MenuItemOptions> [
             fileMenu id dispatch editors
             editMenu dispatch
             viewMenu()
-            helpMenu dispatch editors id
-            testMenu editors id debugLevel
+            helpMenu dispatch editors id decorations
+            testMenu editors id debugLevel decorations
         ]
     template
     |> electron.remote.Menu.buildFromTemplate

@@ -78,11 +78,12 @@ let highlightErrorParse ((err : ParseError), lineNo) tId opc editors =
     let gLink = []
     let mLink = [ sprintf "[more](%s)" (Refs.visualDocsPage link) ]
     let mHover = hover @ [ "More: see \u26a0" ]
-    match err with
-    | ``Duplicate symbol`` (sym, lines) -> makeErrorInEditor tId lineNo hover hover
-    | _ -> makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink)
+    let newDecorations =
+        match err with
+        | ``Duplicate symbol`` (sym, lines) -> makeErrorInEditor tId lineNo hover hover editors decorations
+        | _ -> makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink) editors decorations
 
-    setMode ParseErrorMode
+    ParseErrorMode, newDecorations
 
 /// Make map of all data memory locs
 let makeDataLocMemoryMap mm =
@@ -167,7 +168,8 @@ let showInfoFromCurrentMode() =
 
 /// Apply GUI decorations to instruction line of last PC and current PC.
 /// Move current instruction line to middle of window if not visible.
-let highlightCurrentAndNextIns classname pInfo tId editors =
+let highlightCurrentAndNextIns classname pInfo tId editors decorations =
+    let mutable newDecorations = decorations
     removeEditorDecorations tId
     Tooltips.deleteAllContentWidgets()
     match pInfo.LastDP with
@@ -175,7 +177,7 @@ let highlightCurrentAndNextIns classname pInfo tId editors =
     | Some(dp, _uFl) ->
         match Map.tryFind (WA dp.Regs.[R15]) pInfo.IMem with
         | Some(condInstr, lineNo) ->
-            highlightLine tId lineNo classname
+            newDecorations <- highlightLine tId lineNo classname newDecorations
             Editors.revealLineInWindow tId lineNo
             Editors.toolTipInfo (lineNo - 1, "top") dp condInstr editors
         | Option.None
@@ -187,7 +189,7 @@ let highlightCurrentAndNextIns classname pInfo tId editors =
     let pc = (fst pInfo.dpCurrent).Regs.[R15]
     match Map.tryFind (WA pc) pInfo.IMem with
     | Some(condInstr, lineNo) ->
-        highlightNextInstruction tId lineNo
+        newDecorations <- highlightNextInstruction tId lineNo newDecorations editors
         Editors.toolTipInfo (lineNo - 1, "bottom") (fst pInfo.dpCurrent) condInstr editors
     | _ -> ()
 
@@ -227,7 +229,7 @@ let handleTest (pInfo : RunInfo) editors =
 /// Update GUI after a runtime error or exit. Highlight error line (and make it visible).
 /// Set suitable error message hover. Update GUI to 'finished' state on program exit.
 /// If running a testbench check results on finish and start next test if passed.
-let UpdateGUIFromRunState (pInfo : RunInfo) editors =
+let UpdateGUIFromRunState (pInfo : RunInfo) editors decorations =
     let getCodeLineMess pInfo =
         match pInfo.LastDP with
         | None -> ""
@@ -240,12 +242,12 @@ let UpdateGUIFromRunState (pInfo : RunInfo) editors =
     | PSError TBEXIT
     | PSExit ->
         setMode (FinishedMode pInfo)
-        highlightCurrentAndNextIns "editor-line-highlight" (pInfo) currentFileTabId editors
+        highlightCurrentAndNextIns "editor-line-highlight" (pInfo) currentFileTabId editors decorations
         enableEditors()
 
     | PSBreak ->
         setMode (ActiveMode(Paused, pInfo))
-        highlightCurrentAndNextIns "editor-line-highlight" (pInfo) currentFileTabId editors
+        highlightCurrentAndNextIns "editor-line-highlight" (pInfo) currentFileTabId editors decorations
         enableEditors()
 
     | PSError(NotInstrMem x) ->
@@ -254,7 +256,7 @@ let UpdateGUIFromRunState (pInfo : RunInfo) editors =
 
     | PSError(``Run time error`` (_pos, msg)) ->
         let lineMess = getCodeLineMess pInfo
-        highlightCurrentAndNextIns "editor-line-highlight-error" pInfo currentFileTabId editors
+        highlightCurrentAndNextIns "editor-line-highlight-error" pInfo currentFileTabId editors decorations
         updateRegisters()
         Browser.window.setTimeout ((fun () ->
             showVexAlert (sprintf "Error %s: %s" lineMess msg)
@@ -358,7 +360,7 @@ let runTests startTest tests stepFunc tabId editors debugLevel =
 /// Keep GUI updated from time to time if steps is large positive.
 /// Always update GUI at end.
 /// Stored history means that backward stepping will always be fast.
-let rec asmStepDisplay (breakc : BreakCondition) (editors : Map<int, Editor>) (tabId : int) debugLevel steps ri' =
+let rec asmStepDisplay (breakc : BreakCondition) (editors : Map<int, Editor>) (tabId : int) debugLevel decorations steps ri' =
     let ri = { ri' with BreakCond = breakc }
     let loopMessage() =
         let steps = Refs.vSettings.SimulatorMaxSteps
@@ -369,23 +371,23 @@ let rec asmStepDisplay (breakc : BreakCondition) (editors : Map<int, Editor>) (t
     let displayState ri' running =
             match ri'.State with
             | PSRunning -> // simulation stopped without error or exit
-                highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors
+                highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors decorations
                 showInfoFromCurrentMode()
                 if ri.StepsDone < slowDisplayThreshold || (ri.StepsDone - lastDisplayStepsDone) > maxStepsBeforeSlowDisplay then
                     lastDisplayStepsDone <- ri.StepsDone
                     showInfoFromCurrentMode()
                 if running && (int64 Refs.vSettings.SimulatorMaxSteps) <> 0L then showVexAlert (loopMessage())
             | PSError e -> // Something went wrong causing a run-time error
-                UpdateGUIFromRunState ri' editors
+                UpdateGUIFromRunState ri' editors decorations
             | PSBreak // execution met a valid break condition
             | PSExit -> // end-of-program termination (from END or implicit drop off code section)
-                UpdateGUIFromRunState ri' editors
+                UpdateGUIFromRunState ri' editors decorations
 
     match runMode with
     | ActiveMode(Stopping, ri') -> // pause execution from GUI button
         setCurrentModeActiveFromInfo RunState.Paused ri'
         showInfoFromCurrentMode()
-        highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors
+        highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors decorations
     | ResetMode -> () // stop everything after reset
     | _ -> // actually do some simulation
         let stepsNeeded = steps - ri.StepsDone // the number of steps still required
@@ -396,7 +398,7 @@ let rec asmStepDisplay (breakc : BreakCondition) (editors : Map<int, Editor>) (t
             let ri' = asmStep steps { ri with BreakCond = NoBreak } // finally run the simulator!
             setCurrentModeActiveFromInfo Paused ri' // mark the fact that we have paused
             displayState ri' running // update GUI
-            highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors
+            highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors decorations
         else // in this case we are running indefinitely, or else for a long time
              // if indefinitely, we could stop on display update timeout, or error, or end of program exit
             let ri' = asmStep (stepsMax + ri.StepsDone - 1L) ri // finally run the simulator!
@@ -406,13 +408,13 @@ let rec asmStepDisplay (breakc : BreakCondition) (editors : Map<int, Editor>) (t
             | PSRunning -> //
                  Browser.window.setTimeout ((fun () ->
                         // schedule more simulation in the event loop allowing button-press events
-                        asmStepDisplay ri'.BreakCond editors tabId debugLevel steps ri'), 0, []) |> ignore
+                        asmStepDisplay ri'.BreakCond editors tabId debugLevel decorations steps ri'), 0, []) |> ignore
             | _ ->
                 displayState ri' false // update GUI
-                highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors
+                highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors decorations
                 match handleTest ri' editors with
                 | [] -> ()
-                | tests -> runTests false tests (asmStepDisplay NoBreak editors tabId debugLevel) tabId editors debugLevel
+                | tests -> runTests false tests (asmStepDisplay NoBreak editors tabId debugLevel decorations) tabId editors debugLevel 
 
 
 
@@ -430,7 +432,7 @@ let prepareModeForExecution editors =
 /// Parses and runs the assembler program in the current tab
 /// Aborts after steps instructions, unless steps is 0, or
 /// if breackCondition happens
-let runEditorTab breakCondition editors tabId debugLevel steps =
+let runEditorTab breakCondition editors tabId debugLevel decorations steps =
     if currentFileTabId = -1 then
         showVexAlert "No file tab in editor to run!"
         ()
@@ -445,10 +447,10 @@ let runEditorTab breakCondition editors tabId debugLevel steps =
                 disableEditors()
                 let ri = lim |> getRunInfoFromImage breakCondition
                 setCurrentModeActiveFromInfo RunState.Running ri
-                asmStepDisplay breakCondition editors tabId debugLevel steps ri
+                asmStepDisplay breakCondition editors tabId debugLevel decorations steps ri 
             | _ -> ()
         | ActiveMode(RunState.Paused, ri) ->
-            asmStepDisplay breakCondition editors tabId debugLevel (steps + ri.StepsDone) ri
+            asmStepDisplay breakCondition editors tabId debugLevel decorations (steps + ri.StepsDone) ri
         | ActiveMode _
         | RunErrorMode _
         | FinishedMode _ -> ()
@@ -456,9 +458,9 @@ let runEditorTab breakCondition editors tabId debugLevel steps =
 
 
 /// Step simulation forward by 1
-let stepCode tabId editors debugLevel () =
+let stepCode tabId editors debugLevel decorations () =
     match currentTabIsTB tabId editors with
-    | false -> runEditorTab NoBreak editors tabId debugLevel 1L
+    | false -> runEditorTab NoBreak editors tabId debugLevel decorations 1L
     | true -> showVexAlert "Current file is a testbench: switch to an assembly tab"
 
 /// Step simulation back by numSteps
@@ -490,7 +492,7 @@ let stepCodeBackBy editors numSteps =
                 disableEditors()
                 match ri'.State with
                 | PSRunning ->
-                    highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors 
+                    highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId editors decorations
                 | PSError _ | PSExit | PSBreak -> failwithf "What? Error can't happen when stepping backwards!"
                 showInfoFromCurrentMode()
     | ParseErrorMode -> showVexAlert (sprintf "Can't execute when code has errors")
@@ -501,15 +503,15 @@ let stepCodeBackBy editors numSteps =
 let stepCodeBack editors () = stepCodeBackBy editors 1L
 
 
-let runEditorTabOnTests (tests : Test list) editors currentTabId debugLevel =
+let runEditorTabOnTests (tests : Test list) editors currentTabId debugLevel decorations =
         if tests = [] then showVexAlert "There are no Tests to run in the testbench!"
-        let runT() = runTests false tests (asmStepDisplay NoBreak editors debugLevel currentTabId) //TODO:3*
+        let runT() = runTests false tests (asmStepDisplay NoBreak editors debugLevel decorations currentTabId) //TODO:3*
         prepareModeForExecution editors
         match runMode with
         | ResetMode
         | ParseErrorMode _ ->
             let tId = currentTabId
-            Editors.removeEditorDecorations tId //TODO: DECORATIONS
+            //Editors.removeEditorDecorations tId //TODO: DECORATIONS
             runT()
         | ActiveMode _
         | RunErrorMode _
@@ -517,22 +519,22 @@ let runEditorTabOnTests (tests : Test list) editors currentTabId debugLevel =
             resetEmulator();
             runT()
 
-let runTestbench editors currentTabId ()=
-    match getParsedTests 0x80000000u editors with
+let runTestbench editors currentTabId decorations ()=
+    match getParsedTests 0x80000000u editors decorations with
     | Error(mess) ->
         showVexAlert mess
     | Ok(tabId, tests) when currentTabId = tabId ->
         showVexAlert "Please select the program tab which you want to test - not the testbench"
     | Ok(_, tests) ->
         printfn "Running %d Tests" tests.Length
-        runEditorTabOnTests tests editors currentTabId |> ignore
+        runEditorTabOnTests tests editors decorations currentTabId |> ignore
 
 let runTestbenchOnCode editors dispatch tabId =
-    runThingOnCode (runTestbench editors tabId) editors dispatch//TODO:2*
+    runThingOnCode (runTestbench editors tabId decorations) editors dispatch//TODO:2*
 
 
 let startTest test editors tabId debugLevel =
-    runThingOnCode (fun () -> runTests true [ test ] (asmStepDisplay NoBreak editors tabId debugLevel) tabId editors debugLevel)
+    runThingOnCode (fun () -> runTests true [ test ] (asmStepDisplay NoBreak editors tabId debugLevel decorations) tabId editors debugLevel)
 
 /// Top-level simulation execute
 /// If current tab is TB run TB if this is possible
@@ -547,7 +549,7 @@ let runCode breakCondition tabId editors dispatch debugLevel () =
         match runMode with
         | ActiveMode(RunState.Running, ri) -> setCurrentModeActiveFromInfo (RunState.Stopping) ri 
         | _ ->
-            runEditorTab breakCondition editors tabId debugLevel <|
+            runEditorTab breakCondition editors tabId debugLevel decorations <|
                 match int64 Refs.vSettings.SimulatorMaxSteps with
                 | 0L -> System.Int64.MaxValue
                 | n when n > 0L -> n

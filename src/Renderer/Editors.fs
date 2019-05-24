@@ -85,7 +85,7 @@ let enableEditors() =
     Refs.darkenOverlay.classList.add ([| "invisible" |])
 
 let mutable decorations : obj list = []
-let mutable lineDecorations : obj list = []
+//let mutable lineDecorations : obj list = []
 
 [<Emit "new monaco.Range($0,$1,$2,$3)">]
 let monacoRange _ _ _ _ = jsNative
@@ -105,19 +105,19 @@ let removeEditorDecorations tId =
         List.iter (fun x -> removeDecorations Refs.editors.[tId] x) decorations
         decorations <- []
 
-let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) =
+let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) decorations =
     let model = editor?getModel ()
     let lineWidth = model?getLineMaxColumn (number)
     let posStart = match rangeOpt with | None -> 1 | Some(n, _) -> n
     let posEnd = match rangeOpt with | None -> lineWidth | Some(_, n) -> n
-    let newDecs = lineDecoration editor
+    let newDecs = lineDecoration editor//TODO:
                     decorations
                     (monacoRange number posStart number posEnd)
                     decoration
-    decorations <- List.append decorations [ newDecs ]
+    List.append decorations [ newDecs ]
 
 // highlight a particular line
-let highlightLine tId number className =
+let highlightLine tId number className decorations =
     editorLineDecorate
         Refs.editors.[tId]
         number
@@ -127,19 +127,22 @@ let highlightLine tId number className =
             "inlineClassName" ==> className
         ])
         None
+        decorations
 
-let highlightGlyph tId number glyphClassName =
+let highlightGlyph tId number glyphClassName (editors : Map<int, Editor>) decorations =
     editorLineDecorate
-        Refs.editors.[tId]
+        editors.[tId].IEditor
         number
         (createObj [
             "isWholeLine" ==> true
             "glyphMarginClassName" ==> glyphClassName
         ])
         None
+        decorations
 
-let highlightNextInstruction tId number =
-    if number > 0 then highlightGlyph tId number "editor-glyph-margin-arrow"
+let highlightNextInstruction tId number decorations editors =
+    if number > 0 then highlightGlyph tId number "editor-glyph-margin-arrow" editors decorations
+        else decorations
 
 /// <summary>
 /// Decorate a line with an error indication and set up a hover message.
@@ -149,22 +152,24 @@ let highlightNextInstruction tId number =
 /// lineNumber: int - line to decorate, starting at 1.
 /// hoverLst: hover attached to line.
 /// gHoverLst: hover attached to margin glyph.</summary>
-let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) =
+let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) (editors : Map<int, Editor>) decorations =
     let makeMarkDown textLst =
         textLst
         |> List.toArray
         |> Array.map (fun txt -> createObj [ "isTrusted" ==> true; "value" ==> txt ])
     // decorate the line
-    editorLineDecorate
-        Refs.editors.[tId]
-        lineNumber
-        (createObj [
-            "isWholeLine" ==> true
-            "isTrusted" ==> true
-            "inlineClassName" ==> "editor-line-error"
-            "hoverMessage" ==> makeMarkDown hoverLst
-         ])
-        None
+    let newDecorations =
+        editorLineDecorate //TODO:
+            editors.[tId].IEditor
+            lineNumber
+            (createObj [
+                "isWholeLine" ==> true
+                "isTrusted" ==> true
+                "inlineClassName" ==> "editor-line-error"
+                "hoverMessage" ==> makeMarkDown hoverLst
+             ])
+            None
+            decorations
     // decorate the margin
     editorLineDecorate
         Refs.editors.[tId]
@@ -177,6 +182,7 @@ let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : strin
             "overviewRuler" ==> createObj [ "position" ==> 4 ]
         ])
         None
+        newDecorations
 
 let revealLineInWindow tId (lineNumber : int) =
     Refs.editors.[tId]?revealLineInCenterIfOutsideViewport (lineNumber) |> ignore

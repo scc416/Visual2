@@ -399,7 +399,7 @@ let deleteContentWidget name =
         editors.[currentFileTabId]?removeContentWidget w |> ignore
         currentTabWidgets <- Map.remove name currentTabWidgets
 /// delete all content widgets
-let deleteAllContentWidgets() =
+let deleteAllContentWidgets () =
     Array.iter deleteContentWidget (Map.keys currentTabWidgets)
 
 /// work out tippy theme with opposite background to editor

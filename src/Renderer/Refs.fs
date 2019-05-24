@@ -116,6 +116,7 @@ type Model = {
     Settings : VSettings
     DialogBox : DialogBox option
     InitClose : bool
+    Decorations : obj list
     }
 
 type Msg =

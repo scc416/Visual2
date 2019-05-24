@@ -46,13 +46,13 @@ let resetFlags() =
     setFlag "Z" false false
     setFlag "V" false false
 
-let setStatusButton msg (className : string) =
+let setStatusButton msg (className : string) = // TODO: REACT
     let classes = [| "btn-positive"; "btn-negative"; "btn-primary" |]
     Refs.statusBar.classList.remove classes
     Refs.statusBar.classList.add (className)
     Refs.statusBar.innerHTML <- msg
 
-let setErrorStatus msg = setStatusButton msg "btn-negative"
+let setErrorStatus msg = setStatusButton msg "btn-negative" // TODO: REACT
 
 let setExecutionCompleteStatus() =
     setStatusButton "Execution Complete" "btn-positive"
@@ -65,14 +65,14 @@ let setNoStatus() =
     Refs.statusBar.classList.remove ("btn-primary")
     Refs.statusBar.innerHTML <- "-"
 
-let setRunButton (mode : ExecutionTop.RunMode) =
+let setRunButton (mode : ExecutionTop.RunMode) = //TODO: REACT ELEMENT
     match mode with
     | ExecutionTop.ActiveMode(ExecutionTop.Running, _) ->
         Refs.runSimulationBtn.innerText <- "Pause";
     | _ ->
         Refs.runSimulationBtn.innerText <- "Run"
 
-let setMode (rm : ExecutionTop.RunMode) =
+let setMode (rm : ExecutionTop.RunMode) = 
     match rm with
     | ExecutionTop.ParseErrorMode -> setErrorStatus "Errors in Code"
     | ExecutionTop.RunErrorMode _ -> setErrorStatus "Runtime Error"
@@ -80,7 +80,7 @@ let setMode (rm : ExecutionTop.RunMode) =
         setNoStatus()
         Tooltips.deleteAllContentWidgets()
     | ExecutionTop.ActiveMode(_, _) -> setStepExecutionStatus()
-    | ExecutionTop.FinishedMode _ -> setExecutionCompleteStatus()
+    | _ -> () 
     setRunButton rm
     Refs.runMode <- rm
 
@@ -154,7 +154,7 @@ let deleteFileTab id =
                    | true -> -1
                    | false -> List.last Refs.fileTabList
         | _ -> ()
-        Tooltips.deleteAllContentWidgets()
+        // TODO : Tooltips.deleteAllContentWidgets  DONE CAN CHECK IF DELETED IN UPDATE
         Refs.fileTabMenu.removeChild (Refs.fileTab id) |> ignore
         Refs.fileViewPane.removeChild (Refs.fileView id) |> ignore
         match isSettingsTab with
