@@ -8,7 +8,7 @@
       <Paket>True</Paket>
       <Link>paket-files/Monaco.fs</Link>
     </Compile>
-    <Compile Include="MonacoEditor.fs" />
+    <Compile Include="Editor.fs" />
     <Compile Include="Renderer.fs" />
 
   </ItemGroup>

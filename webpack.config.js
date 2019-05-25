@@ -1,6 +1,6 @@
 var path = require("path");
 var webpack = require("webpack");
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+var MonacoWebpackPlugin = require("monaco-editor-webpack-plugin");
 
 function resolve(filePath) {
   return path.join(__dirname, filePath)
@@ -8,14 +8,6 @@ function resolve(filePath) {
 
 var babelOptions = {
     presets: ["@babel/preset-react"],
-//    presets: [
-//        ["@babel/preset-env", {
-//            "targets": {
-//                "browsers": ["last 2 versions"]
-//            },
-//        "modules": false
-//        }]
-//    ],
     plugins: ['@babel/plugin-proposal-class-properties']
 };
 
@@ -48,12 +40,8 @@ var basicConfig = {
         },
       },
             {
-            test:  /\.(sass|scss|css)$/,
-            use: [
-                  isProduction ? MiniCssExtractPlugin.loader : 'style-loader',
-                  'css-loader',
-                  'sass-loader',
-                  ],
+            test: /\.css$/,
+            use: ['style-loader', 'css-loader' ]
             }
     ]
   }
@@ -68,10 +56,30 @@ var mainConfig = Object.assign({
   output: {
     path: resolve("."),
     filename: "main.js"
-  }
+  },
 }, basicConfig);
 
 var rendererConfig = Object.assign({
+  plugins: [
+
+    //new UglifyJSPlugin(),
+
+//    new CopyWebpackPlugin([
+//      {
+//        from: 'node_modules/monaco-editor/min/vs',
+//        to: 'vs',
+//      },
+//      {
+//        from: 'node_modules/monaco-editor/esm/vs/editor/editor.worker.js',
+//        to: '',
+//      }
+//    ]),
+            new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }),
+            new MonacoWebpackPlugin({
+                                    languages:["javascript","css","html","json"],
+                                    features:["coreCommands","find"]
+                                    })
+  ],
   target: "electron-renderer",
   devtool: "source-map",
   entry: resolve("src/Renderer/Renderer.fsproj"),
