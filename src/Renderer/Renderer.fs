@@ -250,7 +250,8 @@ let view (m : Model) (dispatch : Msg -> unit) =
                          button [ ClassName "btn btn-fixed btn-default button-run"
                                   DOMAttr.OnClick (fun _ -> RunSimulation |> dispatch) ]
                                 [ str "Run" ]
-                         button [ ClassName "btn btn-default" ]
+                         button [ ClassName "btn btn-default"
+                                  DOMAttr.OnClick (fun _ -> ResetEmulator |> dispatch) ]
                                 [ str "Reset" ]
                          button [ ClassName "btn btn-default button-back" ]
                                 [ str " Step" ]
