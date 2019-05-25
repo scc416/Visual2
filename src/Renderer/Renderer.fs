@@ -65,7 +65,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
           div [ ClassName "window-content" ] 
               [ div [ ClassName "pane-group" ] 
                     [ div [ ClassName "pane"] 
-                          [ editor [] ] ] ] ]
+                          [ editor [ Options editorOptions ] ] ] ] ]
         
 Program.mkProgram init update view
 #if DEBUG

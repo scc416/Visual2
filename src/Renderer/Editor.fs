@@ -23,3 +23,8 @@ type Props =
 
 let inline editor (props: Props list) : React.ReactElement =
     ofImport "default" "react-monaco-editor" (keyValueList CaseRules.LowerFirst props) []
+
+let editorOptions =
+    createObj [
+        "automaticLayout" ==> true;
+    ]
