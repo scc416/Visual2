@@ -106,10 +106,11 @@ let removeEditorDecorations tId decorations (editors : Map<int, Editor>) : obj l
         []
         else decorations
 
-let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) (m : Model) =
+let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) (m : Model) : obj list =
     Browser.console.log("margin decoration")
     Browser.console.log(string m.Decorations)
     let model = editor?getModel ()
+    Browser.console.log(string model)
     let lineWidth = model?getLineMaxColumn (number)
     let posStart = match rangeOpt with | None -> 1 | Some(n, _) -> n
     let posEnd = match rangeOpt with | None -> lineWidth | Some(_, n) -> n
@@ -117,7 +118,8 @@ let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) 
                     m.Decorations
                     (monacoRange number posStart number posEnd)
                     decoration
-    { m with Decorations = List.append m.Decorations [ newDecs ] }
+    Browser.console.log(string newDecs)
+    List.append m.Decorations [ newDecs ]
 
 // highlight a particular line
 let highlightLine tId (editors : Map<int, Editor>) number className (m : Model) =
@@ -132,6 +134,7 @@ let highlightLine tId (editors : Map<int, Editor>) number className (m : Model) 
         ])
         None
         m
+
 let highlightGlyph number glyphClassName (m : Model) =
     Browser.console.log("EDITOR 136")
     editorLineDecorate
@@ -146,7 +149,7 @@ let highlightGlyph number glyphClassName (m : Model) =
 
 let highlightNextInstruction number (m : Model) =
     if number > 0 then highlightGlyph number "editor-glyph-margin-arrow" m
-        else m
+        else m.Decorations
 
 /// <summary>
 /// Decorate a line with an error indication and set up a hover message.
@@ -156,13 +159,14 @@ let highlightNextInstruction number (m : Model) =
 /// lineNumber: int - line to decorate, starting at 1.
 /// hoverLst: hover attached to line.
 /// gHoverLst: hover attached to margin glyph.</summary>
-let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) (m : Model)=
-    let makeMarkDown textLst =
+let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) (m : Model) =
+    let makeMarkDown (textLst : string list) =
+        Browser.console.log("making tooltips")
         textLst
         |> List.toArray
         |> Array.map (fun txt -> createObj [ "isTrusted" ==> true; "value" ==> txt ])
     // decorate the line
-    let m2 = 
+    let decorations2 = 
         Browser.console.log("editor 166")
         editorLineDecorate
             m.Editors.[tId].IEditor
@@ -172,23 +176,31 @@ let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : strin
                 "isTrusted" ==> true
                 "inlineClassName" ==> "editor-line-error"
                 "hoverMessage" ==> makeMarkDown hoverLst
+                "glyphMarginClassName" ==> "editor-glyph-margin-error"
+                "glyphMarginHoverMessage" ==> makeMarkDown gHoverLst
+                "overviewRuler" ==> createObj [ "position" ==> 4 ]
              ])
             None
             m
     // decorate the margin
-    Browser.console.log("editor 179")
-    editorLineDecorate
-        m2.Editors.[tId].IEditor
-        lineNumber
-        (createObj [
-            "isWholeLine" ==> true
-            "isTrusted" ==> true
-            "glyphMarginClassName" ==> "editor-glyph-margin-error"
-            "glyphMarginHoverMessage" ==> makeMarkDown gHoverLst
-            "overviewRuler" ==> createObj [ "position" ==> 4 ]
-        ])
-        None
-        m2
+    //let decorations3 =
+        //Browser.console.log("editor 179")
+        //editorLineDecorate
+            //m.Editors.[tId].IEditor
+            //lineNumber
+            //(createObj [
+            //    "isWholeLine" ==> true
+            //    "isTrusted" ==> true
+
+            //])
+            //None
+            //m
+
+    Browser.console.log("decorations 2")
+    Browser.console.log(string decorations2)
+    //Browser.console.log("decorations 3")
+    //Browser.console.log(string decorations3)
+    decorations2 //@ decorations3
 
 let revealLineInWindow tId (lineNumber : int) (editors : Map<int, Editor>) =
     editors.[tId].IEditor?revealLineInCenterIfOutsideViewport (lineNumber) |> ignore

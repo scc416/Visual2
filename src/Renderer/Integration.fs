@@ -79,8 +79,8 @@ let highlightErrorParse ((err : ParseError), lineNo) tId opc (m : Model) =
     let mLink = [ sprintf "[more](%s)" (Refs.visualDocsPage link) ]
     let mHover = hover @ [ "More: see \u26a0" ]
     match err with
-    | ``Duplicate symbol`` (sym, lines) -> makeErrorInEditor tId lineNo hover hover m
-    | _ -> makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink) m
+    | ``Duplicate symbol`` (sym, lines) -> (makeErrorInEditor tId lineNo hover hover m)
+    | _ -> (makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink) m)
 
 
 
@@ -182,7 +182,8 @@ let highlightCurrentAndNextIns classname pInfo tId (m : Model) : Model =
         | Some(dp, _uFl) ->
             match Map.tryFind (WA dp.Regs.[R15]) pInfo.IMem with
             | Some(condInstr, lineNo) ->
-                let m4 = highlightLine tId m.Editors lineNo classname m2
+                let decorations = highlightLine tId m.Editors lineNo classname m2
+                let m4 = { m2 with Decorations = decorations }
                 Editors.revealLineInWindow tId lineNo m4.Editors 
                 Editors.toolTipInfo (lineNo - 1, "top") dp condInstr m4
             | Option.None
@@ -195,7 +196,8 @@ let highlightCurrentAndNextIns classname pInfo tId (m : Model) : Model =
     let pc = (fst pInfo.dpCurrent).Regs.[R15]
     match Map.tryFind (WA pc) pInfo.IMem with
     | Some(condInstr, lineNo) ->
-        let m4 = highlightNextInstruction lineNo m3
+        let decorations = highlightNextInstruction lineNo m3
+        let m4 = { m3 with Decorations = decorations }
         Editors.toolTipInfo (lineNo - 1, "bottom") (fst pInfo.dpCurrent) condInstr m4
     | _ -> m3
 
@@ -302,6 +304,7 @@ let tryParseAndIndentCode tId (m : Model) =
     match lim with
     | { Errors = [] } as lim ->
         //Browser.console.log(sprintf "%A" lim)
+        Browser.console.log("no error")
         let editor = m.Editors.[tId].IEditor
         let trimmed line = String.trimEnd [| '\r'; '\n' |] line
         let newCode = List.map trimmed lim.Source
@@ -317,11 +320,10 @@ let tryParseAndIndentCode tId (m : Model) =
         let processParseError model (pe, lineNo, opCode) = 
             highlightErrorParse (pe, lineNo) tId opCode model
         let error = List.map (processParseError m) lim.Errors//|> ignore
-        let m2 = error 
-                 |> List.rev
-                 |> List.head
-                    
-        Core.Option.None, { m2 with RunMode = ParseErrorMode }
+        let decorations = error 
+                          |> List.collect (fun x -> x)
+        Core.Option.None, { m with RunMode = ParseErrorMode
+                                   Decorations = decorations }
 
 
 
@@ -526,7 +528,7 @@ let stepCodeBackBy (m : Model) numSteps =
                 resetEmulator()
                 let newDecorations = 
                     removeEditorDecorations m.CurrentFileTabId m.Decorations m.Editors
-                showInfoFromCurrentMode m
+                showInfoFromCurrentMode { m with Decorations = newDecorations }
             else
                 printfn "Stepping back to step %d" target
                 setCurrentModeActiveFromInfo RunState.Paused ri
