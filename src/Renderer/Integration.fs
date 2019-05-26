@@ -79,8 +79,8 @@ let highlightErrorParse ((err : ParseError), lineNo) tId opc (m : Model) =
     let mLink = [ sprintf "[more](%s)" (Refs.visualDocsPage link) ]
     let mHover = hover @ [ "More: see \u26a0" ]
     match err with
-    | ``Duplicate symbol`` (sym, lines) -> makeErrorInEditor tId lineNo hover hover m.Editors
-    | _ -> makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink) m.Editors
+    | ``Duplicate symbol`` (sym, lines) -> makeErrorInEditor tId lineNo hover hover m
+    | _ -> makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink) m
 
 
 
@@ -135,9 +135,9 @@ let resetEmulator() =
     //Tooltips.deleteAllContentWidgets() INCLUDE THIS
     //let newDecorations = ,///Editors.removeEditorDecorations currentFileTabId
     Editors.enableEditors()
-    memoryMap <- Map.empty
-    symbolMap <- Map.empty
-    regMap <- initialRegMap
+    //memoryMap <- Map.empty
+    //symbolMap <- Map.empty
+    //regMap <- initialRegMap
     setMode ResetMode
     updateMemory()
     updateSymTable()
@@ -172,30 +172,32 @@ let showInfoFromCurrentMode (m : Model) =
 
 /// Apply GUI decorations to instruction line of last PC and current PC.
 /// Move current instruction line to middle of window if not visible.
-let highlightCurrentAndNextIns classname pInfo tId (m : Model) = 
+let highlightCurrentAndNextIns classname pInfo tId (m : Model) : Model = 
     let m2 = 
         { m with Decorations = removeEditorDecorations tId m.Decorations m.Editors 
                  CurrentTabWidgets = Tooltips.deleteAllContentWidgets m () }
-    match pInfo.LastDP with
-    | None -> ()
-    | Some(dp, _uFl) ->
-        match Map.tryFind (WA dp.Regs.[R15]) pInfo.IMem with
-        | Some(condInstr, lineNo) ->
-            highlightLine tId m.Editors lineNo classname 
-            Editors.revealLineInWindow tId lineNo m.Editors 
-            Editors.toolTipInfo (lineNo - 1, "top") dp condInstr m 
-        | Option.None
-        | Some _ ->
-            if dp.Regs.[R15] <> 0xFFFFFFFCu then
-                failwithf "What? Current PC value (%x) is not an instruction: this should be impossible!" dp.Regs.[R15]
-            else
-                () // special case of return from testbench call
+    let m3 = 
+        match pInfo.LastDP with
+        | None -> m2
+        | Some(dp, _uFl) ->
+            match Map.tryFind (WA dp.Regs.[R15]) pInfo.IMem with
+            | Some(condInstr, lineNo) ->
+                let m4 = highlightLine tId m.Editors lineNo classname m2
+                Editors.revealLineInWindow tId lineNo m4.Editors 
+                Editors.toolTipInfo (lineNo - 1, "top") dp condInstr m4
+            | Option.None
+            | Some _ ->
+                if dp.Regs.[R15] <> 0xFFFFFFFCu then
+                    failwithf "What? Current PC value (%x) is not an instruction: this should be impossible!" dp.Regs.[R15]
+                else
+                    ()// special case of return from testbench call
+                m2 
     let pc = (fst pInfo.dpCurrent).Regs.[R15]
     match Map.tryFind (WA pc) pInfo.IMem with
     | Some(condInstr, lineNo) ->
-        highlightNextInstruction lineNo m.Editors.[tId].IEditor 
-        Editors.toolTipInfo (lineNo - 1, "bottom") (fst pInfo.dpCurrent) condInstr m
-    | _ -> ()
+        let m4 = highlightNextInstruction lineNo m3
+        Editors.toolTipInfo (lineNo - 1, "bottom") (fst pInfo.dpCurrent) condInstr m4
+    | _ -> m3
 
 
 let handleTest (pInfo : RunInfo) =
@@ -246,25 +248,25 @@ let UpdateGUIFromRunState(pInfo : RunInfo) (m : Model) =
         | PSError EXIT
         | PSError TBEXIT
         | PSExit ->
-            highlightCurrentAndNextIns "editor-line-highlight" (pInfo) m.CurrentFileTabId m
+            let m2 = highlightCurrentAndNextIns "editor-line-highlight" (pInfo) m.CurrentFileTabId m
             //enableEditors()
-            { m with RunMode = FinishedMode pInfo }
+            { m2 with RunMode = FinishedMode pInfo }
         | PSBreak ->
-            highlightCurrentAndNextIns "editor-line-highlight" (pInfo) m.CurrentFileTabId m
+            let m2 = highlightCurrentAndNextIns "editor-line-highlight" (pInfo) m.CurrentFileTabId m
             //enableEditors()
-            { m with RunMode = ActiveMode(Paused, pInfo) }
+            { m2 with RunMode = ActiveMode(Paused, pInfo) }
         | PSError(NotInstrMem x) ->
             showVexAlert (sprintf "Trying to access non-instruction memory 0x%x" x)
             { m with RunMode = (RunErrorMode pInfo) }
         | PSError(``Run time error`` (_pos, msg)) ->
             let lineMess = getCodeLineMess pInfo
-            highlightCurrentAndNextIns "editor-line-highlight-error" pInfo m.CurrentFileTabId m
+            let m2 = highlightCurrentAndNextIns "editor-line-highlight-error" pInfo m.CurrentFileTabId m
             updateRegisters()
             Browser.window.setTimeout ((fun () ->
                 showVexAlert (sprintf "Error %s: %s" lineMess msg)
                 RunErrorMode pInfo), 100, []) |> ignore
             //setMode 
-            { m with RunMode = (RunMode.RunErrorMode pInfo) }
+            { m2 with RunMode = (RunMode.RunErrorMode pInfo) }
         | PSError(``Unknown symbol runtime error`` undefs) ->
             showVexAlert (sprintf "What? Undefined symbols: %A" undefs)
             { m with RunMode = (RunMode.RunErrorMode pInfo) }
@@ -293,6 +295,7 @@ let currentFileTabProgramIsChanged (pInfo : RunInfo) tabId (editors : Map<int, E
 /// If parse fails decorate the buffer with error info.
 /// Return LoadImage on parse success or None.
 let tryParseAndIndentCode tId (m : Model) =
+    Browser.console.log("tryParseAndIndentCode")
     let lim = imageOfTId tId m.Editors
     let editorASM = lim.EditorText
     // See if any errors exist, if they do display them
@@ -310,10 +313,15 @@ let tryParseAndIndentCode tId (m : Model) =
             (editor?setValue (String.concat "\n" newCode)) |> ignore
         (lim, lim.Source) |> Some, m
     | lim ->
-        let processParseError (pe, lineNo, opCode) = 
-            highlightErrorParse (pe, lineNo) tId opCode
-        let error = List.map processParseError lim.Errors |> ignore
-        Core.Option.None, { m with RunMode = ParseErrorMode }
+        Browser.console.log("error detected")
+        let processParseError model (pe, lineNo, opCode) = 
+            highlightErrorParse (pe, lineNo) tId opCode model
+        let error = List.map (processParseError m) lim.Errors//|> ignore
+        let m2 = error 
+                 |> List.rev
+                 |> List.head
+                    
+        Core.Option.None, { m2 with RunMode = ParseErrorMode }
 
 
 
@@ -368,7 +376,6 @@ let runTests startTest tests stepFunc m =
 /// Always update GUI at end.
 /// Stored history means that backward stepping will always be fast.
 let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
-    Browser.console.log(string m.RegMap)
     Browser.console.log("372")
     let ri = { ri' with BreakCond = breakc }
     let loopMessage() =
@@ -380,15 +387,15 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
     let displayState ri' running =
             match ri'.State with
             | PSRunning -> // simulation stopped without error or exit
-                highlightCurrentAndNextIns "editor-line-highlight" ri' m.CurrentFileTabId m 
-                let m2 = showInfoFromCurrentMode m
-                let m3 = 
+                let m2 = highlightCurrentAndNextIns "editor-line-highlight" ri' m.CurrentFileTabId m 
+                let m3 = showInfoFromCurrentMode m2
+                let m4 = 
                     if ri.StepsDone < slowDisplayThreshold || (ri.StepsDone - lastDisplayStepsDone) > maxStepsBeforeSlowDisplay then
                         lastDisplayStepsDone <- ri.StepsDone
-                        showInfoFromCurrentMode m2 
-                        else m2
+                        showInfoFromCurrentMode m3
+                        else m3
                 if running && (int64 m.Settings.SimulatorMaxSteps) <> 0L then showVexAlert (loopMessage())
-                m3
+                m4
             | PSError e -> // Something went wrong causing a run-time error
                 UpdateGUIFromRunState ri' m
             | PSBreak // execution met a valid break condition
@@ -400,7 +407,6 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
         let newRunMode = ActiveMode(RunState.Paused, ri') 
         let m4 = {showInfoFromCurrentMode m with RunMode = newRunMode }
         highlightCurrentAndNextIns "editor-line-highlight" ri' m4.CurrentFileTabId m4
-        m4
     | ResetMode ->
         m // stop everything after reset
     | _ -> // actually do some simulation
@@ -413,7 +419,6 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
             setCurrentModeActiveFromInfo Paused ri' // mark the fact that we have paused
             let m4 = { displayState ri' running with RunMode = ActiveMode(Paused, ri') }// update GUI
             highlightCurrentAndNextIns "editor-line-highlight" ri' m4.CurrentFileTabId m4
-            m4
         else // in this case we are running indefinitely, or else for a long time
              // if indefinitely, we could stop on display update timeout, or error, or end of program exit
             let ri' = asmStep (stepsMax + ri.StepsDone - 1L) ri // finally run the simulator!
@@ -427,12 +432,12 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
                 asmStepDisplay ri'.BreakCond m4 steps ri'    
             | _ ->
                 let m4 = displayState ri' false // update GUI
-                highlightCurrentAndNextIns "editor-line-highlight" ri' m4.CurrentFileTabId m4
+                let m5 = highlightCurrentAndNextIns "editor-line-highlight" ri' m4.CurrentFileTabId m4
                 match handleTest ri' with //TODO: CHECK TEST
-                | [] -> m4
+                | [] -> m5
                 | tests -> 
                     //runTests false tests (asmStepDisplay NoBreak m) m//TODO: CHECK
-                    m4
+                    m5
 
 
 
@@ -528,11 +533,14 @@ let stepCodeBackBy (m : Model) numSteps =
                 let ri' = asmStep target ri
                 setCurrentModeActiveFromInfo Paused ri'
                 //TODO: disableEditors()
-                match ri'.State with
-                | PSRunning ->
-                    highlightCurrentAndNextIns "editor-line-highlight" ri' m.CurrentFileTabId m
-                | PSError _ | PSExit | PSBreak -> failwithf "What? Error can't happen when stepping backwards!"
-                showInfoFromCurrentMode m
+                let m2 = 
+                    match ri'.State with
+                    | PSRunning ->
+                        highlightCurrentAndNextIns "editor-line-highlight" ri' m.CurrentFileTabId m
+                    | PSError _ | PSExit | PSBreak -> 
+                        failwithf "What? Error can't happen when stepping backwards!"
+                        m
+                showInfoFromCurrentMode m2
     | ParseErrorMode -> 
         showVexAlert (sprintf "Can't execute when code has errors")
         m
@@ -588,14 +596,12 @@ let runCode breakCondition (m : Model) : Model =
     | false ->
         match m.RunMode with
         | ActiveMode(RunState.Running, ri) -> 
-            Browser.console.log("582")
             { m with RunMode = ActiveMode((RunState.Stopping), ri) }
         | _ ->
             let m2 = 
                 match m.RunMode with
                 | FinishedMode _
                 | RunErrorMode _ -> 
-                    Browser.console.log("589")
                     let newDecorations = 
                         removeEditorDecorations m.CurrentFileTabId m.Decorations m.Editors
                     let newCurrentWidgets =
@@ -608,7 +614,6 @@ let runCode breakCondition (m : Model) : Model =
                                          Decorations = newDecorations
                                          CurrentTabWidgets = newCurrentWidgets() }//TODO: resetEmulator()
                 | _ ->
-                    Browser.console.log("602")
                     m
             runEditorTab breakCondition m2 <|
                 match int64 m.Settings.SimulatorMaxSteps with

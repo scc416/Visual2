@@ -84,8 +84,8 @@ let enableEditors() =
     updateEditor Refs.currentFileTabId false
     Refs.darkenOverlay.classList.add ([| "invisible" |])
 
-let mutable decorations : obj list = []
-let mutable lineDecorations : obj list = []
+//let mutable decorations : obj list = []
+//let mutable lineDecorations : obj list = []
 
 [<Emit "new monaco.Range($0,$1,$2,$3)">]
 let monacoRange _ _ _ _ = jsNative
@@ -106,19 +106,22 @@ let removeEditorDecorations tId decorations (editors : Map<int, Editor>) : obj l
         []
         else decorations
 
-let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) =
+let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) (m : Model) =
+    Browser.console.log("margin decoration")
+    Browser.console.log(string m.Decorations)
     let model = editor?getModel ()
     let lineWidth = model?getLineMaxColumn (number)
     let posStart = match rangeOpt with | None -> 1 | Some(n, _) -> n
     let posEnd = match rangeOpt with | None -> lineWidth | Some(_, n) -> n
     let newDecs = lineDecoration editor
-                    decorations
+                    m.Decorations
                     (monacoRange number posStart number posEnd)
                     decoration
-    decorations <- List.append decorations [ newDecs ]
+    { m with Decorations = List.append m.Decorations [ newDecs ] }
 
 // highlight a particular line
-let highlightLine tId (editors : Map<int, Editor>) number className =
+let highlightLine tId (editors : Map<int, Editor>) number className (m : Model) =
+    Browser.console.log("EDITOR 124")
     editorLineDecorate
         editors.[tId].IEditor
         number
@@ -128,19 +131,22 @@ let highlightLine tId (editors : Map<int, Editor>) number className =
             "inlineClassName" ==> className
         ])
         None
-
-let highlightGlyph number glyphClassName editor =
+        m
+let highlightGlyph number glyphClassName (m : Model) =
+    Browser.console.log("EDITOR 136")
     editorLineDecorate
-        editor
+        m.Editors.[m.CurrentFileTabId].IEditor
         number
         (createObj [
             "isWholeLine" ==> true
             "glyphMarginClassName" ==> glyphClassName
         ])
         None
+        m
 
-let highlightNextInstruction number editor =
-    if number > 0 then highlightGlyph number "editor-glyph-margin-arrow" editor
+let highlightNextInstruction number (m : Model) =
+    if number > 0 then highlightGlyph number "editor-glyph-margin-arrow" m
+        else m
 
 /// <summary>
 /// Decorate a line with an error indication and set up a hover message.
@@ -150,25 +156,29 @@ let highlightNextInstruction number editor =
 /// lineNumber: int - line to decorate, starting at 1.
 /// hoverLst: hover attached to line.
 /// gHoverLst: hover attached to margin glyph.</summary>
-let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) (editors : Map<int, Editor>)=
+let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : string list) (m : Model)=
     let makeMarkDown textLst =
         textLst
         |> List.toArray
         |> Array.map (fun txt -> createObj [ "isTrusted" ==> true; "value" ==> txt ])
     // decorate the line
-    editorLineDecorate
-        editors.[tId].IEditor
-        lineNumber
-        (createObj [
-            "isWholeLine" ==> true
-            "isTrusted" ==> true
-            "inlineClassName" ==> "editor-line-error"
-            "hoverMessage" ==> makeMarkDown hoverLst
-         ])
-        None
+    let m2 = 
+        Browser.console.log("editor 166")
+        editorLineDecorate
+            m.Editors.[tId].IEditor
+            lineNumber
+            (createObj [
+                "isWholeLine" ==> true
+                "isTrusted" ==> true
+                "inlineClassName" ==> "editor-line-error"
+                "hoverMessage" ==> makeMarkDown hoverLst
+             ])
+            None
+            m
     // decorate the margin
+    Browser.console.log("editor 179")
     editorLineDecorate
-        editors.[tId].IEditor
+        m2.Editors.[tId].IEditor
         lineNumber
         (createObj [
             "isWholeLine" ==> true
@@ -178,6 +188,7 @@ let makeErrorInEditor tId lineNumber (hoverLst : string list) (gHoverLst : strin
             "overviewRuler" ==> createObj [ "position" ==> 4 ]
         ])
         None
+        m2
 
 let revealLineInWindow tId (lineNumber : int) (editors : Map<int, Editor>) =
     editors.[tId].IEditor?revealLineInCenterIfOutsideViewport (lineNumber) |> ignore
@@ -209,12 +220,12 @@ let findCodeEnd (lineCol : int) tId (editors: Map<int, Editor>) =
 let toolTipInfo (v : int, orientation : string)
                 (dp : DataPath)
                 ({ Cond = cond; InsExec = instruction; InsOpCode = opc } : ParseTop.CondInstr) 
-                (m : Model) =
+                (m : Model) : Model =
     match Helpers.condExecute cond dp, instruction with
-    | false, _ -> ()
+    | false, _ -> m
     | true, ParseTop.IMEM ins ->
         match Memory.executeMem ins dp with
-        | Error _ -> ()
+        | Error _ -> m
         | Ok res ->
             let TROWS s =
                 (List.map (fun s -> s |> toDOM |> TD) >> TROW) s
@@ -279,16 +290,16 @@ let toolTipInfo (v : int, orientation : string)
             | Memory.STR ins -> makeTip <| memPointerInfo ins MemWrite
             | Memory.LDM ins -> makeTip <| memStackInfo ins MemRead
             | Memory.STM ins -> makeTip <| memStackInfo ins MemWrite
-            | _ -> ()
+            | _ -> m
     | true, ParseTop.IDP(exec, op2) ->
         let alu = ExecutionTop.isArithmeticOpCode opc
         let pos = findCodeEnd v m.CurrentFileTabId m.Editors, v, orientation
         match exec dp with
-        | Error _ -> ()
+        | Error _ -> m
         | Ok(dp', uF') ->
             match op2 with
             | DP.Op2.NumberLiteral _
-            | DP.Op2.RegisterWithShift(_, _, 0u) -> ()
+            | DP.Op2.RegisterWithShift(_, _, 0u) -> m
             | DP.Op2.RegisterWithShift(rn, shiftT, shiftAmt) ->
                     makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) shiftAmt op2 m
                     
@@ -296,4 +307,4 @@ let toolTipInfo (v : int, orientation : string)
                     makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) (dp.Regs.[sRn] % 32u) op2 m
 
             | DP.Op2.RegisterWithRRX rn -> makeShiftTooltip pos (dp, dp', uF') rn (None, alu) 1u op2 m
-    | _ -> ()
+    | _ -> m

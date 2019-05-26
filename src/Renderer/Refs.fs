@@ -161,6 +161,7 @@ type Msg =
     | ReadOnlineInfoFail of VisualEvent
     | UpdateModel of Model
     | ResetEmulator
+    | InitialiseIExports of Monaco.IExports
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =

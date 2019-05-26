@@ -369,7 +369,7 @@ type WidgetPlace =
 /// <param name="name"> Widget id (tracked by editor) name</param>
 /// <param name="dom"> HTML to display in widget </param>
 /// <param name="pos">  Position of widget on editor character grid </param>
-let makeContentWidget (name : string) (dom : HTMLElement) (pos : WidgetPlace) =
+let makeContentWidget (name : string) (dom : HTMLElement) (m : Model) (pos : WidgetPlace)  =
     let h, v = match pos with | AboveBelow(h, v) -> (h, v) | Exact(h, v) -> (h, v)
     let widget = createObj [
                   "domNode" ==> dom
@@ -388,8 +388,8 @@ let makeContentWidget (name : string) (dom : HTMLElement) (pos : WidgetPlace) =
                                         | AboveBelow _ -> [| 1; 2 |]
                                   ]
                   ]
-    editors.[currentFileTabId]?addContentWidget widget |> ignore
-    currentTabWidgets <- Map.add name widget currentTabWidgets
+    m.Editors.[m.CurrentFileTabId].IEditor?addContentWidget widget |> ignore
+    { m with CurrentTabWidgets = Map.add name widget m.CurrentTabWidgets }
 
 /// delete content widget with ID = name on current editor.
 let deleteContentWidget (m : Model) name =
@@ -420,6 +420,7 @@ let tippyTheme =
 /// <param name="button"> true => delay tooltip and make it close on click </param>
 /// <param name="domID"> ID of DOM element to which tooltip is attached </param>
 let makeTooltip (theme : string) (placement : string) (clickable : bool) (button : bool) (domID : string) (tooltip : HTMLElement) =
+    //Tooltips2.tooltips
     tippy ("#" + domID, createObj <|
         [
             "html" ==> tooltip
@@ -458,8 +459,9 @@ let makeEditorInfoButtonWithTheme theme (clickable : bool) (h, v, orientation) (
         )
     deleteContentWidget m domID |> ignore // in some cases we may be updating an existing widget
     let newTabWidgets = Map.remove domID m.CurrentTabWidgets
-    makeContentWidget domID dom <| Exact(0, v)
+
     makeTooltip theme orientation clickable false domID tooltip
+    makeContentWidget domID dom m <| Exact(0, v) 
 
 /// Make an editor tooltip info button with correct theme
 let makeEditorInfoButton clickable settingtheme (h, v, orientation) = makeEditorInfoButtonWithTheme (tippyTheme settingtheme) clickable (h, v, orientation)

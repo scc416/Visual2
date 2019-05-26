@@ -229,6 +229,10 @@ let update (msg : Msg) (m : Model) =
                              ClockTime = (0uL, 0uL)
                              Decorations = newDecorations
                              CurrentTabWidgets = newCurrentWidgets() }, Cmd.none
+        | InitialiseIExports iExports -> 
+            //iExports?languages?register (registerLanguage)
+            //iExports?languages?setMonarchTokensProvider (token)
+            m, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose

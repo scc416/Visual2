@@ -77,7 +77,7 @@ let getParsedTests dStart (m : Model) =
         let highlightErrors tab =
             List.iter (fun (lNum, mess) ->
                 printfn "Testbench error %d %s." lNum mess
-                Editors.highlightLine tab m.Editors lNum "editor-line-error")
+                Editors.highlightLine tab m.Editors lNum "editor-line-error" m |> ignore)
         match getTBWithTab() with
         | Error mess -> Error mess
         | Ok(tab, _) ->
