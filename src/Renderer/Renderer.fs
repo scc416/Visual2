@@ -280,7 +280,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
                             dashboardStyle m.CurrentRep ]
                           [ viewButtons m.CurrentView dispatch
                             viewPanel (m.CurrentRep, m.CurrentView, m.RegMap) 
-                                      (m.MemoryMap, m.SymbolMap, m.ByteView, m.ReverseDirection)
+                                      (m.MemoryMap, m.SymbolMap, m.ByteView, m.ReverseDirection, m.RunMode)
                                       dispatch
                             footer m.Flags ] ] ] ]
 

@@ -10,6 +10,9 @@ open Settings2
 open Files2
 open ExecutionTop
 
+let maxSymbolWidth = 30
+let maxDataSymbolLength = 16
+
 let dashboardStyle rep =
     let width = 
         match rep with
@@ -102,9 +105,7 @@ let viewButtonClass =
     function
     | false -> ClassName "btn full-width btn-byte"
     | true -> ClassName "btn full-width btn-byte btn-byte-active"
-
-let maxSymbolWidth = 30
-
+    
 let nameSquash maxW name =
     let nameLen = String.length name
     if nameLen <= maxW then name
@@ -113,7 +114,7 @@ let nameSquash maxW name =
         let lp = maxW - (fp + 3)
         name.[0..fp - 1] + "..." + name.[nameLen - lp..nameLen - 1]
 
-let symbolView (symbolMap : Map<string,(uint32 * SymbolType)>)=
+let symbolView (symbolMap : Map<string,(uint32 * SymbolType)>) currentRep =
     let makeRow ((sym : string), (value, typ) : uint32 * ExecutionTop.SymbolType) =
         tr []
            [ td [ ClassName "selectable-text" ] 
@@ -159,48 +160,144 @@ let symbolView (symbolMap : Map<string,(uint32 * SymbolType)>)=
         [ table [ ClassName "table-striped" ]
                 symTabRows ]
 
-let memTable memoryMap = 
-        match Map.isEmpty memoryMap with
-        | true -> 
-            []
-        | false -> 
-            let rows =
-                let row address value =
-                    tr []
-                       [ td [ Class "td-mem" ]
-                            [ address |> string |> str ]
-                         td [ Class "td-mem" ]
-                            [ value |> string |> str ] ] 
-                memoryMap
-                |> Map.map (fun key value -> row key value)
-                |> Map.toList
-                |> List.map (fun (_, el) -> el)
-            [ div [ Class "list-group-item"
-                    Style [ Padding "0px" ] ]
-                  [ table [ Class "table-striped" ]
-                          (tr [ Class "tr-head-mem" ]
-                              [ th [ Class "th-mem" ]
-                                   [ str "Address" ]
-                                th [ Class "th-mem" ]
-                                   [ str "Value" ]] :: rows ) ] ]
+/// Converts a memory map to a list of lists which are contiguous blocks of memory
+let contiguousMemory reverse (mem : Map<uint32, uint32>) =
+    Map.toList mem
+    |> List.fold (fun state (addr, value) ->
+        match state with
+        | [] -> [ [ (addr, value) ] ]
+        | hd :: tl ->
+            match hd with
+            | [] -> failwithf "Contiguous memory never starts a new list with no elements"
+            | hd' :: _ when fst hd' = addr - 4u ->
+                ((addr, value) :: hd) :: tl // Add to current contiguous block
+                           | _ :: _ -> [ (addr, value) ] :: state // Non-contiguous, add to new block
+    ) []
+    |> List.map (if reverse then id else List.rev) // Reverse each list to go back to increasing
+    |> if reverse then id else List.rev // Reverse the overall list
 
-let memView memoryMap dispatch = 
-   ul [ ClassName "list-group" ]
-      [ li [ Class "list-group-item" ]
-           [ div [ Class "btn-group full-width" ]
-                 [ button [ viewButtonClass byteView
-                            DOMAttr.OnClick (fun _ -> ToggleByteView |> dispatch)]
-                          [ byteViewButtonString byteView ]
-                   button [ viewButtonClass reverseDirection 
-                            DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)]
-                          [ reverseDirectionButtonString reverseDirection ] ] ]
-        li [ Class "list-group" ] (memTable memoryMap)
-        li [ ]
-           [ div [ Style [ TextAlign "center" ] ]
-                 [ b [] [ str "Uninitialized memory is zeroed" ] ] ] ]
+/// Converts a list of (uint32 * uint32) to a byte addressed
+/// memory list of (uint32 * uint32) which is 4 times longer
+/// LITTLE ENDIAN
+let lstToBytes (lst : (uint32 * uint32) list) =
+    let byteInfo (dat : uint32) =
+        let b = dat &&& 0xFFu
+        match b with
+        | _ when b >= 32u && b <= 126u -> sprintf "'%c'" (char b), b
+        | _ -> "", b
+    lst
+    |> List.collect (fun (addr, value) ->
+        [
+            addr, value |> byteInfo
+            addr + 1u, (value >>> 8) |> byteInfo
+            addr + 2u, (value >>> 16) |> byteInfo
+            addr + 3u, (value >>> 24) |> byteInfo
+        ]
+    )
+
+let memView memoryMap dispatch byteView reverseView runMode currentRep symbolMap = 
+    let stackInfo =
+        match runMode with
+        | FinishedMode ri
+        | RunErrorMode ri
+        | ActiveMode(_, ri) ->
+            let sp = (fst ri.dpCurrent).Regs.[CommonData.R13]
+            Some(ri.StackInfo, sp)
+        | _ -> Core.Option.None
+    let chWidth = 13
+    let memPanelShim = 50
+    let onlyIfByte x = if byteView then [ x ] else []
+    let invSymbolTypeMap symType =
+        symbolMap
+        |> Map.toList
+        |> List.filter (fun (_, (_, typ)) -> typ = symType)
+        |> List.distinctBy (fun (_, (addr, _)) -> addr)
+        |> List.map (fun (sym, (addr, _)) -> (addr, sym))
+        |> Map.ofList
+    let invSymbolMap = invSymbolTypeMap ExecutionTop.DataSymbol
+    let invCodeMap = invSymbolTypeMap ExecutionTop.CodeSymbol
+    let invStackMap =
+        match stackInfo with
+        | Some(si, sp) -> si |> List.map (fun { SP = sp; Target = target } ->
+                                        sp - 4u, match Map.tryFind target invCodeMap with
+                                                 | Some s -> "(" + s + ")"
+                                                 | None -> sprintf "(%08x)" target)
+                           |> Map.ofList, sp
+        | _ -> Map.empty, 0u
+        |> (fun (map, sp) -> // add SP legend
+                let lab =
+                    match sp, Map.tryFind sp map with
+                    | 0u, Some sym -> sym
+                    | 0u, None -> ""
+                    | _, None -> "SP ->"
+                    | _, Some sym -> sym + " ->"
+                Map.add sp lab map)
+
+    let lookupSym addr =
+            match Map.tryFind addr invSymbolMap, Map.tryFind addr invStackMap with
+            | Some sym, _ -> sym
+            | option.None, Some sub -> sub
+            | _ -> ""
+
+    let makeRow (addr : uint32, (chRep : string, value : uint32)) =
+
+        let rowDat =
+            [
+                lookupSym addr |> nameSquash maxDataSymbolLength
+                sprintf "0x%X" addr
+                (if byteView then
+                    formatterWithWidth 8 currentRep value +
+                    (chRep |> function | "" -> "" | chr -> sprintf " %s" chr)
+                else formatter currentRep value)
+            ]
+
+        let makeNode txt = td [ ClassName "selectable-text" ] [ str txt ]
+
+        tr [ ClassName "tr-head-mem" ] (List.map makeNode rowDat)
+
+    let makeContig (lst : (uint32 * uint32) list) =
+
+        let makeNode txt = th [ ClassName "th-mem" ] [ str txt ]
+
+        let tr = tr [] 
+                    (List.map makeNode ([ "Symbol"; "Address"; "Value" ]))
+
+        let byteSwitcher =
+            match byteView with
+            | true -> lstToBytes
+            | false -> List.map (fun (addr, dat) -> (addr, ("", dat)))
+
+        // Add each row to the table from lst
+        let rows =
+            lst
+            |> byteSwitcher
+            |> List.map makeRow
+
+        li [ ClassName "list-group-item"
+             Style [ Padding 0 ] ]
+           [ table [ ClassName "table-striped" ]
+           ([ tr ] @ rows) ]
+           
+    ul [ ClassName "list-group" ]
+       [ li [ Class "list-group-item" ]
+            [ div [ Class "btn-group full-width" ]
+                  [ button [ viewButtonClass byteView
+                             DOMAttr.OnClick (fun _ -> ToggleByteView |> dispatch)]
+                           [ byteViewButtonString byteView ]
+                    button [ viewButtonClass reverseView
+                             DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)]
+                           [ reverseDirectionButtonString reverseView ] ] ]
+         li [ ClassName "list-group-item"
+              Style [ Padding 0 ] ]
+            (memoryMap
+             |> contiguousMemory reverseView
+             |> List.map makeContig ) 
+         li [ ]
+            [ div [ Style [ TextAlign "center" ] ]
+                  [ b [] [ str "Uninitialized memory is zeroed" ] ] ] ] 
 
 
-let regView (regMap : Map<CommonData.RName, uint32>) = 
+let regView (regMap : Map<CommonData.RName, uint32>) currentRep = 
     let registerLi rName  = 
         li [ ClassName "list-group-item" ] 
            [ div [ ClassName "btn-group full-width" ] 
@@ -216,19 +313,15 @@ let regView (regMap : Map<CommonData.RName, uint32>) =
 
     ul [ ClassName "list-group" ] (registerSet regMap)
 
-
 /// return the view panel on the right
 let viewPanel (currentRep, currentView, regMap : Map<CommonData.RName, uint32>)
-              (memoryMap : Map<uint32, uint32>, symbolMap, byteView, reverseDirection)
+              (memoryMap : Map<uint32, uint32>, symbolMap, byteView, reverseDirection, runMode)
               dispatch = 
-
-
-    let symbolView = symbolView symbolMap
     let view =
         match currentView with
-        | Registers -> regView regMap
-        | Memory -> memView memoryMap dispatch
-        | Symbols -> symbolView
+        | Registers -> regView regMap currentRep
+        | Memory -> memView memoryMap dispatch byteView reverseDirection runMode currentRep symbolMap
+        | Symbols -> symbolView symbolMap currentRep
     div [ ClassName "viewer" ; viewerStyle currentRep ] 
         [ view ]
 
@@ -251,4 +344,3 @@ let footer (flags : CommonData.Flags) =
                               footerDiv "Z" flags.Z
                               footerDiv "C" flags.C
                               footerDiv "V" flags.V ] ] ]
-
