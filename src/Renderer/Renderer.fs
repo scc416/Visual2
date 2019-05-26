@@ -253,7 +253,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                       [ span [ ClassName "icon icon-floppy" ] [] ] ]
                          button [ ClassName "btn btn-fixed btn-default button-run"
                                   DOMAttr.OnClick (fun _ -> RunSimulation |> dispatch) ]
-                                [ str "Run" ]
+                                [ m.RunMode |> runButtonText |> str ]
                          button [ ClassName "btn btn-default"
                                   DOMAttr.OnClick (fun _ -> ResetEmulator |> dispatch) ]
                                 [ str "Reset" ]
@@ -261,15 +261,14 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                 [ str " Step" ]
                          button [ ClassName "btn btn-default button-forward" ]
                                 [ str "Step " ]
-                         button [ ClassName "btn btn-large btn-default status-bar" ]//; Disabled true ]
-                                [ str "-" ]
+                         (statusBar m.RunMode)
                          div [ ClassName "btn-group clock" ]
                              [ tooltips (Content clockSymTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
                                         [ button [ ClassName "btn btn-large btn-default clock-symbol" ]
                                                  [ str "\U0001F551" ]]
                                tooltips (Content clockTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
                                         [ button [ ClassName "btn btn-large btn-default clock-time" ]//; Disabled true ]
-                                                 [ str "-" ] ] ]
+                                                 [ m.ClockTime |> clockText |> str  ] ] ]
                          repButtons m.CurrentRep dispatch ] ]
           div [ ClassName "window-content" ] 
               [ div [ ClassName "pane-group" ] 

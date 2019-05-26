@@ -29,6 +29,27 @@ let viewerStyle rep =
             MinWidth width
             Left ("100vw - " + string width) ]
 
+let statusBar runMode = 
+    let className, txt = 
+        match runMode with
+        | ExecutionTop.ParseErrorMode -> "btn-negative", "Errors in Code"
+        | ExecutionTop.RunErrorMode _ -> "btn-negative", "Runtime Error"
+        | ExecutionTop.ResetMode -> "", "-"
+        | ExecutionTop.ActiveMode(_, _) -> "btn-primary", "Stepping"
+        | ExecutionTop.FinishedMode _ -> "btn-positive", "Execution Complete"
+    button [ "btn btn-large btn-default status-bar " + className |> ClassName 
+             Disabled true ]
+           [ str txt ]
+
+let runButtonText =
+    function
+    | ExecutionTop.ActiveMode(ExecutionTop.Running, _) -> "Pause"
+    | _ -> "Run"
+
+let clockText (n : uint64, m : uint64) =
+    match n with
+    | 0uL -> "-" 
+    | _ -> sprintf "%d : %d" n m
 // ***********************************************************************************
 //                   Functions Relating to Representation Buttons
 // ***********************************************************************************
