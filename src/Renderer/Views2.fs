@@ -8,6 +8,7 @@ open Tooltips2
 open Editors2
 open Settings2
 open Files2
+open ExecutionTop
 
 let dashboardStyle rep =
     let width = 
@@ -102,26 +103,63 @@ let viewButtonClass =
     | false -> ClassName "btn full-width btn-byte"
     | true -> ClassName "btn full-width btn-byte btn-byte-active"
 
-/// return the view panel on the right
-let viewPanel (currentRep, currentView, regMap : Map<CommonData.RName, uint32>)
-              (memoryMap : Map<uint32, uint32>, symbolMap, byteView, reverseDirection)
-              dispatch = 
-    let registerLi rName = 
-        li [ ClassName "list-group-item" ] 
-           [ div [ ClassName "btn-group full-width" ] 
-                 [ tooltips ((rName |> regTooltipStr |> Content) :: Placement "bottom" :: basicTooltipsPropsLst)
-                            [ button [ ClassName "btn btn-reg" ] 
-                                     [  rName |> string |> str ] ]
-                   span [ ClassName "btn btn-reg-con selectable-text" ] 
-                        [ regMap.[rName] |> formatter currentRep |> str ] ] ]
-    let registerSet =
-        [0 .. 15]
-        |> List.map (fun x -> 
-            x |> CommonData.register |> registerLi )
+let maxSymbolWidth = 30
 
-    let regView = ul [ ClassName "list-group" ] registerSet
+let nameSquash maxW name =
+    let nameLen = String.length name
+    if nameLen <= maxW then name
+    else
+        let fp = (float maxW) * 0.65 |> int
+        let lp = maxW - (fp + 3)
+        name.[0..fp - 1] + "..." + name.[nameLen - lp..nameLen - 1]
 
-    let memTable = 
+let symbolView (symbolMap : Map<string,(uint32 * SymbolType)>)=
+    let makeRow ((sym : string), (value, typ) : uint32 * ExecutionTop.SymbolType) =
+        tr []
+           [ td [ ClassName "selectable-text" ] 
+                [ str sym ]
+             td [ ClassName "selectable-text" ] 
+                [ formatter currentRep value |> str ] ]
+
+    let makeGroupHdr (typ : SymbolType) =
+        let symName =
+            match typ with
+            | DataSymbol -> "Data Symbol"
+            | CodeSymbol -> "Code Symbol"
+            | CalculatedSymbol -> "EQU Symbol"
+
+        tr [] 
+           [ th [ ClassName "th-mem" ] 
+                [ str symName ]
+             th [ ClassName "th-mem" ] 
+                [ str "Value" ] ]
+
+    let symTabRows =
+        let makeGroupRows (grpTyp, grpSyms) =
+            grpSyms
+            |> Array.map (fun (sym, addr) -> sym, addr)
+            |> Array.sortBy snd
+            |> Array.map (fun (sym, addr) -> nameSquash maxSymbolWidth sym, addr)
+            |> Array.map makeRow
+            |> Array.append [| makeGroupHdr grpTyp |]
+
+        let groupOrder = function
+            | (CodeSymbol, _) -> 1
+            | (DataSymbol, _) -> 2
+            | (CalculatedSymbol, _) -> 3
+
+        symbolMap
+        |> Map.toArray
+        |> Array.groupBy (fun (_sym, (_addr, typ)) -> typ)
+        |> Array.sortBy groupOrder
+        |> Array.collect makeGroupRows
+        |> Array.toList
+
+    div [ ClassName "list-group" ]
+        [ table [ ClassName "table-striped" ]
+                symTabRows ]
+
+let memTable memoryMap = 
         match Map.isEmpty memoryMap with
         | true -> 
             []
@@ -146,28 +184,50 @@ let viewPanel (currentRep, currentView, regMap : Map<CommonData.RName, uint32>)
                                 th [ Class "th-mem" ]
                                    [ str "Value" ]] :: rows ) ] ]
 
-    let memView = 
-       ul [ ClassName "list-group" ]
-          [ li [ Class "list-group-item" ]
-               [ div [ Class "btn-group full-width" ]
-                     [ button [ viewButtonClass byteView
-                                DOMAttr.OnClick (fun _ -> ToggleByteView |> dispatch)]
-                              [ byteViewButtonString byteView ]
-                       button [ viewButtonClass reverseDirection 
-                                DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)]
-                              [ reverseDirectionButtonString reverseDirection ] ] ]
-            li [ Class "list-group" ] memTable
-            li [ ]
-               [ div [ Style [ TextAlign "center" ] ]
-                     [ b [] [ str "Uninitialized memory is zeroed" ] ] ] ]
-    let symbolView =
-        div [ ClassName "list-group" ]
-            [ table [ ClassName "table-striped" ]
-                    []]
+let memView memoryMap dispatch = 
+   ul [ ClassName "list-group" ]
+      [ li [ Class "list-group-item" ]
+           [ div [ Class "btn-group full-width" ]
+                 [ button [ viewButtonClass byteView
+                            DOMAttr.OnClick (fun _ -> ToggleByteView |> dispatch)]
+                          [ byteViewButtonString byteView ]
+                   button [ viewButtonClass reverseDirection 
+                            DOMAttr.OnClick (fun _ -> ToggleReverseView |> dispatch)]
+                          [ reverseDirectionButtonString reverseDirection ] ] ]
+        li [ Class "list-group" ] (memTable memoryMap)
+        li [ ]
+           [ div [ Style [ TextAlign "center" ] ]
+                 [ b [] [ str "Uninitialized memory is zeroed" ] ] ] ]
+
+
+let regView (regMap : Map<CommonData.RName, uint32>) = 
+    let registerLi rName  = 
+        li [ ClassName "list-group-item" ] 
+           [ div [ ClassName "btn-group full-width" ] 
+                 [ tooltips ((rName |> regTooltipStr |> Content) :: Placement "bottom" :: basicTooltipsPropsLst)
+                            [ button [ ClassName "btn btn-reg" ] 
+                                     [  rName |> string |> str ] ]
+                   span [ ClassName "btn btn-reg-con selectable-text" ] 
+                        [ regMap.[rName] |> formatter currentRep |> str ] ] ]
+    let registerSet regMap =
+        [0 .. 15]
+        |> List.map (fun x -> 
+            x |> CommonData.register |> registerLi )
+
+    ul [ ClassName "list-group" ] (registerSet regMap)
+
+
+/// return the view panel on the right
+let viewPanel (currentRep, currentView, regMap : Map<CommonData.RName, uint32>)
+              (memoryMap : Map<uint32, uint32>, symbolMap, byteView, reverseDirection)
+              dispatch = 
+
+
+    let symbolView = symbolView symbolMap
     let view =
         match currentView with
-        | Registers -> regView
-        | Memory -> memView
+        | Registers -> regView regMap
+        | Memory -> memView memoryMap dispatch
         | Symbols -> symbolView
     div [ ClassName "viewer" ; viewerStyle currentRep ] 
         [ view ]
