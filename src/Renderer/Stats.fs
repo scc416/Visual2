@@ -165,7 +165,7 @@ let checkActions txt ve lastRemindTime =
         | RunningCode -> ()
     remindInExams txt lastRemindTime
 
-let doFetch (onlineFetchText, ve, lastRemindTime) =
+let doFetch (onlineFetchText, ve, lastRemindTime, debugLevel) =
     //new IHttpRequestHeaders
     //hdrs?append("pragma","no-cache") |> ignore
     //hdrs?append("cache-control","no-cache") |> ignore
@@ -197,7 +197,7 @@ let doFetch (onlineFetchText, ve, lastRemindTime) =
         txt
     )
 
-let readOnlineInfo (ve: VisualEvent) info =
+let readOnlineInfo (ve: VisualEvent) info debugLevel =
     let doFetchBl =
         match info.LastOnlineFetchTime with
         | Error tim  -> doIfHoursLaterThan (if ve = Startup then 0. else 0.1) tim
@@ -205,7 +205,7 @@ let readOnlineInfo (ve: VisualEvent) info =
     match doFetchBl with       
     | true -> 
         Cmd.ofPromise doFetch 
-                      (info.OnlineFetchText, ve, info.LastRemindTime) 
+                      (info.OnlineFetchText, ve, info.LastRemindTime, debugLevel) 
                       (fun x -> 
                           match x with
                           | Ok x -> (x, ve) |> ReadOnlineInfoSuccess

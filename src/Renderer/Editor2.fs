@@ -13,7 +13,7 @@ open Fable.Import.Browser
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Fable.Import.React
-open Settings2
+open Settings
 
 type Props =
     | Width of obj

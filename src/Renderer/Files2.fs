@@ -1,11 +1,11 @@
-﻿module Files2
+﻿module Files
 
 open EEExtensions
 open Fable.Core.JsInterop
 open Fable.Import
 open Fable.Import.Electron
 open Refs
-open Tabs2
+open Tabs
 open MenuBar2
 
 /// merge 2 maps into 1
@@ -45,11 +45,19 @@ let openLstOfFiles (fLst : string list) : Editor List =
           IEditor = Option.None
           Saved = true })
 
+let fileFilterOpts =
+    ResizeArray [
+        createObj [
+            "name" ==> "Assembly Code"
+            "extensions" ==> ResizeArray [ "s" ]
+        ]
+    ] |> Some
+
 /// open file dialog
 let openFile currentFilePath (dispatch : Msg -> Unit) =
     let options = createEmpty<OpenDialogOptions>
     options.properties <- ResizeArray([ "openFile"; "multiSelections" ]) |> Some
-    options.filters <- Files.fileFilterOpts
+    options.filters <- fileFilterOpts
     options.defaultPath <- Some currentFilePath
     // path of the opened files
     let seq = electron.remote.dialog.showOpenDialog (options) /// open dialog
@@ -62,14 +70,6 @@ let openFile currentFilePath (dispatch : Msg -> Unit) =
             |> Seq.toList
             |> openLstOfFiles
     OpenFile fileLst |> dispatch
-
-let fileFilterOpts =
-    ResizeArray [
-        createObj [
-            "name" ==> "Assembly Code"
-            "extensions" ==> ResizeArray [ "s" ]
-        ]
-    ] |> Some
 
 /// save file dialog
 let saveFileAs filePathSetting (editor : Editor) dispatch : (unit) =

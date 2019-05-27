@@ -9,19 +9,15 @@ open Elmish.Browser.Navigation
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.Import
-open Fable.Import.Browser
-open Fable.Import.React
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Monaco
-open Monaco.Monaco.Languages
-open Monaco.Monaco
 open Views
-open Tabs2
-open MenuBar2
+open Tabs
+open MenuBar
 open Tooltips2
-open Files2
-open Settings2
+open Files
+open Settings
 open Editors2
 open Dialog
 open Stats
@@ -75,6 +71,7 @@ let init _ =
                        { LastOnlineFetchTime = m.LastOnlineFetchTime
                          LastRemindTime = m.LastRemindTime
                          OnlineFetchText = m.Settings.OnlineFetchText } 
+                       m.DebugLevel
     m, cmd
 
 let update (msg : Msg) (m : Model) =
@@ -204,6 +201,7 @@ let update (msg : Msg) (m : Model) =
                            { LastOnlineFetchTime = m.LastOnlineFetchTime
                              LastRemindTime = m.LastRemindTime
                              OnlineFetchText = m.Settings.OnlineFetchText }
+                           m.DebugLevel
                            
         let newM = runCode ExecutionTop.NoBreak m
         newM, cmd

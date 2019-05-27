@@ -7,7 +7,7 @@ open Fable.Import.React
 open Fable.Core.JsInterop
 open Fable.Import
 open Fable.Import.Electron
-open Files2
+open Files
 open Elmish
 
 let closeTabDialog (fileName : string option, settingTab : int option, currentId)

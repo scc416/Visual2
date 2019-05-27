@@ -1,10 +1,11 @@
-﻿module Settings2
+﻿module Settings
+
 open Fable.Import.Browser
 open Refs
 open Fable.Import.React
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
-open Tabs2
+open Tabs
 open MenuBar2
 
 /// string for the id, to obtain the value in input

@@ -18,7 +18,6 @@ open Node.Exports
 open EEExtensions
 open Monaco
 
-
 // **********************************************************************************
 //                                  App Version
 // **********************************************************************************
@@ -681,107 +680,15 @@ let runPage url () =
 let runExtPage url () =
     electron.shell.openExternal url |> ignore
 
-
 let writeToFile str path =
     let errorHandler _err = // TODO: figure out how to handle errors which can occur
         ()
     fs.writeFile (path, str, errorHandler)
 
-
-// ***********************************************************************************************
-//                                       Mutable state
-// ***********************************************************************************************
-
-
-
 let initialFlags = { N = false; Z = false; C = false; V = false }
-/// File Tab currently selected (and therefore visible)
-let mutable currentFileTabId = -1 // By default no tab is open
-/// List of all in use file tabs
-let mutable fileTabList : int list = []
-/// tab containing current testbench specification (if testbench is loaded)
-let mutable testbenchTab : int option = None
-/// Map tabIds to the editors which are contained in them
-let mutable editors : Map<int, obj> = Map.ofList []
-/// Map of content widgets currently on editor, indexed by id
-let mutable currentTabWidgets : Map<string, obj> = Map.empty
-/// id of tab containing settings form, if this exists
-let mutable settingsTab : int option = None
-/// The current number representation being used
-let mutable currentRep = Hex
-/// indicates what the current DOM symbols display representation is
-let mutable displayedCurrentRep = Hex
-/// The current View in the right-hand pane
-let mutable currentView = Registers
-/// Whether the Memory View is byte of word based
-let mutable byteView = false
-/// direction of memory addresses
-let mutable reverseDirection = false
-/// Number of instructions imulated before break. If 0 run forever
-let mutable maxStepsToRun = 50000
-/// Contents of data memory
-let mutable memoryMap : Map<uint32, uint32> = Map.empty
-/// Contents of CPU registers
-let mutable regMap : Map<CommonData.RName, uint32> = ExecutionTop.initialRegMap
-/// Contents of CPU flags
-let mutable flags : CommonData.Flags = initialFlags
-/// Values of all Defined Symols
-let mutable symbolMap : Map<string, uint32 * ExecutionTop.SymbolType> = Map.empty
-/// version of symbolMap currently displayed
-let mutable displayedSymbolMap : Map<string, uint32 * ExecutionTop.SymbolType> = Map.empty
 
-/// Current state of simulator
-let mutable runMode : ExecutionTop.RunMode = ExecutionTop.ResetMode
-
-/// Global debug level set from main process.
-/// 0 => production. 1 => development. 2 => debug parameter.
-let mutable debugLevel = 0
-
-
-/// Online data matched time
-let mutable lastOnlineFetchTime : Result<System.DateTime, System.DateTime> =
-    Result.Error System.DateTime.Now
-
-
-//--------------------------------Helper functions to read mutable state-----------------------------------
-
-
-/// Return the text in tab id tId as a string
-let getCode tId : string =
-    if tId < 0 then failwithf "No current Editor!"
-    let editor = editors.[tId]
+/// Return list of lines in editor
+let formatText (editor : Monaco.Editor.IEditor option) =   
     editor?getValue ()
-
-/// Return list of lines in editor tab tId
-let textOfTId tId =
-    getCode tId
     |> (fun (x : string) -> x.Split [| '\n' |])
     |> Array.toList
-
-let formatText tId (editors : Map<int, Editor>) =
-    editors.[tId].IEditor?getValue ()
-    |> (fun (x : string) -> x.Split [| '\n' |])
-    |> Array.toList
-
-
-
-let currentTabText() =
-    if currentFileTabId < 0 then None
-    else
-        Some(textOfTId currentFileTabId)
-
-let setRegister (id : CommonData.RName) (value : uint32) =
-    let el = register id.RegNum
-    el.innerHTML <- formatter currentRep value
-
-let updateRegisters() =
-    Map.iter setRegister regMap
-
-let resetRegs() =
-    [ 0..15 ]
-    |> List.map (fun x ->
-        setRegister (CommonData.register x) (
-            match x with
-            | 13 -> 0xFF000000u
-            | _ -> 0u))
-    |> ignore

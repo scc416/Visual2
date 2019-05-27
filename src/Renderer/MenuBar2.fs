@@ -1,4 +1,4 @@
-﻿module MenuBar2
+﻿module MenuBar
 
 open EEExtensions
 open Fable.Core
@@ -7,7 +7,6 @@ open Fable.Import
 open Fable.Import.Electron
 open Node.Base
 open Refs
-open Settings
 open Tabs
 open Integration
 //open Files2
@@ -27,14 +26,14 @@ let display runMode =
 /// Wrap an action so that it can only happen if simulator is stopped.
 /// Converts unit -> unit into obj. Must be called as fun () -> interlock actionName action.
 /// Suitable for use as JS callback.
-let interlock (actionName : string) (action : Unit -> Unit) = (
+let interlock (actionName : string) (action : Unit -> Unit) debugLevel runMode = (
         if debugLevel > 0 then printf "Interlock : runMode=%A" (display runMode)
         let actIfConfirmed buttonNum =
             printf "button %A" buttonNum
             match buttonNum with
             | false -> ()
             | _ -> resetEmulator(); action()
-        match Refs.runMode with
+        match runMode with
         | ExecutionTop.ResetMode
         | ExecutionTop.ParseErrorMode -> action() :> obj
         | _ -> showVexConfirm (sprintf "Can't %s while simulator is running <br> <br>Reset and %s<br>" actionName actionName) actIfConfirmed :> obj
@@ -42,8 +41,8 @@ let interlock (actionName : string) (action : Unit -> Unit) = (
  /// Wrap an action so that it can only happen if simulator is stopped.
  /// Operates on (Unit->Unit) to make (Unit->Unit).
  /// Suitable for use as action in menu.
-let interlockAction (actionName : string) (action : Unit -> Unit) = (fun () ->
-    interlock actionName action |> ignore
+let interlockAction (actionName : string) (action : Unit -> Unit) debugLevel runMode = (fun () ->
+    interlock actionName action debugLevel runMode |> ignore
     )
 
 (****************************************************************************************************
@@ -51,8 +50,6 @@ let interlockAction (actionName : string) (action : Unit -> Unit) = (fun () ->
  *                                      MENU OPERATIONS
  *
  ****************************************************************************************************)
-
-
 
 let loadDemo (editors : Map<int, Editor>) : ( Map<int, Editor> * int) =
     let sampleFileName = Tests.sampleDir + "karatsuba.s"
@@ -118,22 +115,20 @@ let makeMenu (name : string) (table : MenuItemOptions list) =
  *                                         MENUS
  *
  ****************************************************************************************************)
-let fileMenu id (dispatch : (Msg -> Unit)) editors =
+let fileMenu id (dispatch : (Msg -> Unit)) debugLevel runMode =
     makeMenu "File" [
-            makeItem "New" (Some "CmdOrCtrl+N") (interlockAction "make new file tab" (fun _ -> Refs.NewFile |> dispatch))
+            makeItem "New" (Some "CmdOrCtrl+N") (interlockAction "make new file tab" (fun _ -> NewFile |> dispatch) debugLevel runMode)
             menuSeparator
-            makeItem "Save" (Some "CmdOrCtrl+S") (interlockAction "save file" (fun _ -> Refs.SaveFile |> dispatch ))
-            makeItem "Save As" (Some "CmdOrCtrl+Shift+S") (interlockAction "save file" (fun _ -> Refs.SaveAsFileDialog |> dispatch ))
-            makeItem "Open" (Some "CmdOrCtrl+O") (interlockAction "open file" (fun _ -> Refs.OpenFileDialog |> dispatch ))
+            makeItem "Save" (Some "CmdOrCtrl+S") (interlockAction "save file" (fun _ -> SaveFile |> dispatch) debugLevel runMode)
+            makeItem "Save As" (Some "CmdOrCtrl+Shift+S") (interlockAction "save file" (fun _ -> SaveAsFileDialog |> dispatch ) debugLevel runMode)
+            makeItem "Open" (Some "CmdOrCtrl+O") (interlockAction "open file" (fun _ -> OpenFileDialog |> dispatch ) debugLevel runMode )
             menuSeparator
-            makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" (fun _ -> Refs.AttemptToDeleteTab id |> dispatch ))
+            makeItem "Close" (Some "CmdOrCtrl+W") (interlockAction "close file" (fun _ -> AttemptToDeleteTab id |> dispatch ) debugLevel runMode)
             menuSeparator
-            makeItem "Quit" (Some "CmdOrCtrl+Q") (interlockAction "quit" (fun _ -> AttemptToExit |> dispatch ))
+            makeItem "Quit" (Some "CmdOrCtrl+Q") (interlockAction "quit" (fun _ -> AttemptToExit |> dispatch ) debugLevel runMode)
         ]
 
-
-
-let editMenu (dispatch : (Msg -> Unit)) =
+let editMenu (dispatch : (Msg -> Unit)) debugLevel runMode =
     makeMenu "Edit" [
         makeItem "Undo" (Some "CmdOrCtrl+Z") (fun _ -> UndoEditor |> dispatch )
         makeItem "Redo" (Some "CmdOrCtrl+Shift+Z") (fun _ -> RedoEditor |> dispatch )
@@ -149,7 +144,7 @@ let editMenu (dispatch : (Msg -> Unit)) =
         menuSeparator
         makeItem "Increase Font Size" (Some "CmdOrCtrl+.") (fun _ -> IncreaseFontSize |> dispatch )
         makeItem "Decrease Font Size" (Some "CmdOrCtrl+,") (fun _ -> DecreaseFontSize |> dispatch )
-        makeItem "Preferences" Core.Option.None (interlockAction "show preferences tab" (fun _ -> SelectSettingsTab |> dispatch ))
+        makeItem "Preferences" Core.Option.None (interlockAction "show preferences tab" (fun _ -> SelectSettingsTab |> dispatch ) debugLevel runMode)
     ]
 
 let viewMenu() =
@@ -196,8 +191,8 @@ let testMenu (m : Model) (dispatch : (Msg -> Unit)) =
             makeItem "Step forward by" Core.Option.None runSteps
             makeItem "Step back by" Core.Option.None runStepsBack
             menuSeparator
-            makeItem "Step into test" Core.Option.None (interlockAction "Test" runSingleTest)
-            makeItem "Run all tests" Core.Option.None (interlockAction "Testbench" (fun () -> Integration.runTestbenchOnCode m))
+            makeItem "Step into test" Core.Option.None (interlockAction "Test" runSingleTest m.DebugLevel m.RunMode )
+            makeItem "Run all tests" Core.Option.None (interlockAction "Testbench" (fun () -> Integration.runTestbenchOnCode m) m.DebugLevel m.RunMode)
         ]
 
 let helpMenu dispatch m =
@@ -208,9 +203,9 @@ let helpMenu dispatch m =
                 makeItem "Testbenches" Core.Option.None (runExtPage <| visualDocsPage "testbench")
                 makeItem "Official ARM documentation" Core.Option.None (runExtPage "http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0234b/i1010871.html")
                 menuSeparator
-                makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" (fun _ -> Refs.LoadDemoCode |> dispatch))
-                makeCondItem (debugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (fun () -> runTestbench m))
-                makeCondItem (debugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" (fun () -> Tests.runAllEmulatorTests m))
+                makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" (fun _ -> Refs.LoadDemoCode |> dispatch) m.DebugLevel m.RunMode)
+                makeCondItem (m.DebugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (fun () -> runTestbench m) m.DebugLevel m.RunMode)
+                makeCondItem (m.DebugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" (fun () -> Tests.runAllEmulatorTests m) m.DebugLevel m.RunMode)
                 menuSeparator
                 makeItem "About" Core.option.None (fun _ -> AboutDialog |> dispatch)
             ])
@@ -220,8 +215,8 @@ let helpMenu dispatch m =
 let mainMenu (dispatch : (Msg -> Unit)) (m : Model) =
     let template =
         ResizeArray<MenuItemOptions> [
-            fileMenu m.CurrentFileTabId dispatch m.Editors
-            editMenu dispatch
+            fileMenu m.CurrentFileTabId dispatch m.DebugLevel m.RunMode
+            editMenu dispatch m.DebugLevel m.RunMode
             viewMenu()
             helpMenu dispatch m
             testMenu m dispatch

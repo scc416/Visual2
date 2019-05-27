@@ -42,29 +42,10 @@ let editorOptions (readOnly : bool) =
                         "minimap" ==> createObj [ "enabled" ==> false ];
                         "glyphMargin" ==> true
               ]
-
-
-let updateEditor tId readOnly =
-    if tId <> -1 then
-        let eo = editorOptions readOnly
-        Refs.editors.[tId]?updateOptions (eo) |> ignore
+             
 
 let setTheme theme =
     window?monaco?editor?setTheme (theme)
-
-
-let updateAllEditors readOnly =
-    Refs.editors
-    |> Map.iter (fun tId _ -> if tId = Refs.currentFileTabId then readOnly else false
-                              |> updateEditor tId)
-    let theme = Refs.vSettings.EditorTheme
-    Refs.setFilePaneBackground (
-        match theme with
-        | "one-light-pro" | "solarised-light" -> "white"
-        | _ -> "black")
-    setTheme (theme) |> ignore
-    setCustomCSS "--editor-font-size" (sprintf "%spx" vSettings.EditorFontSize)
-
 
 // Disable the editor and tab selection during execution
 let disableEditors() =
@@ -73,7 +54,6 @@ let disableEditors() =
         showVexAlert ("Cannot change tabs during execution")
         createObj []
     )
-    updateEditor Refs.currentFileTabId true
     Refs.darkenOverlay.classList.remove ("invisible")
     Refs.darkenOverlay.classList.add ([| "disabled-click" |])
 
@@ -81,7 +61,6 @@ let disableEditors() =
 let enableEditors() =
     Refs.fileTabMenu.classList.remove ("disabled-click")
     Refs.fileTabMenu.onclick <- (fun _ -> createObj [])
-    updateEditor Refs.currentFileTabId false
     Refs.darkenOverlay.classList.add ([| "invisible" |])
 
 //let mutable decorations : obj list = []
@@ -217,7 +196,7 @@ let findCodeEnd (lineCol : int) tId (editors: Map<int, Editor>) =
     match tId with
     | -1 -> 0
     | x ->
-        let text = formatText tId editors
+        let text = formatText editors.[tId].IEditor
         if text.Length <= lineCol then
             0
         else

@@ -16,16 +16,16 @@ open CommonData
 open ExecutionTop
 open TestLib
 
-let getTBWithTab() =
-    Refs.fileTabList
-    |> List.map (fun tab -> tab, getCode tab)
+let getTBWithTab (editors: Map<int, Editor>) =
+    []
+    |> List.map (fun tab -> tab, editors.[tab]?getValue ())
     |> List.filter (snd >> String.trim >> String.startsWith "##TESTBENCH")
     |> function | [ tab, tb ] -> Ok(tab, tb)
                 | [] -> Error "No testbench is loaded"
                 | _ -> Error "More than one testbench is loaded"
 
-let getTB() =
-    getTBWithTab()
+let getTB editors =
+    getTBWithTab editors
     |> Result.map snd
 
 let currentTabIsTB tabId (editors : Map<int, Editor>) =
@@ -35,8 +35,8 @@ let currentTabIsTB tabId (editors : Map<int, Editor>) =
              |> String.trim |> String.startsWith "##TESTBENCH"
 
 /// Write test Checklines to the buffer containing the testbench file
-let writeTest (test : Test) =
-        getTBWithTab()
+let writeTest (test : Test) (editors : Map<int, Editor>) =
+        getTBWithTab editors
         |> Result.map (fun (tabId, dat) ->
             dat
             |> String.splitString [| "\n" |]
@@ -54,7 +54,7 @@ let writeTest (test : Test) =
             |> String.concat "\n"
             |> fun r -> tabId, r)
         |> function | Ok(tabId, txt) ->
-                        let editor = editors.[tabId]
+                        let editor = editors.[tabId].IEditor
                         editor?setValue txt
                     | Error _ -> showAlert "Error" "What? can't find testbench to write results!"
 
@@ -63,9 +63,9 @@ let writeTest (test : Test) =
 /// test: test to add (one of those in the testbench).
 /// dp: DataPath after test simulation ends.
 /// Returns true if test has passed.
-let addResultsToTestbench (test : Test) (dp : DataPath) =
+let addResultsToTestbench (test : Test) (dp : DataPath) editors =
     let goodParse, resultLines = computeTestResults test dp
-    writeTest { test with CheckLines = resultLines }
+    writeTest { test with CheckLines = resultLines } editors
     goodParse
 
 /// Top-level testbench parse. Locate loaded testbench, generate pair of testbench tab ID
@@ -78,20 +78,20 @@ let getParsedTests dStart (m : Model) =
             List.iter (fun (lNum, mess) ->
                 printfn "Testbench error %d %s." lNum mess
                 Editors.highlightLine tab m.Editors lNum "editor-line-error" m |> ignore)
-        match getTBWithTab() with
+        match getTBWithTab m.Editors with
         | Error mess -> Error mess
         | Ok(tab, _) ->
-            let newDecorations = Editors.removeEditorDecorations tab m.Decorations m.Editors
-            List.iter (Result.mapError (highlightErrors tab) >> ignore) eLst
+            let newDecorations = Editors.removeEditorDecorations m.CurrentFileTabId m.Decorations m.Editors
+            List.iter (Result.mapError (highlightErrors m.CurrentFileTabId) >> ignore) eLst
             match List.errorList eLst with
             | [] -> List.okList eLst |> Ok
             | x ->
-                Tabs.selectFileTab tab
+                //Tabs.selectFileTab tab //TODO: t
                 printfn "%A" x
                 Error "Parse errors in testbench"
 
     let initStack = 0xFF000000u
-    getTBWithTab()
+    getTBWithTab m.Editors
     |> Result.bind (
             fun (tab, tb) ->
                 String.toUpper tb
