@@ -1,5 +1,4 @@
-﻿
-(*
+﻿(*
     VisUAL2 @ Imperial College London
     Project: A user-friendly ARM emulator in F# and Web Technologies ( Github Electron & Fable Compiler )
     Module: Renderer.Refs
@@ -40,11 +39,11 @@ type LogT =
     | Step 
     | ParseWithErrors of ErrorT list
     | RunOK 
-    | Reset 
+    | Reset
 
 type LogMessage = {
-        LogT: LogT
-        Time: int64
+    LogT: LogT
+    Time: int64
     }
 
 type Editor = { 
@@ -70,26 +69,26 @@ type Views =
     | Symbols
 
 type VSettings = {
+    CurrentFilePath : string
     EditorFontSize : string
-    SimulatorMaxSteps : string
+    EditorRenderWhitespace : bool
     EditorTheme : string
     EditorWordWrap : bool
-    EditorRenderWhitespace : bool
-    CurrentFilePath : string
-    RegisteredKey : string
     OnlineFetchText : string
+    RegisteredKey : string
+    SimulatorMaxSteps : string
     }
 
 type DialogBox =
+    | AboutDl
     | OpenFileDl
+    | QuitDl
     | SaveAsDl
     | UnsavedFileDl
-    | AboutDl
-    | QuitDl
 
 type Model = { 
     /// File Tab currently selected (and therefore visible)
-    CurrentFileTabId : int
+    TabId : int
     /// tab containing current testbench specification (if testbench is loaded)
     TestbenchTab : int option
     /// Map tabIds to the editors which are contained in them
@@ -118,13 +117,13 @@ type Model = {
     Flags : CommonData.Flags
     /// Values of all Defined Symols
     SymbolMap : Map<string, uint32 * ExecutionTop.SymbolType>
-    /// version of symbolMap currently displayed
-    DisplayedSymbolMap : Map<string, uint32 * ExecutionTop.SymbolType>
     /// Current state of simulator
     RunMode : ExecutionTop.RunMode
     /// Global debug level set from main process.
     /// 0 => production. 1 => development. 2 => debug parameter.
     DebugLevel : int
+    /// Execution Step number at which GUI was last updated
+    LastDisplayStepsDone : int64
     LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
     Activity : bool
     Sleeping : bool
@@ -136,7 +135,6 @@ type Model = {
     EditorEnable : bool
     ClockTime : uint64 * uint64
     }
-    
 
 type Msg =
     | ChangeView of Views
@@ -410,17 +408,6 @@ let isUndefined (_ : 'a) : bool = jsNative
 [<Emit("__dirname")>]
 
 let appDirName : string = jsNative
-
-/// compare input with last input: if different, or no last input, execute function
-let cacheLastWithActionIfChanged actionFunc =
-    let mutable cache : 'a option = None
-    fun inDat ->
-        match cache with
-        | Some i when i = inDat -> ()
-        | Some _
-        | None ->
-            cache <- Some inDat
-            actionFunc inDat
             
 /// A reference to the settings for the app
 /// persistent using electron-settings

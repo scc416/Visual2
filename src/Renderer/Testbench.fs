@@ -72,7 +72,6 @@ let addResultsToTestbench (test : Test) (dp : DataPath) editors =
 /// and Test list, or Error message. If testbench lines contain errors these are highlighted in buffer.
 /// Previous error highlights are removed from buffer.
 let getParsedTests dStart (m : Model) =
-
     let processParseErrors (eLst : Result<Test, (int * string) list> list) =
         let highlightErrors tab =
             List.iter (fun (lNum, mess) ->
@@ -81,8 +80,8 @@ let getParsedTests dStart (m : Model) =
         match getTBWithTab m.Editors with
         | Error mess -> Error mess
         | Ok(tab, _) ->
-            let newDecorations = Editors.removeEditorDecorations m.CurrentFileTabId m.Decorations m.Editors
-            List.iter (Result.mapError (highlightErrors m.CurrentFileTabId) >> ignore) eLst
+            let newDecorations = Editors.removeEditorDecorations m.TabId m.Decorations m.Editors
+            List.iter (Result.mapError (highlightErrors m.TabId) >> ignore) eLst
             match List.errorList eLst with
             | [] -> List.okList eLst |> Ok
             | x ->

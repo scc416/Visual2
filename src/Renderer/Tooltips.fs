@@ -388,7 +388,7 @@ let makeContentWidget (name : string) (dom : HTMLElement) (m : Model) (pos : Wid
                                         | AboveBelow _ -> [| 1; 2 |]
                                   ]
                   ]
-    m.Editors.[m.CurrentFileTabId].IEditor?addContentWidget widget |> ignore
+    m.Editors.[m.TabId].IEditor?addContentWidget widget |> ignore
     { m with CurrentTabWidgets = Map.add name widget m.CurrentTabWidgets }
 
 /// delete content widget with ID = name on current editor.
@@ -396,7 +396,7 @@ let deleteContentWidget (m : Model) name =
     match Map.tryFind name m.CurrentTabWidgets with
     | None -> Some name
     | Some w ->
-        m.Editors.[m.CurrentFileTabId].IEditor?removeContentWidget w |> ignore
+        m.Editors.[m.TabId].IEditor?removeContentWidget w |> ignore
         None
 /// delete all content widgets
 let deleteAllContentWidgets (m : Model) () =

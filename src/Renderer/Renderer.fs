@@ -37,7 +37,7 @@ let init _ =
     let settings = checkSettings (getJSONSettings initSettings) initSettings
     let m =
         { 
-            CurrentFileTabId = 0
+            TabId = 0
             TestbenchTab = None
             Editors = Map.ofList [ (0, blankTab) ]
             CurrentTabWidgets = Map.empty
@@ -52,7 +52,6 @@ let init _ =
             RegMap = ExecutionTop.initialRegMap
             Flags = initialFlags
             SymbolMap = Map.empty
-            DisplayedSymbolMap = Map.empty
             RunMode = ExecutionTop.ResetMode
             DebugLevel = debugLevel
             LastOnlineFetchTime = Result.Error System.DateTime.Now
@@ -65,6 +64,7 @@ let init _ =
             Decorations = []
             EditorEnable = true
             ClockTime = (0uL, 0uL)
+            LastDisplayStepsDone = 0L
         }
     let cmd = 
         readOnlineInfo Startup m.LastOnlineFetchTime m.Settings.OnlineFetchText m.LastRemindTime m.DebugLevel
@@ -82,36 +82,36 @@ let update (msg : Msg) (m : Model) =
         { m with ReverseDirection = not m.ReverseDirection }, Cmd.none
     | NewFile -> 
         let newTabId, newEditors = newFileUpdate m.Editors
-        { m with CurrentFileTabId = newTabId
+        { m with TabId = newTabId
                  Editors = newEditors }, Cmd.none
     | EditorTextChange ->
-        let newEditor = { m.Editors.[m.CurrentFileTabId] with Saved = false }
-        let newEditors = Map.add m.CurrentFileTabId newEditor m.Editors
+        let newEditor = { m.Editors.[m.TabId] with Saved = false }
+        let newEditors = Map.add m.TabId newEditor m.Editors
         { m with Editors = newEditors }, Cmd.none
     | SelectFileTab id -> 
         let newTabId = selectFileTabUpdate id m.Editors
-        { m with CurrentFileTabId = newTabId }, Cmd.none
+        { m with TabId = newTabId }, Cmd.none
     | AttemptToDeleteTab id ->
         let newDialog, newCmd =
-            attemptToDeleteTabUpdate (m.CurrentFileTabId, m.Editors.[m.CurrentFileTabId].Saved, m.DialogBox) 
+            attemptToDeleteTabUpdate (m.TabId, m.Editors.[m.TabId].Saved, m.DialogBox) 
                                      id
         { m with DialogBox = newDialog }, newCmd
     | DeleteTab -> 
         let newTabId, newEditors, newSettingsTab = 
-            deleteTabUpdate (m.CurrentFileTabId, m.Editors, m.SettingsTab)
-        { m with CurrentFileTabId = newTabId
+            deleteTabUpdate (m.TabId, m.Editors, m.SettingsTab)
+        { m with TabId = newTabId
                  Editors = newEditors 
                  SettingsTab = newSettingsTab 
                  DialogBox = None 
                  CurrentTabWidgets = Map.empty }, Cmd.none
     | OpenFile editors -> 
         let newEditors, newFilePath, newTabId = 
-            openFileUpdate (m.Editors, m.Settings.CurrentFilePath, m.CurrentFileTabId)
+            openFileUpdate (m.Editors, m.Settings.CurrentFilePath, m.TabId)
                            editors
         let newSettings = 
             { m.Settings with CurrentFilePath = newFilePath }
         { m with Editors = newEditors
-                 CurrentFileTabId = newTabId
+                 TabId = newTabId
                  Settings = newSettings
                  DialogBox = None }, Cmd.none
     | OpenFileDialog -> 
@@ -119,16 +119,16 @@ let update (msg : Msg) (m : Model) =
         { m with DialogBox = newDialog }, Cmd.none
     | SaveFile -> 
         let newDialog, newEditors = 
-            saveFileUpdate (m.CurrentFileTabId, m.Editors)
+            saveFileUpdate (m.TabId, m.Editors)
         { m with Editors = newEditors
                  DialogBox = newDialog }, Cmd.none
     | SaveAsFileDialog -> 
         let newDialogBox =
-            saveAsFileDialogUpdate (m.CurrentFileTabId, m.DialogBox)
+            saveAsFileDialogUpdate (m.TabId, m.DialogBox)
         { m with DialogBox = newDialogBox }, Cmd.none
     | SaveAsFile fileInfo ->
         let newEditors, newFilePathSetting =
-            saveAsFileUpdate (m.Editors, m.CurrentFileTabId, m.Settings.CurrentFilePath)
+            saveAsFileUpdate (m.Editors, m.TabId, m.Settings.CurrentFilePath)
                              fileInfo
         let newSettings = 
             { m.Settings with CurrentFilePath = newFilePathSetting }
@@ -139,19 +139,19 @@ let update (msg : Msg) (m : Model) =
         let newEditors, newTabId =
             selectSettingsTabUpdate (m.SettingsTab, m.Editors)
         { m with Editors = newEditors
-                 CurrentFileTabId = newTabId
+                 TabId = newTabId
                  SettingsTab = Some newTabId }, Cmd.none
     | SaveSettings ->
         let newSettings, newEditors, newId =
             saveSettingsUpdate (m.Settings, m.Editors, m.SettingsTab.Value)
         { m with Settings = newSettings 
                  Editors = newEditors 
-                 CurrentFileTabId = newId 
+                 TabId = newId 
                  SettingsTab = None }, Cmd.none
     | LoadDemoCode -> 
         let newEditors, newId = loadDemo m.Editors
         { m with Editors = newEditors 
-                 CurrentFileTabId = newId }, Cmd.none
+                 TabId = newId }, Cmd.none
     | IncreaseFontSize ->
         let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) + 2) }
         { m with Settings = newSettings }, Cmd.none
@@ -173,21 +173,21 @@ let update (msg : Msg) (m : Model) =
         let newEditors = Map.add y { m.Editors.[y] with IEditor = Some x } m.Editors
         { m with Editors = newEditors }, Cmd.none
     | FindEditor ->
-        let action = m.Editors.[m.CurrentFileTabId].IEditor?getAction ("actions.find")
+        let action = m.Editors.[m.TabId].IEditor?getAction ("actions.find")
         action?run ()
         m, Cmd.none
     | FindAndReplaceEditor ->
-        let action = m.Editors.[m.CurrentFileTabId].IEditor?getAction ("editor.action.startFindReplaceAction")
+        let action = m.Editors.[m.TabId].IEditor?getAction ("editor.action.startFindReplaceAction")
         action?run ()
         m, Cmd.none
     | UndoEditor ->
-        m.Editors.[m.CurrentFileTabId].IEditor?trigger ("Update.fs", "undo") |> ignore
+        m.Editors.[m.TabId].IEditor?trigger ("Update.fs", "undo") |> ignore
         m, Cmd.none
     | SelectAllEditor ->
-        m.Editors.[m.CurrentFileTabId].IEditor?trigger ("Update.fs", "selectAll") |> ignore
+        m.Editors.[m.TabId].IEditor?trigger ("Update.fs", "selectAll") |> ignore
         m, Cmd.none
     | RedoEditor ->
-        m.Editors.[m.CurrentFileTabId].IEditor?trigger ("Update.fs", "redo") |> ignore
+        m.Editors.[m.TabId].IEditor?trigger ("Update.fs", "redo") |> ignore
         m, Cmd.none
     | InitiateClose ->
         { m with InitClose = true }, Cmd.none
@@ -212,7 +212,7 @@ let update (msg : Msg) (m : Model) =
         m, Cmd.none
     | ResetEmulator ->
         let newDecorations = 
-            Editors.removeEditorDecorations m.CurrentFileTabId m.Decorations m.Editors
+            Editors.removeEditorDecorations m.TabId m.Decorations m.Editors
         let newCurrentWidgets =
             Tooltips.deleteAllContentWidgets m
         { m with MemoryMap = Map.empty
@@ -230,7 +230,7 @@ let update (msg : Msg) (m : Model) =
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
     mainMenu dispatch m
-    dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.CurrentFileTabId, m.SettingsTab)
+    dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab)
               dispatch
     Browser.console.log(string m.LastOnlineFetchTime)
     Browser.console.log(string m.RegMap)
@@ -254,7 +254,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                   DOMAttr.OnClick (fun _ -> Integration.stepCodeBack m |> UpdateModel |> dispatch) ]
                                 [ str " Step" ]
                          button [ ClassName "btn btn-default button-forward" 
-                                  DOMAttr.OnClick (fun _ -> Integration.stepCode m.CurrentFileTabId m.Editors m |> UpdateModel |> dispatch )]
+                                  DOMAttr.OnClick (fun _ -> Integration.stepCode m.TabId m.Editors m |> UpdateModel |> dispatch )]
                                 [ str "Step " ]
                          (statusBar m.RunMode)
                          div [ ClassName "btn-group clock" ]
@@ -268,7 +268,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
           div [ ClassName "window-content" ] 
               [ div [ ClassName "pane-group" ] 
                     [ div [ ClassName "pane file-view-pane"] 
-                          (editorPanel (m.CurrentFileTabId, m.Editors, m.SettingsTab, m.Settings) 
+                          (editorPanel (m.TabId, m.Editors, m.SettingsTab, m.Settings) 
                                        dispatch)
                       div [ ClassName "pane dashboard"
                             dashboardStyle m.CurrentRep ]

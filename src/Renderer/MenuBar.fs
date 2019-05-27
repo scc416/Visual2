@@ -181,7 +181,7 @@ let testMenu (m : Model) (dispatch : (Msg -> Unit)) =
         let runTo cond = Integration.runEditorTab cond m System.Int64.MaxValue
         makeMenu "Test" [
             makeItem "Step <-" (Some "F3") (fun () -> Integration.stepCodeBack m |> UpdateModel |> dispatch)
-            makeItem "Step ->" (Some "F4") (fun () -> Integration.stepCode m.CurrentFileTabId m.Editors m |> UpdateModel |> dispatch )
+            makeItem "Step ->" (Some "F4") (fun () -> Integration.stepCode m.TabId m.Editors m |> UpdateModel |> dispatch )
             makeItem "Step to next call" (Some "F5") (fun () -> runTo ExecutionTop.ToSubroutine |> UpdateModel |> dispatch )
             makeItem "Step to next return" (Some "F6") (fun () -> runTo ExecutionTop.ToReturn |> UpdateModel |> dispatch )
             makeItem "Step forward by" Core.Option.None runSteps
@@ -211,7 +211,7 @@ let helpMenu dispatch m =
 let mainMenu (dispatch : (Msg -> Unit)) (m : Model) =
     let template =
         ResizeArray<MenuItemOptions> [
-            fileMenu m.CurrentFileTabId dispatch m.DebugLevel m.RunMode
+            fileMenu m.TabId dispatch m.DebugLevel m.RunMode
             editMenu dispatch m.DebugLevel m.RunMode
             viewMenu()
             helpMenu dispatch m

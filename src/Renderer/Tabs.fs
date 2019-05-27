@@ -67,13 +67,7 @@ let newFileUpdate editors =
 
 let attemptToDeleteTabUpdate (tabId, saved, dialogBox)
                              id =
-    let mutable dialog = dialogBox
-    let mutable cmd = Cmd.none
     match id = tabId, saved, dialogBox with
-    | true, true, _ -> 
-        cmd <- Cmd.ofMsg DeleteTab
-    | true, false, None -> 
-        dialog <- Some UnsavedFileDl
-    | _ -> 
-        ()
-    dialog, cmd
+    | true, true, _ -> dialogBox, Cmd.ofMsg DeleteTab
+    | true, false, None -> Some UnsavedFileDl, Cmd.none
+    | _ -> dialogBox, Cmd.none
