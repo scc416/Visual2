@@ -214,16 +214,15 @@ let doFetch (onlineFetchText, ve, lastRemindTime) =
         txt
     )
 
-let readOnlineInfo (lastOnlineFetchTime, lastRemindTime, onlineFetchText)
-                   (ve: VisualEvent) =
+let readOnlineInfo (ve: VisualEvent) info =
     let doFetchBl =
-        match lastOnlineFetchTime with
+        match info.LastOnlineFetchTime with
         | Error tim  -> doIfHoursLaterThan (if ve = Startup then 0. else 0.1) tim
         | Ok tim -> doIfHoursLaterThan (if debugLevel > 0 then 0.001 else 24.) tim
     match doFetchBl with       
     | true -> 
         Cmd.ofPromise doFetch 
-                      (onlineFetchText, ve, lastRemindTime) 
+                      (info.OnlineFetchText, ve, info.LastRemindTime) 
                       (fun x -> 
                           match x with
                           | Ok x -> (x, ve) |> ReadOnlineInfoSuccess

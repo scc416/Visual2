@@ -163,6 +163,12 @@ type Msg =
     | ResetEmulator
     | InitialiseIExports of Monaco.IExports
 
+type ReadOnlineInfo = {
+    LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
+    LastRemindTime : System.TimeSpan option
+    OnlineFetchText : string
+    }
+
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
     match Map.isEmpty editor with

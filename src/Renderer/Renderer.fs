@@ -71,9 +71,10 @@ let init _ =
             ClockTime = (0uL, 0uL)
         }
     let cmd = 
-        readOnlineInfo (m.LastOnlineFetchTime, m.LastRemindTime, m.Settings.OnlineFetchText) 
-                       Startup
-                                
+        readOnlineInfo Startup
+                       { LastOnlineFetchTime = m.LastOnlineFetchTime
+                         LastRemindTime = m.LastRemindTime
+                         OnlineFetchText = m.Settings.OnlineFetchText } 
     m, cmd
 
 let update (msg : Msg) (m : Model) =
@@ -199,8 +200,11 @@ let update (msg : Msg) (m : Model) =
         { m with InitClose = true }, Cmd.none
     | RunSimulation ->
         let cmd = 
-            readOnlineInfo (m.LastOnlineFetchTime, m.LastRemindTime, m.Settings.OnlineFetchText)
-                           RunningCode
+            readOnlineInfo RunningCode
+                           { LastOnlineFetchTime = m.LastOnlineFetchTime
+                             LastRemindTime = m.LastRemindTime
+                             OnlineFetchText = m.Settings.OnlineFetchText }
+                           
         let newM = runCode ExecutionTop.NoBreak m
         newM, cmd
     | ReadOnlineInfoSuccess (newOnlineFetchText, ve) -> 
