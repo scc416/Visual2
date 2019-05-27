@@ -65,9 +65,12 @@ let newFileUpdate editors =
     let newEditors = Map.add newTabId blankTab editors
     newTabId, newEditors
 
-let attemptToDeleteTabUpdate (tabId, saved, dialogBox)
+let attemptToDeleteTabUpdate (tabId, (editors: Map<int, Editor>), dialogBox)
                              id =
-    match id = tabId, saved, dialogBox with
-    | true, true, _ -> dialogBox, Cmd.ofMsg DeleteTab
-    | true, false, None -> Some UnsavedFileDl, Cmd.none
-    | _ -> dialogBox, Cmd.none
+    match id with
+    | -1 -> dialogBox, Cmd.none
+    | _ ->
+        match id = tabId, editors.[id].Saved, dialogBox with
+        | true, true, _ -> dialogBox, Cmd.ofMsg DeleteTab
+        | true, false, None -> Some UnsavedFileDl, Cmd.none
+        | _ -> dialogBox, Cmd.none

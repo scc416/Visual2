@@ -93,7 +93,7 @@ let update (msg : Msg) (m : Model) =
         { m with TabId = newTabId }, Cmd.none
     | AttemptToDeleteTab id ->
         let newDialog, newCmd =
-            attemptToDeleteTabUpdate (m.TabId, m.Editors.[m.TabId].Saved, m.DialogBox) 
+            attemptToDeleteTabUpdate (m.TabId, m.Editors, m.DialogBox) 
                                      id
         { m with DialogBox = newDialog }, newCmd
     | DeleteTab -> 
