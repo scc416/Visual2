@@ -48,20 +48,20 @@ let setTheme theme =
     window?monaco?editor?setTheme (theme)
 
 // Disable the editor and tab selection during execution
-let disableEditors() =
-    Refs.fileTabMenu.classList.add ("disabled-click")
-    Refs.fileTabMenu.onclick <- (fun _ ->
-        showVexAlert ("Cannot change tabs during execution")
-        createObj []
-    )
-    Refs.darkenOverlay.classList.remove ("invisible")
-    Refs.darkenOverlay.classList.add ([| "disabled-click" |])
+//let disableEditors() =
+    //Refs.fileTabMenu.classList.add ("disabled-click")
+    //Refs.fileTabMenu.onclick <- (fun _ ->
+    //    showVexAlert ("Cannot change tabs during execution")
+    //    createObj []
+    //)
+    //Refs.darkenOverlay.classList.remove ("invisible")
+    //Refs.darkenOverlay.classList.add ([| "disabled-click" |])
 
 // Enable the editor once execution has completed
-let enableEditors() =
-    Refs.fileTabMenu.classList.remove ("disabled-click")
-    Refs.fileTabMenu.onclick <- (fun _ -> createObj [])
-    Refs.darkenOverlay.classList.add ([| "invisible" |])
+//let enableEditors() =
+    //Refs.fileTabMenu.classList.remove ("disabled-click")
+    //Refs.fileTabMenu.onclick <- (fun _ -> createObj [])
+    //Refs.darkenOverlay.classList.add ([| "invisible" |])
 
 //let mutable decorations : obj list = []
 //let mutable lineDecorations : obj list = []

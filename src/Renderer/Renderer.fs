@@ -259,9 +259,11 @@ let view (m : Model) (dispatch : Msg -> unit) =
                          button [ ClassName "btn btn-default"
                                   DOMAttr.OnClick (fun _ -> ResetEmulator |> dispatch) ]
                                 [ str "Reset" ]
-                         button [ ClassName "btn btn-default button-back" ]
+                         button [ ClassName "btn btn-default button-back" 
+                                  DOMAttr.OnClick (fun _ -> Integration.stepCodeBack m |> UpdateModel |> dispatch) ]
                                 [ str " Step" ]
-                         button [ ClassName "btn btn-default button-forward" ]
+                         button [ ClassName "btn btn-default button-forward" 
+                                  DOMAttr.OnClick (fun _ -> Integration.stepCode m.CurrentFileTabId m.Editors m |> UpdateModel |> dispatch )]
                                 [ str "Step " ]
                          (statusBar m.RunMode)
                          div [ ClassName "btn-group clock" ]

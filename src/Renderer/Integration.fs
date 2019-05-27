@@ -105,7 +105,7 @@ let resetEmulator() =
     printfn "Resetting..."
     //Tooltips.deleteAllContentWidgets() INCLUDE THIS
     //let newDecorations = ,///Editors.removeEditorDecorations currentFileTabId
-    Editors.enableEditors()
+    //Editors.enableEditors()
     //memoryMap <- Map.empty
     //symbolMap <- Map.empty
     //regMap <- initialRegMap
@@ -115,7 +115,7 @@ let resetEmulator() =
     //resetRegs()
     //resetFlags()
     //updateRegisters()
-    updateClockTime (0uL, 0uL)
+    //updateClockTime (0uL, 0uL)
 
 /// Display current execution state in GUI from stored runMode
 let showInfoFromCurrentMode (m : Model) =
@@ -308,7 +308,7 @@ let getTestRunInfo test codeTid breakCond m =
     match loadIm with
     | Some(lim, _) ->
         let dp = initTestDP (lim.Mem, lim.SymInf.SymTab) test
-        Editors.disableEditors()
+        //Editors.disableEditors()
         match dp with
         | Ok dp -> getRunInfoFromImageWithInits breakCond lim dp.Regs dp.Fl Map.empty dp.MM |> Ok |> Some
         | Error e -> Error e |> Some
@@ -409,8 +409,6 @@ let rec asmStepDisplay (breakc : BreakCondition) (m : Model) steps ri'  =
                 | tests -> 
                     //runTests false tests (asmStepDisplay NoBreak m) m//TODO: CHECK
                     m5
-
-
 
 /// If program has changed reset execution
 let prepareModeForExecution (m : Model) : Model =

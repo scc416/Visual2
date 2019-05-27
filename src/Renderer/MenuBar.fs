@@ -18,8 +18,7 @@ let display runMode =
     | ExecutionTop.ActiveMode _ -> "ActiveMode"
     | ExecutionTop.ParseErrorMode -> "ParseErrorMode"
     | ExecutionTop.RunErrorMode _ -> "RunErrorMode"
-
-
+    
 /// Wrap an action so that it can only happen if simulator is stopped.
 /// Converts unit -> unit into obj. Must be called as fun () -> interlock actionName action.
 /// Suitable for use as JS callback.
