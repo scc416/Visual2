@@ -6,8 +6,8 @@ open Fable.Helpers.React.Props
 open Fable.Import.React
 open Tooltips2
 open Editors2
-open Settings2
-open Files2
+open Settings
+open Files
 open ExecutionTop
 
 let maxSymbolWidth = 30
