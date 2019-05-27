@@ -11,12 +11,10 @@
     <Compile Include="Tooltips2.fs" />
     <Compile Include="Tooltips.fs" />
     <Compile Include="Stats.fs" />
-    <Compile Include="Stats2.fs" />
     <Compile Include="Editors.fs" />
     <Compile Include="ErrorDocs.fs" />
     <Compile Include="Tabs.fs" />
     <Compile Include="Settings.fs" />
-    <Compile Include="Views.fs" />
     <Compile Include="Files.fs" />
     <Compile Include="Testbench.fs" />
     <Compile Include="Integration.fs" />
@@ -27,7 +25,7 @@
     <Compile Include="Settings2.fs" />
     <Compile Include="Files2.fs" />
     <Compile Include="Editor2.fs" />
-    <Compile Include="Views2.fs" />
+    <Compile Include="Views.fs" />
     <Compile Include="Dialog.fs" />
     <Compile Include="Renderer.fs" />
     <ProjectReference Include="..\Emulator\Emulator.fsproj" />

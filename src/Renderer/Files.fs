@@ -23,7 +23,6 @@ open Refs
 open Fable
 open Settings
 open Tabs
-open Views
 
 open CommonData
 open ExecutionTop

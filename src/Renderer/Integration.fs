@@ -10,7 +10,6 @@ module Integration
 
 open EEExtensions
 open Tabs
-open Views
 open CommonData
 open ParseTop
 open ExecutionTop
@@ -139,8 +138,8 @@ let resetEmulator() =
     //symbolMap <- Map.empty
     //regMap <- initialRegMap
     setMode ResetMode
-    updateMemory()
-    updateSymTable()
+    //updateMemory()
+    //updateSymTable()
     resetRegs()
     resetFlags()
     updateRegisters()

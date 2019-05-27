@@ -16,7 +16,7 @@ open Fable.Helpers.React.Props
 open Monaco
 open Monaco.Monaco.Languages
 open Monaco.Monaco
-open Views2
+open Views
 open Tabs2
 open MenuBar2
 open Tooltips2
@@ -24,7 +24,7 @@ open Files2
 open Settings2
 open Editors2
 open Dialog
-open Stats2
+open Stats
 open Integration
 
 let init _ =

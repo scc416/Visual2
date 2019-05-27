@@ -26,10 +26,27 @@ open Monaco
 let appVersion = "1.06.9"
 
 // **********************************************************************************
-//                               Types used in this module
+//                               Types used in Renderer
 // **********************************************************************************
 
+type VisualEvent =
+    | Startup
+    | RunningCode
 
+type ErrorT = (int * string)
+
+type LogT = 
+    | Wake 
+    | Sleep 
+    | Step 
+    | ParseWithErrors of ErrorT list
+    | RunOK 
+    | Reset 
+
+type LogMessage = {
+        LogT: LogT
+        Time: int64
+    }
 
 type Editor = { 
     DefaultValue : string
@@ -120,10 +137,7 @@ type Model = {
     EditorEnable : bool
     ClockTime : uint64 * uint64
     }
-
-type VisualEvent =
-    | Startup
-    | RunningCode
+    
 
 type Msg =
     | ChangeView of Views

@@ -22,9 +22,6 @@ let editorTheme = "editor-theme"
 let editorWordWrap = "editor-word-wrap"
 let editorRenderWhitespace = "editor-render-whitespace"
 
-
-
-
 let setSettingsUnsaved = (fun _ -> setTabUnsaved (getSettingsTabId()))
 
 
