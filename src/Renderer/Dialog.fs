@@ -53,7 +53,6 @@ let ExitIfOK dispatch =
         match result with
         | false -> CloseDialog |> dispatch
         | true -> Exit |> dispatch
-    Browser.console.log("opening the dialog")
     showQuitMessage callback
 
 /// determine if any dialog box has to be opened

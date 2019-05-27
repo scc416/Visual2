@@ -232,8 +232,6 @@ let view (m : Model) (dispatch : Msg -> unit) =
     mainMenu dispatch m
     dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab)
               dispatch
-    Browser.console.log(string m.LastOnlineFetchTime)
-    Browser.console.log(string m.RegMap)
     div [ ClassName "window" ] 
         [ header [ ClassName "toolbar toolbar-header" ] 
                  [ div [ ClassName "toolbar-actions" ] 
