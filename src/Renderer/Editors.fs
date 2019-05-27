@@ -106,7 +106,7 @@ let highlightLine tId (editors : Map<int, Editor>) number className (m : Model) 
 let highlightGlyph number glyphClassName (m : Model) =
     Browser.console.log("EDITOR 136")
     editorLineDecorate
-        m.Editors.[m.CurrentFileTabId].IEditor
+        m.Editors.[m.TabId].IEditor
         number
         (createObj [
             "isWholeLine" ==> true
@@ -226,7 +226,7 @@ let toolTipInfo (v : int, orientation : string)
                 let regRows =
                     locs
                     |> List.map (makeRegRow >> TROWS)
-                (findCodeEnd v m.CurrentFileTabId m.Editors, "Stack"), TABLE [] [ //TODO: HTML ELEMENT MIGHT NOT WORK
+                (findCodeEnd v m.TabId m.Editors, "Stack"), TABLE [] [ //TODO: HTML ELEMENT MIGHT NOT WORK
                     DIV [] [
                         TROWS [ sprintf "Pointer (%s)" (ins.Rn.ToString()); sprintf "0x%08X" sp ]
                         TROWS [ "Increment"; increment |> sprintf "%d" ]
@@ -243,7 +243,7 @@ let toolTipInfo (v : int, orientation : string)
                 let ea = match ins.MemMode with | Memory.PreIndex | Memory.NoIndex -> (baseAddrU + uint32 offset) | _ -> baseAddrU
                 let mData = (match ins.MemSize with | MWord -> Memory.getDataMemWord | MByte -> Memory.getDataMemByte) ea dp
                 let isIncr = match ins.MemMode with | Memory.NoIndex -> false | _ -> true
-                (findCodeEnd v m.CurrentFileTabId m.Editors, "Pointer"), TABLE [] [
+                (findCodeEnd v m.TabId m.Editors, "Pointer"), TABLE [] [
                     TROWS [ sprintf "Base (%s)" (ins.Rb.ToString()); sprintf "0x%08X" baseAddrU ]
                     TROWS [ "Address"; ea |> sprintf "0x%08X" ]
                     TROWS <| if isIncr then [] else [ "Offset"; (offset |> sprintf "%+d") ]
@@ -273,7 +273,7 @@ let toolTipInfo (v : int, orientation : string)
             | _ -> m
     | true, ParseTop.IDP(exec, op2) ->
         let alu = ExecutionTop.isArithmeticOpCode opc
-        let pos = findCodeEnd v m.CurrentFileTabId m.Editors, v, orientation
+        let pos = findCodeEnd v m.TabId m.Editors, v, orientation
         match exec dp with
         | Error _ -> m
         | Ok(dp', uF') ->
