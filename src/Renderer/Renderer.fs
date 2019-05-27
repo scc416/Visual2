@@ -15,10 +15,10 @@ open Monaco
 open Views
 open Tabs
 open MenuBar
-open Tooltips2
+open Tooltips
 open Files
 open Settings
-open Editors2
+open Editors
 open Dialog
 open Stats
 open Integration
@@ -34,7 +34,7 @@ let init _ =
         if isArg "--debug" || isArg "-d" then 2
         elif isArg "-w" then 1
         else 0
-    let settings = checkSettings (getJSONSettings()) initSettings
+    let settings = checkSettings (getJSONSettings initSettings) initSettings
     let m =
         { 
             CurrentFileTabId = 0
@@ -67,11 +67,7 @@ let init _ =
             ClockTime = (0uL, 0uL)
         }
     let cmd = 
-        readOnlineInfo Startup
-                       { LastOnlineFetchTime = m.LastOnlineFetchTime
-                         LastRemindTime = m.LastRemindTime
-                         OnlineFetchText = m.Settings.OnlineFetchText } 
-                       m.DebugLevel
+        readOnlineInfo Startup m.LastOnlineFetchTime m.Settings.OnlineFetchText m.LastRemindTime m.DebugLevel
     m, cmd
 
 let update (msg : Msg) (m : Model) =
@@ -197,12 +193,7 @@ let update (msg : Msg) (m : Model) =
         { m with InitClose = true }, Cmd.none
     | RunSimulation ->
         let cmd = 
-            readOnlineInfo RunningCode
-                           { LastOnlineFetchTime = m.LastOnlineFetchTime
-                             LastRemindTime = m.LastRemindTime
-                             OnlineFetchText = m.Settings.OnlineFetchText }
-                           m.DebugLevel
-                           
+            readOnlineInfo RunningCode m.LastOnlineFetchTime m.Settings.OnlineFetchText m.LastRemindTime m.DebugLevel        
         let newM = runCode ExecutionTop.NoBreak m
         newM, cmd
     | ReadOnlineInfoSuccess (newOnlineFetchText, ve) -> 

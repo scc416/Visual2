@@ -6,7 +6,6 @@ open Fable.Import.React
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Tabs
-open MenuBar
 
 /// string for the id, to obtain the value in input
 let editorFontSize = "editor-font-size"

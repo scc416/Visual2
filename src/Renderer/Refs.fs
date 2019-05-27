@@ -176,12 +176,6 @@ type Msg =
     | ResetEmulator
     | InitialiseIExports of Monaco.IExports
 
-type ReadOnlineInfo = {
-    LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
-    LastRemindTime : System.TimeSpan option
-    OnlineFetchText : string
-    }
-
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
     match Map.isEmpty editor with
@@ -229,11 +223,11 @@ vex?defaultOptions?className <- "vex-theme-default"
 vex?registerPlugin vexDialog
 
 let vButton (caption : string) =
-    let b = createObj [
+    createObj [
         "text" ==> caption
         "click" ==> fun () -> "abc"
     ]
-    b
+
 let showVexConfirm (htmlMessage : string) (callBack : bool -> unit) =
     vex?dialog?confirm (createObj [
         "unsafeMessage" ==> htmlMessage;
@@ -334,75 +328,10 @@ let TD x = ELEMENT "td" [] <| [ x ]
 
 /// look up a DOM element
 let getHtml = Browser.document.getElementById
-//--------------------------- Buttons -------------------------------
 
-let openFileBtn = getHtml "explore" :?> HTMLButtonElement
-let saveFileBtn = getHtml "save" :?> HTMLButtonElement
-let runSimulationBtn : HTMLButtonElement = getHtml "run" :?> HTMLButtonElement
-let resetSimulationBtn = getHtml "reset" :?> HTMLButtonElement
-let stepForwardBtn = getHtml "stepf" :?> HTMLButtonElement
-let stepBackBtn = getHtml "stepb" :?> HTMLButtonElement
-/// get byte/word switch button element
-let byteViewBtn = getHtml "byte-view"
-
-/// get reverse direction element
-let reverseViewBtn = getHtml "reverse-view"
-
-/// get memory list element
-let memList = getHtml "mem-list"
-
-/// get symbol table View element
-let symView = getHtml "sym-view"
-
-/// get symbol table element
-let symTable = getHtml "sym-table"
-
-//---------------------File tab elements-------------------------------
-
-/// get element containing all tab headers
-let fileTabMenu = getHtml "tabs-files"
-
-/// get last (invisible) tab header
-let newFileTab = getHtml "new-file-tab"
 // ***********************************************************************************
 //                       Functions Relating to Right-hand View Panel
 // ***********************************************************************************
-
-/// used to get ID of button for each representation
-let repToId =
-    Map.ofList [
-        Hex, "rep-hex";
-        Bin, "rep-bin";
-        Dec, "rep-dec";
-        UDec, "rep-udec";
-    ]
-
-/// used to get ID used in DOM for each View
-let viewToIdView =
-    Map.ofList [
-        Registers, "view-reg";
-        Memory, "view-mem";
-        Symbols, "view-sym";
-    ]
-/// used to get Tab ID in DOM for each View
-let viewToIdTab =
-    Map.ofList [
-        Registers, "tab-reg";
-        Memory, "tab-mem";
-        Symbols, "tab-sym"
-    ]
-/// Get Flag display element from ID ("C", "V", "N", "Z")
-let flag id = getHtml <| sprintf "flag_%s" id
-
-/// get button for specific representation
-let representation rep = getHtml repToId.[rep]
-
-/// get View pane element from View
-let viewView view = getHtml viewToIdView.[view]
-
-/// get View Tab element from view
-let viewTab view = getHtml viewToIdTab.[view]
-
 
 /// get ID of Tab for Tab number tabID
 let fileTabIdFormatter tabID = sprintf "file-tab-%d" tabID
@@ -434,21 +363,16 @@ let tabFilePath id = getHtml <| tabFilePathIdFormatter id
 //--------------- Simulation Indicator elements----------------------
 
 let darkenOverlay = getHtml "darken-overlay"
-/// get element for status-bar button (and indicator)
-let statusBar = getHtml "status-bar"
 
 /// Set the background of file panes.
 /// This is done based on theme (light or dark) to prevent flicker
 let setFilePaneBackground color =
     fileViewPane.setAttribute ("style", sprintf "background: %s" color)
 
-let updateClockTime (n : uint64, m : uint64) =
-    getHtml "clock-time"
-    |> INNERHTML(if n = 0uL then "-" else sprintf "%d : %d" n m) |> ignore
-
 // ************************************************************************************
 //                         Utility functions used in this module
 // ************************************************************************************
+
 [<Emit "'0x' + ($0 >>> 0).toString(16).toUpperCase()">]
 let hexFormatter _ : string = jsNative
 
@@ -476,7 +400,6 @@ let formatterWithWidth width rep =
     | Dec -> (int32 >> sprintf "%d")
     | UDec -> uDecFormatter
 
-
 let formatter = formatterWithWidth 32
 
 
@@ -498,27 +421,12 @@ let cacheLastWithActionIfChanged actionFunc =
         | None ->
             cache <- Some inDat
             actionFunc inDat
-
-
-
-
-
+            
 /// A reference to the settings for the app
 /// persistent using electron-settings
 let settings : obj = electron.remote.require "electron-settings"
 
 let initSettings = {
-    EditorFontSize = "16"
-    SimulatorMaxSteps = "20000"
-    EditorTheme = "solarised-dark"
-    EditorWordWrap = false
-    EditorRenderWhitespace = false
-    CurrentFilePath = Fable.Import.Node.Exports.os.homedir()
-    RegisteredKey = ""
-    OnlineFetchText = ""
-    }
-
-let mutable vSettings = {
     EditorFontSize = "16"
     SimulatorMaxSteps = "20000"
     EditorTheme = "solarised-dark"
@@ -563,7 +471,7 @@ let checkSettings (vs : VSettings) vso =
                 match List.tryFind (fun (th, _) -> (th = vs.EditorTheme)) themes with
                 | Some _ -> vs.EditorTheme
                 | _ -> printfn "Setting theme to default"
-                       vSettings.EditorTheme
+                       vso.EditorTheme
             SimulatorMaxSteps =
                 checkNum vs.SimulatorMaxSteps 0L System.Int64.MaxValue vso.SimulatorMaxSteps
             EditorFontSize =
@@ -584,14 +492,14 @@ let setJSONSettings setting =
     setSetting "JSON" (Fable.Import.JS.JSON.stringify setting)
 
 
-let getJSONSettings() =
+let getJSONSettings initSettings =
     let json = settings?get ("JSON", "undefined")
     printfn "Getting settings"
     match json = "undefined" with
     | true ->
             printfn "No JSON settings found on this PC"
             setJSONSettings()
-            vSettings
+            initSettings
     | false ->
         try
             let vs = (Fable.Import.JS.JSON.parse json) :?> VSettings
@@ -599,7 +507,7 @@ let getJSONSettings() =
         with
         | e ->
             printfn "Parse failed: using default settings"
-            vSettings
+            initSettings
 
 let showMessage1 (callBack : int -> unit) (message : string) (detail : string) (buttons : string list) =
     let rem = electron.remote
@@ -628,22 +536,6 @@ let showAlert1 (message : string) (detail : string) =
         opts.``type`` <- "error" |> Some
         opts))
     |> ignore
-
-/// extract CSS custom variable value
-let getCustomCSS (varName : string) =
-    let styles = window.getComputedStyle Browser.document.documentElement
-    styles.getPropertyValue varName
-/// set a custom CSS variable defined in :root pseudoclass
-let setCustomCSS (varName : string) (content : string) =
-    let element = Browser.document.documentElement
-    element.style.setProperty (varName, content)
-
-/// set the CSS variable that determines dashboard width
-let setDashboardWidth (width) =
-    setCustomCSS "--dashboard-width" width
-
-/// Element in Register view representing register rNum
-let register rNum = getHtml <| sprintf "R%i" rNum
 
 let visualDocsPage name =
     match EEExtensions.String.split [| '#' |] name |> Array.toList with

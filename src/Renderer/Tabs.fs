@@ -15,24 +15,9 @@ open Fable.Core
 open EEExtensions
 open CommonData
 open Refs
-open Editors
 open Elmish
 open Fable.Core.JsInterop
 
-
-/// Set flag as stored and displayed in GUI
-let setFlag (id : string) (value : bool) (hasChanged : bool) =
-    let el = Refs.flag id
-    match value with
-        | false ->
-            el.innerHTML <- sprintf "%i" 0
-        | true ->
-            el.innerHTML <- sprintf "%i" 1
-    match hasChanged with
-        | false ->
-            el.setAttribute ("style", "background: #fcfcfc")
-        | true ->
-            el.setAttribute ("style", "background: #4285f4")
 
 /// return the id of the last editor in the map of editors
 let selectLastTabId editors =

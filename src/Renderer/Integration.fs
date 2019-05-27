@@ -35,7 +35,6 @@ let guideHTML = "https://tomcl.github.io/visual2.github.io/guide.html"
 let fstOf3 (x, _, _) = x
 let dpAndInfo (dp, _, dpi) = dp, dpi
 
-
 /// Process an editor line parse error. Generate a hover message and line decoration. Set Parse Error Mode
 let highlightErrorParse ((err : ParseError), lineNo) tId opc (m : Model) =
     let ML = EEExtensions.String.split [| '\n' |] >> Array.toList
@@ -79,9 +78,7 @@ let highlightErrorParse ((err : ParseError), lineNo) tId opc (m : Model) =
     match err with
     | ``Duplicate symbol`` (sym, lines) -> (makeErrorInEditor tId lineNo hover hover m)
     | _ -> (makeErrorInEditor tId lineNo mHover (gHover @ hover @ mLink @ gLink) m)
-
-
-
+    
 /// Make map of all data memory locs
 let makeDataLocMemoryMap mm =
     Map.toList mm
@@ -91,15 +88,6 @@ let makeDataLocMemoryMap mm =
            | CodeSpace -> Core.Option.None)
     |> List.choose id
     |> Map.ofList
-
-/// Set all current stored flags
-let setFlags (uFlags : DP.UFlags) =
-    let flags = uFlags.F
-    setFlag "N" flags.N uFlags.NZU
-    setFlag "C" flags.C uFlags.CU
-    setFlag "Z" flags.Z uFlags.NZU
-    setFlag "V" flags.V uFlags.VU
-   
 
 let resetEmulator() =
     printfn "Resetting..."

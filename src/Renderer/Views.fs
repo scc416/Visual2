@@ -4,8 +4,8 @@ open Refs
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Fable.Import.React
-open Tooltips2
-open Editors2
+open Tooltips
+open Editors
 open Settings
 open Files
 open ExecutionTop
