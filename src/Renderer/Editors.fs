@@ -29,6 +29,7 @@ open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Fable.Import.React
 open Settings
+open Tooltips
 
 open CommonData
 open Memory
@@ -56,6 +57,38 @@ let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) 
                     decoration
     List.append decorations [ newDecs ]
 
+let highlightGlyph editor number glyphClassName decorations =
+    editorLineDecorate
+        editor
+        number
+        (createObj [
+            "isWholeLine" ==> true
+            "glyphMarginClassName" ==> glyphClassName
+        ])
+        None
+        decorations
+
+let highlightNextInstruction editor number decorations =
+    if number > 0 
+        then highlightGlyph editor number "editor-glyph-margin-arrow" decorations
+        else decorations
+
+let revealLineInWindow editor (lineNumber : int) =
+    editor?revealLineInCenterIfOutsideViewport (lineNumber) |> ignore
+
+// highlight a particular line
+let highlightLine editor number className decorations =
+    editorLineDecorate
+        editor
+        number
+        (createObj [
+            "isWholeLine" ==> true
+            "isTrusted" ==> true
+            "inlineClassName" ==> className
+        ])
+        None
+        decorations
+
 /// <summary>
 /// Decorate a line with an error indication and set up a hover message.
 /// Distinct message lines must be elements of markdownLst.
@@ -64,37 +97,26 @@ let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) 
 /// lineNumber: int - line to decorate, starting at 1.
 /// hoverLst: hover attached to line.
 /// gHoverLst: hover attached to margin glyph.</summary>
-let makeErrorInEditor lineNumber (hoverLst : string list) (gHoverLst : string list) editor decorations =
+let makeErrorInEditor lineNumber (hoverLst : string list) (gHoverLst : string list) (editor: Monaco.Editor.IEditor option) decorations =
     let makeMarkDown textLst =
         textLst
         |> List.toArray
         |> Array.map (fun txt -> createObj [ "isTrusted" ==> true; "value" ==> txt ])
-    // decorate the line
-    let newDecorations = 
-        editorLineDecorate 
-            editor
-            lineNumber
-            (createObj [ 
-                "isWholeLine" ==> true
-                "isTrusted" ==> true
-                "inlineClassName" ==> "editor-line-error"
-                "hoverMessage" ==> makeMarkDown hoverLst
-            ])
-            None
-            decorations
-    // decorate the margin
-    editorLineDecorate
+    // decorate the line and margin
+    editorLineDecorate 
         editor
         lineNumber
         (createObj [
             "isWholeLine" ==> true
             "isTrusted" ==> true
+            "inlineClassName" ==> "editor-line-error"
+            "hoverMessage" ==> makeMarkDown hoverLst
             "glyphMarginClassName" ==> "editor-glyph-margin-error"
             "glyphMarginHoverMessage" ==> makeMarkDown gHoverLst
             "overviewRuler" ==> createObj [ "position" ==> 4 ]
-        ])
+         ])
         None
-        newDecorations
+        decorations
 
 
 type Props =
@@ -161,8 +183,8 @@ let fileNameFormat (fileName : string)
 
 let tabNameClass id =
     function
-    | Some x when x = id -> ClassName "tab-file-name icon icon-cog" 
-    | _ -> ClassName "tab-file-name" 
+    | Some x when x = id -> "tab-file-name icon icon-cog" 
+    | _ -> "tab-file-name" 
 
 let tabGroupClass =
     function
@@ -172,7 +194,7 @@ let tabGroupClass =
 let tabGroupOnClick (dispatch : Msg -> unit) =
     function
     | true -> ()
-    | _ -> ("Cannot change tabs during execution") |> AlertVex |> UpdateDialogBox |> dispatch
+    | _ -> ("Cannot change tabs during execution") |> Alert |> UpdateDialogBox |> dispatch
 
 let overlayClass =
     function
@@ -226,7 +248,7 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
             [ span [ ClassName "invisible" ] []
               span [ ClassName "icon icon-cancel icon-close-tab" 
                      DOMAttr.OnClick (fun _ -> AttemptToDeleteTab id |> dispatch)] []
-              span [ tabNameClass id settingsTabId
+              span [ tabNameClass id settingsTabId |> ClassName
                      tabHeaderTextStyle editor.Saved ] 
                    [ editor.Saved |> fileNameFormat fileName |> str ] ]
 
@@ -234,7 +256,7 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
     let addNewTabDiv =
         [ div [ ClassName "tab-item tab-item-fixed" 
                 DOMAttr.OnClick (fun _ -> NewFile |> dispatch) ]
-              [ span [ ClassName "icon icon-plus"] []]]
+              [ span [ ClassName "icon icon-plus" ] [] ] ]
 
     /// all tab headers plus the add new tab button
     let tabHeaders =
@@ -604,3 +626,117 @@ let tokeniZer = createObj [
 //  }
 //}
     ]
+
+
+/// find editor Horizontal char position after end of code (ignoring comment)
+let findCodeEnd (lineCol : int) editor =
+    let tabSize = 6
+    let txt =  formatText editor
+    if txt.Length <= lineCol then
+        0
+    else
+        let line = txt.[lineCol]
+        match String.splitRemoveEmptyEntries [| ';' |] line |> Array.toList with
+        | s :: _ -> (s.Length / tabSize) * tabSize + (if s.Length % tabSize > 0 then tabSize else 0)
+        | [] -> 0
+
+
+
+/// Make an editor tooltip info button with correct theme
+let makeEditorInfoButton clickable (h, v, orientation) editorTheme widgets editor fontSize = 
+    makeEditorInfoButtonWithTheme (tippyTheme editorTheme) clickable (h, v, orientation) widgets editor fontSize
+
+let lineTipsClickable = false
+
+/// Make execution tooltip info for the given instruction and line v, dp before instruction dp.
+/// Does nothing if opcode is not documented with execution tooltip
+let toolTipInfo (v : int, orientation : string)
+                (dp : DataPath)
+                ({ Cond = cond; InsExec = instruction; InsOpCode = opc } : ParseTop.CondInstr) 
+                editorTheme 
+                editor 
+                widgets
+                fontSize =
+    match Helpers.condExecute cond dp, instruction with
+    | false, _ -> ()
+    | true, ParseTop.IMEM ins ->
+        match Memory.executeMem ins dp with
+        | Error _ -> ()
+        | Ok res ->
+            let TROWS s =
+                (List.map (fun s -> s |> toDOM |> TD) >> TROW) s
+            let memStackInfo (ins : Memory.InstrMemMult) (dir : MemDirection) (dp : DataPath) =
+                let sp = dp.Regs.[ins.Rn]
+                let offLst, increment = Memory.offsetList (sp |> int32) ins.suff ins.rList ins.WB (dir = MemRead)
+                let locs = List.zip ins.rList offLst
+                let makeRegRow (rn : RName, ol : uint32) =
+                    [
+                        rn.ToString()
+                        (match dir with | MemRead -> "\u2190" | MemWrite -> "\u2192")
+                        (sprintf "Mem<sub>32</sub>[0x%08X]" ol)
+                        (match dir with
+                            | MemRead -> Map.tryFind (WA ol) dp.MM |> (function | Some(Dat x) -> x | _ -> 0u)
+                            | MemWrite -> dp.Regs.[rn])
+                        |> (fun x -> if abs (int x) < 10000 then sprintf "(%d)" x else sprintf "(0x%08X)" x)
+                    ]
+                let regRows =
+                    locs
+                    |> List.map (makeRegRow >> TROWS)
+                (findCodeEnd v editor, "Stack"), TABLE [] [
+                    DIV [] [
+                        TROWS [ sprintf "Pointer (%s)" (ins.Rn.ToString()); sprintf "0x%08X" sp ]
+                        TROWS [ "Increment"; increment |> sprintf "%d" ]
+                    ]
+                    DIV [ "tooltip-stack-regs-" + tippyTheme editorTheme + "-theme" ] regRows ]
+
+
+            let memPointerInfo (ins : Memory.InstrMemSingle) (dir : MemDirection) (dp : DataPath) =
+                let baseAddrU =
+                    let rb = dp.Regs.[ins.Rb]
+                    match ins.Rb with | R15 -> rb + 8u | _ -> rb
+                let baseAddr = int32 baseAddrU
+                let offset = (ins.MAddr dp baseAddr |> uint32) - baseAddrU |> int32
+                let ea = match ins.MemMode with | Memory.PreIndex | Memory.NoIndex -> (baseAddrU + uint32 offset) | _ -> baseAddrU
+                let mData = (match ins.MemSize with | MWord -> Memory.getDataMemWord | MByte -> Memory.getDataMemByte) ea dp
+                let isIncr = match ins.MemMode with | Memory.NoIndex -> false | _ -> true
+                (findCodeEnd v editor, "Pointer"), TABLE [] [
+                    TROWS [ sprintf "Base (%s)" (ins.Rb.ToString()); sprintf "0x%08X" baseAddrU ]
+                    TROWS [ "Address"; ea |> sprintf "0x%08X" ]
+                    TROWS <| if isIncr then [] else [ "Offset"; (offset |> sprintf "%+d") ]
+                    TROWS [ "Increment"; (if isIncr then offset else 0) |> (fun n -> sprintf "%+d" n) ]
+                    TROWS [ "Data"; match ins.LSType with
+                                    | LOAD -> match mData with | Ok dat -> dat | _ -> 0u
+                                    | STORE -> dp.Regs.[ins.Rd]
+                                    |> fun d ->
+                                        match ins.MemSize with
+                                        | MWord -> sprintf "0x%08X" d
+                                        | MByte -> sprintf "0x%02X" ((uint32 d) % 256u) ]
+                    ]
+
+            let makeTip memInfo =
+                let (hOffset, label), tipDom = memInfo dp
+                makeEditorInfoButton Tooltips.lineTipsClickable (hOffset, (v + 1), orientation) editorTheme widgets editor fontSize label tipDom
+            match ins with
+            | Memory.LDR ins -> makeTip <| memPointerInfo ins MemRead
+            | Memory.STR ins -> makeTip <| memPointerInfo ins MemWrite
+            | Memory.LDM ins -> makeTip <| memStackInfo ins MemRead
+            | Memory.STM ins -> makeTip <| memStackInfo ins MemWrite
+            | _ -> ()
+    | true, ParseTop.IDP(exec, op2) ->
+        let alu = ExecutionTop.isArithmeticOpCode opc
+        let pos = findCodeEnd v editor, v, orientation
+        match exec dp with
+        | Error _ -> ()
+        | Ok(dp', uF') ->
+            match op2 with
+            | DP.Op2.NumberLiteral _
+            | DP.Op2.RegisterWithShift(_, _, 0u) -> ()
+            | DP.Op2.RegisterWithShift(rn, shiftT, shiftAmt) ->
+                    makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) shiftAmt op2 widgets editor fontSize
+                    
+            | DP.Op2.RegisterWithRegisterShift(rn, shiftT, sRn) ->
+                    makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) (dp.Regs.[sRn] % 32u) op2 widgets editor fontSize
+
+            | DP.Op2.RegisterWithRRX rn -> makeShiftTooltip pos (dp, dp', uF') rn (None, alu) 1u op2 widgets editor fontSize
+    | _ -> ()
+

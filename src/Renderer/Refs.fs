@@ -81,11 +81,19 @@ type VSettings = {
     }
 
 type DialogBox =
-    | AlertVex of string
+    | Alert of string
     | OpenFileDl
     | QuitDl
     | SaveAsDl
     | UnsavedFileDl
+
+/// Position of widget on editor buffer character grid.
+/// AboveBelow => offset form position, Exact => centered on position
+type WidgetPlace =
+    | AboveBelow of HPos : int * VPos : int
+    | Exact of HPos : int * VPos : int
+
+type MemDirection = | MemRead | MemWrite
 
 type Model = { 
     /// File Tab currently selected (and therefore visible)
@@ -184,15 +192,19 @@ type Msg =
     | SetCurrentModeActive of RunState * RunInfo
     | RunEditorTab
     | DeleteAllContentWidgets
-    | EnableEditors
     | RemoveDecorations
     | RrepareModeForExecution
     | RunEditorRunMode
-    | AsmStepDisplay of BreakCondition * int64 * RunInfo
-    | UpdateRunMode of RunMode
-    | UpdateDecorations of obj list
-    | MatchLoadImage of (LoadImage * string list) option
+    | AsmStepDisplay1 of BreakCondition * int64 * RunInfo
+    | MatchLoadImage of (LoadImage * string list) option * int64 * BreakCondition
+    | MatchLoadImageTest of (LoadImage * string list) option
     | UpdateDialogBox of DialogBox
+    | UpdateDecorations of obj list
+    | TryParseAndIndentCode of bool * int64 * BreakCondition
+    | UpdateGUIFromRunState of RunInfo
+    | ShowInfoFromCurrentMode
+    | HighlightCurrentAndNextIns of string * RunInfo
+    | MakeToolTipInfo of int * string * DataPath * ParseTop.CondInstr
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =

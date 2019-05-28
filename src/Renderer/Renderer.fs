@@ -24,6 +24,7 @@ open Stats
 open Integration
 open ExecutionTop
 open CommonData
+open Core.Option
 
 let init _ =
     let debugLevel =
@@ -213,16 +214,16 @@ let update (msg : Msg) (m : Model) =
             readOnlineInfoFailUpdate m.Settings.OnlineFetchText ve m.LastRemindTime
         { m with LastOnlineFetchTime = newLastOnlineFetchTime 
                  LastRemindTime = newLastRemindTime}, cmd
-    | UpdateModel m ->
+    | UpdateModel m -> //TODO:
         m, Cmd.none
     | InitialiseIExports iExports -> 
         //iExports?languages?register (registerLanguage)
         //iExports?languages?setMonarchTokensProvider (token)
-        { m with IExports = Some iExports } , Cmd.none
+        { m with IExports = Some iExports }, Cmd.none
     | RunSimulation ->
         let newDialogBox, cmd = 
-            runSimulation m.TabId m.DialogBox
-        { m with DialogBox = newDialogBox }, 
+            runSimulation m.TabId
+        { m with DialogBox = defaultValue m.DialogBox newDialogBox }, 
         Cmd.batch [ RunningCode |> ReadOnlineInfo |> Cmd.ofMsg
                     cmd ]
     | MatchActiveMode ->
@@ -242,21 +243,34 @@ let update (msg : Msg) (m : Model) =
             m.Settings.SimulatorMaxSteps
             |> int64 
             |> stepsFromSettings 
-        let cmd = runEditorRunMode NoBreak steps m.Editors.[m.TabId].IEditor m.DebugLevel m.RunMode m.Decorations
+        let cmd = 
+            runEditorRunMode NoBreak steps m.RunMode
         m, cmd
-    | UpdateRunMode runMode ->
-        { m with RunMode = runMode }, Cmd.none
-    | UpdateDecorations decorations ->
-        { m with Decorations = decorations }, Cmd.none
-    | MatchLoadImage info ->
-        let cmd = matchLI info
+    | TryParseAndIndentCode (test, steps, bkCon) ->
+        let loadImage, newRunMode, newDecorations = 
+            tryParseAndIndentCode 
+                m.Editors.[m.TabId].IEditor 
+                m.DebugLevel 
+                m.Decorations
+        let msg =
+            match test with
+            | true -> MatchLoadImage (loadImage, steps, bkCon)
+            | false -> MatchLoadImageTest loadImage
+        { m with RunMode = defaultValue m.RunMode newRunMode
+                 Decorations = newDecorations }, 
+        Cmd.ofMsg msg
+    | MatchLoadImageTest (info) -> //Todo::
+        m, Cmd.none
+    | MatchLoadImage (info, steps, bkCon) ->
+        let newEnableEditors, newRunMode, cmd = 
+            matchLI m.RegMap m.Flags m.MemoryMap steps bkCon info 
         m, cmd
-    | AsmStepDisplay (breakCon, steps, ri) -> //TODO:
+    | AsmStepDisplay1 (breakCon, steps, ri) -> //TODO:
         m, Cmd.none
     | RrepareModeForExecution ->
         let cmd, newDialogBox = 
-            prepareModeForExecution m.RunMode m.Editors.[m.TabId].IEditor m.DialogBox
-        { m with DialogBox = newDialogBox }, cmd
+            prepareModeForExecution m.Editors.[m.TabId].IEditor m.RunMode
+        { m with DialogBox = defaultValue m.DialogBox newDialogBox }, cmd
     | RunTestBench -> //TODO:
         m, Cmd.none
     | IsItTestbench ->
@@ -270,19 +284,28 @@ let update (msg : Msg) (m : Model) =
                  RunMode = ResetMode
                  ClockTime = (0uL, 0uL)
                  Flags = initialFlags
-                 FlagsHasChanged = initialFlags }, 
-        Cmd.batch [ Cmd.ofMsg DeleteAllContentWidgets 
-                    Cmd.ofMsg EnableEditors 
+                 FlagsHasChanged = initialFlags 
+                 EditorEnable = true }, 
+        Cmd.batch [ Cmd.ofMsg DeleteAllContentWidgets
                     Cmd.ofMsg RemoveDecorations ]
     | RemoveDecorations ->
         List.iter (fun x -> removeDecorations m.Editors.[m.TabId].IEditor x) 
                   m.Decorations
         { m with Decorations = [] }, Cmd.none
-    | EnableEditors ->
-        { m with EditorEnable = true }, Cmd.none
     | DeleteAllContentWidgets ->
         deleteAllContentWidgets m.CurrentTabWidgets m.Editors.[m.TabId].IEditor
         { m with CurrentTabWidgets = Map.empty }, Cmd.none
+    | UpdateDecorations deco ->
+        { m with Decorations = deco }, Cmd.none
+    | ShowInfoFromCurrentMode -> //TODO: 
+        m, Cmd.none
+    | UpdateGUIFromRunState ri -> //TODO: 
+        m, Cmd.none
+    | HighlightCurrentAndNextIns (className, ri) -> 
+        //let c = highlightCurrentAndNextIns className ri//TODO: 
+        m, Cmd.none
+    | MakeToolTipInfo (a, b, c, d) -> //TODO: 
+        m, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
@@ -326,7 +349,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
                     [ div [ ClassName "pane file-view-pane"] 
                           ((editorPanel (m.TabId, m.Editors, m.SettingsTab, m.Settings, m.EditorEnable) 
                                        dispatch) @
-                           [ div [ ClassName "overlay darken-overlay"] []])
+                           [ div [ m.EditorEnable |> overlayClass |> ClassName ] []])
                       div [ ClassName "pane dashboard"
                             dashboardStyle m.CurrentRep ]
                           [ viewButtons m.CurrentView dispatch

@@ -25,19 +25,126 @@ open TestLib
 open Testbench
 open Fable.Core.JsInterop
 open Fable.Import
+open Monaco
 
-let matchLI =
+/// Number of execution steps before slowing down display update
+let maxStepsBeforeSlowDisplay : int64 = 100000L
+/// Number of execution steps before updating displayed state on long runs.
+let slowDisplayThreshold : int64 = 20000L
+
+/// Apply GUI decorations to instruction line of last PC and current PC.
+/// Move current instruction line to middle of window if not visible.
+let highlightCurrentAndNextIns classname pInfo editor decorations =
+    let (newDecorations : obj list), cmd = 
+        match pInfo.LastDP with
+        | None -> decorations, Cmd.none
+        | Some(dp, _uFl) ->
+            match Map.tryFind (WA dp.Regs.[R15]) pInfo.IMem with
+            | Some(condInstr, lineNo) ->
+                let newDecorations = highlightLine editor lineNo classname decorations
+                Editors.revealLineInWindow editor lineNo
+                newDecorations, (lineNo - 1, "top", dp, condInstr) |> MakeToolTipInfo |> Cmd.ofMsg
+            | Option.None
+            | Some _ ->
+                if dp.Regs.[R15] <> 0xFFFFFFFCu then
+                    failwithf "What? Current PC value (%x) is not an instruction: this should be impossible!" dp.Regs.[R15]
+                else
+                    () // special case of return from testbench call
+                decorations, Cmd.none
+    let pc = (fst pInfo.dpCurrent).Regs.[R15]
+    match Map.tryFind (WA pc) pInfo.IMem with
+    | Some(condInstr, lineNo) ->
+        let newDecorations2 = 
+            highlightNextInstruction editor lineNo newDecorations
+        let cmd2 = 
+            Cmd.batch [ cmd
+                        (lineNo - 1, "bottom", fst pInfo.dpCurrent, condInstr) |> MakeToolTipInfo |> Cmd.ofMsg ]
+        newDecorations2, cmd2
+    | _ -> 
+        newDecorations, cmd
+
+///// Main subfunction that updates GUI after a bit of simulation.
+///// running: true if trying to run program to end, false if pausing or single stepping.
+///// ri': simulator state including whether we have a program end or break or error termination.
+//let displayState ri' running tabId ri lastDisplayStepsDone simulatorMaxSteps =
+//    let loopMessage =
+//        sprintf "WARNING Possible infinite loop: max number of steps (%s) exceeded. 
+//                 To disable this warning use Edit -> Preferences" 
+//                simulatorMaxSteps
+//    match ri'.State with
+//    | PSRunning -> // simulation stopped without error or exit
+//        //highlightCurrentAndNextIns "editor-line-highlight" ri' tabId
+//        let newDialog = 
+//            match running && (int64 simulatorMaxSteps) <> 0L with
+//            | true -> loopMessage |> Alert |> Some |> Some
+//            | false -> None
+//        if ri.StepsDone < slowDisplayThreshold || (ri.StepsDone - lastDisplayStepsDone) > maxStepsBeforeSlowDisplay then
+//            Some ri.StepsDone, newDialog, 
+//            Cmd.batch [ Cmd.ofMsg RemoveDecorations
+//                        Cmd.ofMsg DeleteAllContentWidgets
+//                        ("editor-line-highlight", ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg 
+//                        Cmd.ofMsg ShowInfoFromCurrentMode ]
+//        else None, None, Cmd.none
+//    | PSError _
+//    | PSBreak // execution met a valid break condition
+//    | PSExit -> // end-of-program termination (from END or implicit drop off code section)
+//        None, None, ri' |> UpdateGUIFromRunState |> Cmd.ofMsg 
+
+///// Run the simulation from state ri for steps instructions.
+///// Steps can be positive or negative, for forward or backward stepping.
+///// Keep GUI updated from time to time if steps is large positive.
+///// Always update GUI at end.
+///// Stored history means that backward stepping will always be fast.
+//let rec asmStepDisplay (breakc : BreakCondition) steps ri' simulatorMaxSteps runMode tabId =
+    //let ri = { ri' with BreakCond = breakc }
+
+    //match runMode with
+    //| ActiveMode(Stopping, ri') -> // pause execution from GUI button
+    //    setCurrentModeActiveFromInfo RunState.Paused ri'
+    //    showInfoFromCurrentMode()
+    //    highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId
+    //| ResetMode -> () // stop everything after reset
+    //| _ -> // actually do some simulation
+        //let stepsNeeded = steps - ri.StepsDone // the number of steps still required
+        //let running = stepsNeeded <> 1L // false if we are single-stepping - a special case
+        //let stepsMax = maxStepsBeforeCheckEvents // maximum steps to do before updating GUI
+        ////printfn "exec with steps=%d and R0=%d" ri.StepsDone ri.dpCurrent.Regs.[R0]
+        //if stepsNeeded <= stepsMax then // in this case we are running to some defined step as part of stepping back, or stepping forward by 1
+        //    let ri' = asmStep steps { ri with BreakCond = NoBreak } // finally run the simulator!
+        //    setCurrentModeActiveFromInfo Paused ri' // mark the fact that we have paused
+        //    displayState ri' running // update GUI
+        //    highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId
+        //else // in this case we are running indefinitely, or else for a long time
+            // // if indefinitely, we could stop on display update timeout, or error, or end of program exit
+            //let ri' = asmStep (stepsMax + ri.StepsDone - 1L) ri // finally run the simulator!
+            //setCurrentModeActiveFromInfo RunState.Running ri' // mark the fact that we are running
+            //showInfoFromCurrentMode() // main function to update GUI
+            //match ri'.State with
+            //| PSRunning -> //
+            //     Browser.window.setTimeout ((fun () ->
+            //            // schedule more simulation in the event loop allowing button-press events
+            //            asmStepDisplay ri'.BreakCond steps ri'), 0, []) |> ignore
+            //| _ ->
+                //displayState ri' false // update GUI
+                //highlightCurrentAndNextIns "editor-line-highlight" ri' currentFileTabId
+                //match handleTest ri' with
+                //| [] -> ()
+                //| tests -> runTests false tests (asmStepDisplay NoBreak)
+
+let getRunInfoFromImage bc (lim : LoadImage) regMap flags memoryMap =
+    getRunInfoFromImageWithInits bc lim regMap flags memoryMap lim.Mem
+
+let matchLI regMap flags memoryMap steps breakCon =
     function
-    | Some(lim, _) -> 
-        //disableEditors()
-        //let ri = lim |> getRunInfoFromImage breakCondition
-        //setCurrentModeActiveFromInfo RunState.Running ri
-        //asmStepDisplay breakCondition steps ri
-        Cmd.none
-    | _ -> Cmd.none
+    | Some(lim, _) ->
+        let ri = getRunInfoFromImage NoBreak lim regMap flags memoryMap
+        Some false, Some (ActiveMode(RunState.Running, ri)), 
+        (breakCon, steps, ri) |> AsmStepDisplay1 |> Cmd.ofMsg 
+    | _ -> 
+        None, None, Cmd.none
 
 /// Process an editor line parse error. Generate a hover message and line decoration. Set Parse Error Mode
-let highlightErrorParse ((err : ParseError), lineNo) opc editor decorations =
+let highlightErrorParse ((err : ParseError), lineNo) opc (editor : Monaco.Editor.IEditor option) decorations =
     let ML = EEExtensions.String.split [| '\n' |] >> Array.toList
     let codeLines = editor?getValue () |> EEExtensions.String.split [| '\n' |]
     let (gHover, range) =
@@ -72,7 +179,6 @@ let highlightErrorParse ((err : ParseError), lineNo) opc editor decorations =
             "", ML(sprintf "%s: duplicate labels on lines: %s\nDuplicate label names are not allowed" sym lineMsg)
         | ``Literal more than 32 bits`` lit
         | ``Literal is not a valid number`` lit -> "", sprintf "%s is not a valid literal" lit |> ML
-
     let gLink = []
     let mLink = [ sprintf "[more](%s)" (Refs.visualDocsPage link) ]
     let mHover = hover @ [ "More: see \u26a0" ]
@@ -87,7 +193,7 @@ let imageOfTId = formatText >> reLoadProgram
 /// Parse text in tId as program. If parse is OK, indent the program.
 /// If parse fails decorate the buffer with error info.
 /// Return LoadImage on parse success or None.
-let tryParseAndIndentCode editor debugLevel runMode decorations =
+let tryParseAndIndentCode editor debugLevel decorations =
     let lim = imageOfTId editor
     let editorASM = lim.EditorText
     // See if any errors exist, if they do display them
@@ -102,7 +208,7 @@ let tryParseAndIndentCode editor debugLevel runMode decorations =
                 if oldCode.Length <> newCode.Length then
                     printfn "Lengths of indented and old code do not match!"
             (editor?setValue (String.concat "\n" newCode)) |> ignore
-        (lim, lim.Source) |> Some, runMode, decorations
+        (lim, lim.Source) |> Some, None, decorations
     | lim ->
         let processParseError (pe, lineNo, opCode) =
             highlightErrorParse (pe, lineNo) opCode editor decorations
@@ -110,23 +216,20 @@ let tryParseAndIndentCode editor debugLevel runMode decorations =
             lim.Errors
             |> List.map processParseError 
             |> List.collect (fun x -> x)
-        Core.Option.None, ParseErrorMode, newDecorations
+        Core.Option.None, Some ParseErrorMode, newDecorations
 
-let runEditorRunMode breakCondition steps editor debugLevel runMode decorations =
-    match runMode with
+let runEditorRunMode breakCondition steps =
+    function
     | ResetMode
     | ParseErrorMode _ ->
-        let info, newRunMode, newDecorations = 
-            tryParseAndIndentCode editor debugLevel runMode decorations
         Cmd.batch [ Cmd.ofMsg RemoveDecorations 
-                    newRunMode |> UpdateRunMode |> Cmd.ofMsg
-                    newDecorations |> UpdateDecorations |> Cmd.ofMsg 
-                    info |> MatchLoadImage |> Cmd.ofMsg ]
+                    (false, steps, breakCondition) |> TryParseAndIndentCode |> Cmd.ofMsg ]
     | ActiveMode(RunState.Paused, ri) ->
-        (breakCondition, (steps + ri.StepsDone), ri) |> AsmStepDisplay |> Cmd.ofMsg   
+        (breakCondition, (steps + ri.StepsDone), ri) |> AsmStepDisplay1 |> Cmd.ofMsg
     | ActiveMode _
     | RunErrorMode _
-    | FinishedMode _ -> Cmd.none
+    | FinishedMode _ -> 
+        Cmd.none
 
 let stepsFromSettings =
     function
@@ -141,17 +244,17 @@ let currentFileTabProgramIsChanged (pInfo : RunInfo) editor =
     List.zip txt txt'
     |> List.exists (fun (a, b) -> invariantOfLine a <> invariantOfLine b)
 
-let prepareModeForExecution runMode editor dialogBox =
-    match runMode with
+let prepareModeForExecution editor =
+    function
     | FinishedMode ri
     | RunErrorMode ri
     | ActiveMode(_, ri) ->
         if currentFileTabProgramIsChanged ri editor 
             then 
-                let newDialogBox = AlertVex "Resetting emulator for new execution"
-                Cmd.ofMsg ResetEmulator, dialogBoxUpdate newDialogBox dialogBox
-            else Cmd.none, dialogBox
-    | _ -> Cmd.none, dialogBox
+                let newDialogBox = Alert "Resetting emulator for new execution"
+                Cmd.ofMsg ResetEmulator, newDialogBox |> Some |> Some
+            else Cmd.none, None
+    | _ -> Cmd.none, None
 
 let matchRunMode =
     function
@@ -180,9 +283,9 @@ let isItTestbench editor : Cmd<Msg> =
 
 /// Top-level simulation execute
 /// If current tab is TB run TB if this is possible
-let runSimulation tabId dialogBox : DialogBox option * Cmd<Msg> =
+let runSimulation tabId : DialogBox option option * Cmd<Msg> =
     match tabId with
     | -1 -> 
-        let newDialogBox = AlertVex "No file tab in editor to run!"
-        dialogBoxUpdate newDialogBox dialogBox, Cmd.none
-    | _ -> dialogBox, Cmd.ofMsg IsItTestbench
+        let newDialogBox = Alert "No file tab in editor to run!"
+        newDialogBox |> Some |> Some , Cmd.none
+    | _ -> None, Cmd.ofMsg IsItTestbench

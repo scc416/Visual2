@@ -65,7 +65,7 @@ let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingT
                        dispatch
     | Some QuitDl ->
         ExitIfOK dispatch
-    | Some (AlertVex txt) ->
+    | Some (Alert txt) ->
         alertDialog txt dispatch
     | Option.None -> 
         ()
@@ -73,11 +73,11 @@ let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingT
 let attemptToExitUpdate editors (dialogBox: DialogBox option) =
     match dialogBox with
     | Option.None -> 
-        let anyUnsaved = 
+        let allSaved = 
             editors 
             |> Map.forall (fun _ value -> value.Saved = true) 
-        match anyUnsaved with
+        match allSaved with
         | true -> dialogBox, Cmd.ofMsg Exit
-        | _ -> Some QuitDl, Cmd.none
+        | _ -> dialogBoxUpdate QuitDl dialogBox, Cmd.none
     | _ -> 
         dialogBox, Cmd.none

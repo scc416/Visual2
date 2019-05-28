@@ -100,7 +100,7 @@ let (|MatchDate|_|) txt =
 
 let infoBox (mess:string) =
     ("<h4>Information</h4> <br> <p>" + mess + "</p>")
-    |> AlertVex 
+    |> Alert
     |> UpdateDialogBox
     |> Cmd.ofMsg
     
