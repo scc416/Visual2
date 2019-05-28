@@ -99,8 +99,10 @@ let (|MatchDate|_|) txt =
 
 
 let infoBox (mess:string) =
-    showVexAlert ("<h4>Information</h4> <br> <p>" + mess + "</p>")
-    ()
+    ("<h4>Information</h4> <br> <p>" + mess + "</p>")
+    |> AlertVex 
+    |> UpdateDialogBox
+    |> Cmd.ofMsg
     
 
 let (|MatchVersion|_|) txt =
@@ -134,10 +136,11 @@ let remindNewVersion txt =
 let remindInExams txt (lastRemindTime : System.TimeSpan option ) =
     printfn "Remind in exams every 5 min!"
     let mutable newRemindTime = lastRemindTime
-    let remind() = 
+    let mutable cmd = Cmd.none
+    let cmd1, remind = 
         infoBox ("WARNING: an assessed Test is scheduled now." +
                 "If you are currently doing this you are not allowed to use Visual2. " +
-                "Please exit Visual2 immediately")
+                "Please exit Visual2 immediately"),
         Some DateTime.Now.TimeOfDay
     txt 
     |> String.splitRemoveEmptyEntries [|'\n';'\r'|]
@@ -147,12 +150,16 @@ let remindInExams txt (lastRemindTime : System.TimeSpan option ) =
                 let tim = DateTime.Now
                 let inExam = tim.TimeOfDay > t1 && tim.TimeOfDay < t2 && tim.Date = date.Date
                 match inExam, lastRemindTime with
-                | true, None -> newRemindTime <- remind()
-                | true, Some tt when tt.Add (TimeSpan.FromMinutes 5.) < tim.TimeOfDay -> newRemindTime <- remind()                            
+                | true, None -> 
+                    newRemindTime <- remind
+                    cmd <- cmd1
+                | true, Some tt when tt.Add (TimeSpan.FromMinutes 5.) < tim.TimeOfDay -> 
+                    newRemindTime <- remind
+                    cmd <- cmd1                            
                 | _ -> ()
             | _ -> ()
         )
-    newRemindTime
+    newRemindTime, cmd
 
 
 let doIfHoursLaterThan hours (tim:System.DateTime) =
@@ -180,7 +187,7 @@ let doFetch (onlineFetchText, ve, lastRemindTime, debugLevel) =
              else 
                  if debugLevel > 0 then printfn "can't read internet data"
                  let newLastOnlineFetchTime = Error System.DateTime.Now
-                 let newLastRemindTime = checkActions onlineFetchText ve lastRemindTime
+                 let newLastRemindTime, cmd = checkActions onlineFetchText ve lastRemindTime
                  let newOnlineFetchText = onlineFetchText
                  Error "can't read internet data"
         )
@@ -188,7 +195,7 @@ let doFetch (onlineFetchText, ve, lastRemindTime, debugLevel) =
     |> Promise.mapResult (fun txt -> 
         //if debugLevel > 0 then printf "----%s----%s----" txt vSettings.OnlineFetchText
         let newLastOnlineFetchTime = Ok System.DateTime.Now
-        let newLastRemindTime = checkActions txt ve lastRemindTime
+        let newLastRemindTime, cmd = checkActions txt ve lastRemindTime
         let newOnlineFetchText = txt
         if onlineFetchText <> txt
         then
@@ -216,10 +223,10 @@ let readOnlineInfo (ve: VisualEvent) lastOnlineFetchTime onlineFetchText lastRem
 
 let readOnlineInfoFailUpdate onlineFetchText ve lastRemindTime = 
     let newLastOnlineFetchTime = Error System.DateTime.Now
-    let newLastRemindTime = checkActions onlineFetchText ve lastRemindTime
-    newLastOnlineFetchTime, newLastRemindTime
+    let newLastRemindTime, cmd = checkActions onlineFetchText ve lastRemindTime
+    newLastOnlineFetchTime, newLastRemindTime, cmd
 
 let readOnlineInfoSuccessUpdate onlineFetchText ve lastRemindTime =
     let newLastOnlineFetchTime = Ok System.DateTime.Now
-    let newLastRemindTime = checkActions onlineFetchText ve lastRemindTime
-    newLastOnlineFetchTime, newLastRemindTime
+    let newLastRemindTime, cmd = checkActions onlineFetchText ve lastRemindTime
+    newLastOnlineFetchTime, newLastRemindTime, cmd

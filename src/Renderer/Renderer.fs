@@ -75,6 +75,9 @@ let init _ =
 
 let update (msg : Msg) (m : Model) =
     match msg with
+    | UpdateDialogBox dialogBox ->
+        let newDialogBox = dialogBoxUpdate dialogBox m.DialogBox
+        { m with DialogBox = newDialogBox }, Cmd.none
     | ChangeView view -> 
         { m with CurrentView = view }, Cmd.none
     | ChangeRep rep ->
@@ -160,9 +163,6 @@ let update (msg : Msg) (m : Model) =
         let newSettings = 
             { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) - 2) }
         { m with Settings = newSettings }, Cmd.none
-    | AboutDialog ->
-        let newDialog = aboutDialogUpdate m.DialogBox
-        { m with DialogBox = newDialog }, Cmd.none
     | CloseDialog ->
         { m with DialogBox = None }, Cmd.none
     | AttemptToExit ->
@@ -202,17 +202,17 @@ let update (msg : Msg) (m : Model) =
                            m.DebugLevel
         m, cmd
     | ReadOnlineInfoSuccess (newOnlineFetchText, ve) -> 
-        let newLastOnlineFetchTime, newLastRemindTime = 
+        let newLastOnlineFetchTime, newLastRemindTime, cmd = 
             readOnlineInfoSuccessUpdate newOnlineFetchText ve m.LastRemindTime
         let newSettings = { m.Settings with OnlineFetchText = newOnlineFetchText }
         { m with LastOnlineFetchTime = Ok System.DateTime.Now 
                  LastRemindTime = newLastRemindTime
-                 Settings = newSettings }, Cmd.none
+                 Settings = newSettings }, cmd
     | ReadOnlineInfoFail ve -> 
-        let newLastOnlineFetchTime, newLastRemindTime = 
+        let newLastOnlineFetchTime, newLastRemindTime, cmd = 
             readOnlineInfoFailUpdate m.Settings.OnlineFetchText ve m.LastRemindTime
         { m with LastOnlineFetchTime = newLastOnlineFetchTime 
-                 LastRemindTime = newLastRemindTime}, Cmd.none
+                 LastRemindTime = newLastRemindTime}, cmd
     | UpdateModel m ->
         m, Cmd.none
     | InitialiseIExports iExports -> 
@@ -242,15 +242,22 @@ let update (msg : Msg) (m : Model) =
             m.Settings.SimulatorMaxSteps
             |> int64 
             |> stepsFromSettings 
-        let cmd = runEditorRunMode NoBreak steps m.RunMode
-        m, Cmd.none//cmd
-    | AsmStepDisplay (breakCon, x, y) ->
+        let cmd = runEditorRunMode NoBreak steps m.Editors.[m.TabId].IEditor m.DebugLevel m.RunMode m.Decorations
+        m, cmd
+    | UpdateRunMode runMode ->
+        { m with RunMode = runMode }, Cmd.none
+    | UpdateDecorations decorations ->
+        { m with Decorations = decorations }, Cmd.none
+    | MatchLoadImage info ->
+        let cmd = matchLI info
+        m, cmd
+    | AsmStepDisplay (breakCon, steps, ri) -> //TODO:
         m, Cmd.none
     | RrepareModeForExecution ->
         let cmd, newDialogBox = 
-            prepareModeForExecution2 m.RunMode m.Editors.[m.TabId].IEditor m.DialogBox
+            prepareModeForExecution m.RunMode m.Editors.[m.TabId].IEditor m.DialogBox
         { m with DialogBox = newDialogBox }, cmd
-    | RunTestBench ->
+    | RunTestBench -> //TODO:
         m, Cmd.none
     | IsItTestbench ->
         let cmd = isItTestbench m.Editors.[m.TabId].IEditor
@@ -319,7 +326,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
                     [ div [ ClassName "pane file-view-pane"] 
                           ((editorPanel (m.TabId, m.Editors, m.SettingsTab, m.Settings, m.EditorEnable) 
                                        dispatch) @
-                           [ div [] []])
+                           [ div [ ClassName "overlay darken-overlay"] []])
                       div [ ClassName "pane dashboard"
                             dashboardStyle m.CurrentRep ]
                           [ viewButtons m.CurrentView dispatch

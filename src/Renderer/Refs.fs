@@ -81,13 +81,11 @@ type VSettings = {
     }
 
 type DialogBox =
-    | AboutDl
+    | AlertVex of string
     | OpenFileDl
     | QuitDl
     | SaveAsDl
     | UnsavedFileDl
-    | NoFileTabDl
-    | ResettingEmulatorDl
 
 type Model = { 
     /// File Tab currently selected (and therefore visible)
@@ -161,7 +159,6 @@ type Msg =
     | LoadDemoCode
     | IncreaseFontSize
     | DecreaseFontSize
-    | AboutDialog
     | CloseDialog
     | AttemptToExit
     | Exit
@@ -192,6 +189,10 @@ type Msg =
     | RrepareModeForExecution
     | RunEditorRunMode
     | AsmStepDisplay of BreakCondition * int64 * RunInfo
+    | UpdateRunMode of RunMode
+    | UpdateDecorations of obj list
+    | MatchLoadImage of (LoadImage * string list) option
+    | UpdateDialogBox of DialogBox
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
@@ -256,9 +257,9 @@ let showVexConfirm (htmlMessage : string) (callBack : bool -> unit) =
         "callback" ==> callBack ])
     ()
 
-let showVexAlert (htmlMessage : string) =
-    vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage ])
-    ()
+//let showVexAlert (htmlMessage : string) =
+    //vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage ])
+    //()
 
 let showVexPrompt (placeHolder : string) (callBack : string -> unit) (htmlMessage : string) =
     vex?dialog?prompt (createObj [
@@ -268,7 +269,7 @@ let showVexPrompt (placeHolder : string) (callBack : string -> unit) (htmlMessag
         ])
     ()
 
-let showVexAlert2 (htmlMessage : string) (callBack : bool -> unit) =
+let showVexAlert (htmlMessage : string) (callBack : bool -> unit) =
     vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage 
                                   "callback" ==> callBack ])
     ()
@@ -285,16 +286,16 @@ let validPosInt s =
             | true, n -> Error "number must be greater than 0"
             | false, _ -> Error "Input a positive integer"
 
-let showVexValidatedPrompt (placeHolder : string) (validator : string -> Result<'T, string>) (callBack : 'T -> unit) (htmlMessage : string) =
-    let cb (s : string) =
-        match (unbox s) with
-        | false -> ()
-        | _ ->
-            validator s
-            |> function
-                | Ok valid -> callBack valid
-                | Error errMess -> showVexAlert errMess
-    showVexPrompt placeHolder cb htmlMessage
+//let showVexValidatedPrompt (placeHolder : string) (validator : string -> Result<'T, string>) (callBack : 'T -> unit) (htmlMessage : string) =
+    //let cb (s : string) =
+    //    match (unbox s) with
+    //    | false -> ()
+    //    | _ ->
+    //        validator s
+    //        |> function
+    //            | Ok valid -> callBack valid
+    //            | Error errMess -> showVexAlert errMess
+    //showVexPrompt placeHolder cb htmlMessage
 
 let showSimpleVexPrompt (callBack : string -> unit) (htmlMessage : string) =
     showVexPrompt "" callBack htmlMessage

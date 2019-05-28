@@ -33,9 +33,69 @@ open Settings
 open CommonData
 open Memory
 
+[<Emit "new monaco.Range($0,$1,$2,$3)">]
+let monacoRange _ _ _ _ = jsNative
+
+[<Emit "$0.deltaDecorations($1, [
+    { range: $2, options: $3},
+  ]);">]
+let lineDecoration _editor _decorations _range _name = jsNative
+
 [<Emit "$0.deltaDecorations($1, [{ range: new monaco.Range(1,1,1,1), options : { } }]);">]
 let removeDecorations _editor _decorations =
     jsNative
+
+let editorLineDecorate editor number decoration (rangeOpt : (int * int) option) decorations =
+    let model = editor?getModel ()
+    let lineWidth = model?getLineMaxColumn (number)
+    let posStart = match rangeOpt with | None -> 1 | Some(n, _) -> n
+    let posEnd = match rangeOpt with | None -> lineWidth | Some(_, n) -> n
+    let newDecs = lineDecoration editor
+                    decorations
+                    (monacoRange number posStart number posEnd)
+                    decoration
+    List.append decorations [ newDecs ]
+
+/// <summary>
+/// Decorate a line with an error indication and set up a hover message.
+/// Distinct message lines must be elements of markdownLst.
+/// markdownLst: string list - list of markdown paragraphs.
+/// tId: int - tab identifier.
+/// lineNumber: int - line to decorate, starting at 1.
+/// hoverLst: hover attached to line.
+/// gHoverLst: hover attached to margin glyph.</summary>
+let makeErrorInEditor lineNumber (hoverLst : string list) (gHoverLst : string list) editor decorations =
+    let makeMarkDown textLst =
+        textLst
+        |> List.toArray
+        |> Array.map (fun txt -> createObj [ "isTrusted" ==> true; "value" ==> txt ])
+    // decorate the line
+    let newDecorations = 
+        editorLineDecorate 
+            editor
+            lineNumber
+            (createObj [ 
+                "isWholeLine" ==> true
+                "isTrusted" ==> true
+                "inlineClassName" ==> "editor-line-error"
+                "hoverMessage" ==> makeMarkDown hoverLst
+            ])
+            None
+            decorations
+    // decorate the margin
+    editorLineDecorate
+        editor
+        lineNumber
+        (createObj [
+            "isWholeLine" ==> true
+            "isTrusted" ==> true
+            "glyphMarginClassName" ==> "editor-glyph-margin-error"
+            "glyphMarginHoverMessage" ==> makeMarkDown gHoverLst
+            "overviewRuler" ==> createObj [ "position" ==> 4 ]
+        ])
+        None
+        newDecorations
+
 
 type Props =
     | Width of obj
@@ -109,6 +169,16 @@ let tabGroupClass =
     | true -> "tab-group tabs-files"
     | _ -> "tab-group tabs-files disabled-click"
 
+let tabGroupOnClick (dispatch : Msg -> unit) =
+    function
+    | true -> ()
+    | _ -> ("Cannot change tabs during execution") |> AlertVex |> UpdateDialogBox |> dispatch
+
+let overlayClass =
+    function
+    | true -> "invisible"
+    | _ -> "darken-overlay disabled-click"
+
 /// return all the react elements in the editor panel (including the react monaco editor)
 let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, settings, editorEnable) 
                 dispatch =
@@ -158,7 +228,8 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
                      DOMAttr.OnClick (fun _ -> AttemptToDeleteTab id |> dispatch)] []
               span [ tabNameClass id settingsTabId
                      tabHeaderTextStyle editor.Saved ] 
-                   [ editor.Saved |> fileNameFormat fileName |> str ]]
+                   [ editor.Saved |> fileNameFormat fileName |> str ] ]
+
     /// button (actually is a clickable div) that add new tab
     let addNewTabDiv =
         [ div [ ClassName "tab-item tab-item-fixed" 
@@ -175,10 +246,9 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
 
         addNewTabDiv 
         |> List.append filesHeader
-        |> div [ editorEnable |> tabGroupClass |> ClassName ]
-
-    let overlay =
-        div [ ClassName "invisible darken-overlay" ] []
+        |> div [ editorEnable |> tabGroupClass |> ClassName 
+                 DOMAttr.OnClick (fun _ -> tabGroupOnClick dispatch editorEnable) ]
+        
     /// the editor
     let editorViewDiv =
         let editorsLst = 

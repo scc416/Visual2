@@ -192,6 +192,10 @@ let popupMenu (items) =
         //]
 
 let helpMenu dispatch m =
+        let newDialogBox = AlertVex (sprintf "<h4>VisUAL2 ARM Simulator v%s</h4> " Refs.appVersion +
+                               "(c) 2018, Imperial College <br> Acknowledgements: Salman Arif (VisUAL), HLP 2018 class" +
+                               " (F# reimplementation), with special mention to Thomas Carrotti," +
+                               " Lorenzo Silvestri, and HLP Team 10")
         makeMenu "Help" (
             [
                 makeItem "UAL instruction guide" Core.Option.None (runExtPage <| visualDocsPage "guide#content")
@@ -203,7 +207,7 @@ let helpMenu dispatch m =
                 //makeCondItem (m.DebugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (fun () -> runTestbench m) m.DebugLevel m.RunMode)
                 //makeCondItem (m.DebugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" (fun () -> Tests.runAllEmulatorTests m) m.DebugLevel m.RunMode)
                 menuSeparator
-                makeItem "About" Core.option.None (fun _ -> AboutDialog |> dispatch)
+                makeItem "About" Core.option.None (fun _ -> (m.DialogBox |> dialogBoxUpdate newDialogBox).Value |> UpdateDialogBox |> dispatch )
             ])
 
 
