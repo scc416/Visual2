@@ -22,6 +22,8 @@ open Editors
 open Dialog
 open Stats
 open Integration
+open ExecutionTop
+open CommonData
 
 let init _ =
     let debugLevel =
@@ -66,8 +68,10 @@ let init _ =
             ClockTime = (0uL, 0uL)
             LastDisplayStepsDone = 0L
             IExports = None
+            FlagsHasChanged = initialFlags
         }
-    m, RunOnlineInfo Startup |> Cmd.ofMsg
+    let cmd = Startup |> ReadOnlineInfo |> Cmd.ofMsg         
+    m, cmd
 
 let update (msg : Msg) (m : Model) =
     match msg with
@@ -100,9 +104,8 @@ let update (msg : Msg) (m : Model) =
             deleteTabUpdate (m.TabId, m.Editors, m.SettingsTab)
         { m with TabId = newTabId
                  Editors = newEditors 
-                 SettingsTab = newSettingsTab 
-                 DialogBox = None 
-                 CurrentTabWidgets = Map.empty }, Cmd.none
+                 SettingsTab = newSettingsTab
+                 CurrentTabWidgets = Map.empty }, Cmd.ofMsg CloseDialog
     | OpenFile editors -> 
         let newEditors, newFilePath, newTabId = 
             openFileUpdate (m.Editors, m.Settings.CurrentFilePath, m.TabId)
@@ -111,10 +114,9 @@ let update (msg : Msg) (m : Model) =
             { m.Settings with CurrentFilePath = newFilePath }
         { m with Editors = newEditors
                  TabId = newTabId
-                 Settings = newSettings
-                 DialogBox = None }, Cmd.none
+                 Settings = newSettings }, Cmd.ofMsg CloseDialog
     | OpenFileDialog -> 
-        let newDialog = openFileDialogUpdate m.DialogBox
+        let newDialog = dialogBoxUpdate OpenFileDl m.DialogBox
         { m with DialogBox = newDialog }, Cmd.none
     | SaveFile -> 
         let newDialog, newEditors = 
@@ -123,7 +125,7 @@ let update (msg : Msg) (m : Model) =
                  DialogBox = newDialog }, Cmd.none
     | SaveAsFileDialog -> 
         let newDialogBox =
-            saveAsFileDialogUpdate (m.TabId, m.DialogBox)
+            saveAsFileDialogUpdate m.DialogBox m.TabId
         { m with DialogBox = newDialogBox }, Cmd.none
     | SaveAsFile fileInfo ->
         let newEditors, newFilePathSetting =
@@ -131,9 +133,8 @@ let update (msg : Msg) (m : Model) =
                              fileInfo
         let newSettings = 
             { m.Settings with CurrentFilePath = newFilePathSetting }
-        { m with DialogBox = None 
-                 Editors = newEditors
-                 Settings = newSettings }, Cmd.none
+        { m with Editors = newEditors
+                 Settings = newSettings }, Cmd.ofMsg CloseDialog
     | SelectSettingsTab ->
         let newEditors, newTabId =
             selectSettingsTabUpdate (m.SettingsTab, m.Editors)
@@ -169,7 +170,7 @@ let update (msg : Msg) (m : Model) =
         { m with DialogBox = newDialogBox }, newCmd
     | Exit ->
         close()
-        { m with DialogBox = None }, Cmd.none
+        m, Cmd.ofMsg CloseDialog
     | UpdateIEditor (x, y) ->
         let newEditors = Map.add y { m.Editors.[y] with IEditor = Some x } m.Editors
         { m with Editors = newEditors }, Cmd.none
@@ -192,7 +193,7 @@ let update (msg : Msg) (m : Model) =
         m, Cmd.none
     | InitiateClose ->
         { m with InitClose = true }, Cmd.none
-    | RunOnlineInfo ve ->
+    | ReadOnlineInfo ve ->
         let cmd = 
             readOnlineInfo ve
                            m.LastOnlineFetchTime
@@ -214,31 +215,74 @@ let update (msg : Msg) (m : Model) =
                  LastRemindTime = newLastRemindTime}, Cmd.none
     | UpdateModel m ->
         m, Cmd.none
-    | ResetEmulator ->
-        let newDecorations = 
-            Editors.removeEditorDecorations m.TabId m.Decorations m.Editors
-        let newCurrentWidgets =
-            Tooltips.deleteAllContentWidgets m
-        { m with MemoryMap = Map.empty
-                             SymbolMap = Map.empty
-                             RegMap = ExecutionTop.initialRegMap
-                             RunMode = ExecutionTop.ResetMode
-                             ClockTime = (0uL, 0uL)
-                             Decorations = newDecorations
-                             CurrentTabWidgets = newCurrentWidgets() }, Cmd.none
     | InitialiseIExports iExports -> 
         //iExports?languages?register (registerLanguage)
         //iExports?languages?setMonarchTokensProvider (token)
         { m with IExports = Some iExports } , Cmd.none
     | RunSimulation ->
-        let newM = runCode m
-        newM, Cmd.none
+        let newDialogBox, cmd = 
+            runSimulation m.TabId m.DialogBox
+        { m with DialogBox = newDialogBox }, 
+        Cmd.batch [ RunningCode |> ReadOnlineInfo |> Cmd.ofMsg
+                    cmd ]
+    | MatchActiveMode ->
+        let cmd = matchActiveMode m.RunMode
+        m, cmd
+    | SetCurrentModeActive (rs, ri) ->
+        { m with RunMode = ActiveMode(rs, ri) }, Cmd.none
+    | MatchRunMode ->
+        let cmd = matchRunMode m.RunMode
+        m, cmd
+    | RunEditorTab ->
+        m, Cmd.batch [ Cmd.ofMsg ResetEmulator
+                       Cmd.ofMsg RrepareModeForExecution 
+                       Cmd.ofMsg RunEditorRunMode ]
+    | RunEditorRunMode ->
+        let steps = 
+            m.Settings.SimulatorMaxSteps
+            |> int64 
+            |> stepsFromSettings 
+        let cmd = runEditorRunMode NoBreak steps m.RunMode
+        m, Cmd.none//cmd
+    | AsmStepDisplay (breakCon, x, y) ->
+        m, Cmd.none
+    | RrepareModeForExecution ->
+        let cmd, newDialogBox = 
+            prepareModeForExecution2 m.RunMode m.Editors.[m.TabId].IEditor m.DialogBox
+        { m with DialogBox = newDialogBox }, cmd
+    | RunTestBench ->
+        m, Cmd.none
+    | IsItTestbench ->
+        let cmd = isItTestbench m.Editors.[m.TabId].IEditor
+        m, cmd
+    | ResetEmulator ->
+        printfn "Resetting..."
+        { m with MemoryMap = Map.empty
+                 SymbolMap = Map.empty
+                 RegMap = initialRegMap
+                 RunMode = ResetMode
+                 ClockTime = (0uL, 0uL)
+                 Flags = initialFlags
+                 FlagsHasChanged = initialFlags }, 
+        Cmd.batch [ Cmd.ofMsg DeleteAllContentWidgets 
+                    Cmd.ofMsg EnableEditors 
+                    Cmd.ofMsg RemoveDecorations ]
+    | RemoveDecorations ->
+        List.iter (fun x -> removeDecorations m.Editors.[m.TabId].IEditor x) 
+                  m.Decorations
+        { m with Decorations = [] }, Cmd.none
+    | EnableEditors ->
+        { m with EditorEnable = true }, Cmd.none
+    | DeleteAllContentWidgets ->
+        deleteAllContentWidgets m.CurrentTabWidgets m.Editors.[m.TabId].IEditor
+        { m with CurrentTabWidgets = Map.empty }, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
     mainMenu dispatch m
-    dialogBox (m.DialogBox, m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab)
+    dialogBox (m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab)
               dispatch
+              m.DialogBox
     div [ ClassName "window" ] 
         [ header [ ClassName "toolbar toolbar-header" ] 
                  [ div [ ClassName "toolbar-actions" ] 
@@ -255,11 +299,11 @@ let view (m : Model) (dispatch : Msg -> unit) =
                          button [ ClassName "btn btn-default"
                                   DOMAttr.OnClick (fun _ -> ResetEmulator |> dispatch) ]
                                 [ str "Reset" ]
-                         button [ ClassName "btn btn-default button-back" 
-                                  DOMAttr.OnClick (fun _ -> Integration.stepCodeBack m |> UpdateModel |> dispatch) ]
+                         button [ ClassName "btn btn-default button-back" ]
+                                  //DOMAttr.OnClick (fun _ -> Integration.stepCodeBack m |> UpdateModel |> dispatch) ]
                                 [ str " Step" ]
-                         button [ ClassName "btn btn-default button-forward" 
-                                  DOMAttr.OnClick (fun _ -> Integration.stepCode m.TabId m.Editors m |> UpdateModel |> dispatch )]
+                         button [ ClassName "btn btn-default button-forward" ]
+                                  //DOMAttr.OnClick (fun _ -> Integration.stepCode m.TabId m.Editors m |> UpdateModel |> dispatch )]
                                 [ str "Step " ]
                          (statusBar m.RunMode)
                          div [ ClassName "btn-group clock" ]
@@ -273,15 +317,16 @@ let view (m : Model) (dispatch : Msg -> unit) =
           div [ ClassName "window-content" ] 
               [ div [ ClassName "pane-group" ] 
                     [ div [ ClassName "pane file-view-pane"] 
-                          (editorPanel (m.TabId, m.Editors, m.SettingsTab, m.Settings) 
-                                       dispatch)
+                          ((editorPanel (m.TabId, m.Editors, m.SettingsTab, m.Settings, m.EditorEnable) 
+                                       dispatch) @
+                           [ div [] []])
                       div [ ClassName "pane dashboard"
                             dashboardStyle m.CurrentRep ]
                           [ viewButtons m.CurrentView dispatch
                             viewPanel (m.CurrentRep, m.CurrentView, m.RegMap) 
                                       (m.MemoryMap, m.SymbolMap, m.ByteView, m.ReverseDirection, m.RunMode)
                                       dispatch
-                            footer m.Flags ] ] ] ]
+                            footer m.Flags m.FlagsHasChanged ] ] ] ]
 
 Program.mkProgram init update view
 #if DEBUG

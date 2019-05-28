@@ -16,6 +16,7 @@ open Microsoft.FSharp.Collections
 open Node.Exports
 open EEExtensions
 open Monaco
+open ExecutionTop
 
 // **********************************************************************************
 //                                  App Version
@@ -85,6 +86,8 @@ type DialogBox =
     | QuitDl
     | SaveAsDl
     | UnsavedFileDl
+    | NoFileTabDl
+    | ResettingEmulatorDl
 
 type Model = { 
     /// File Tab currently selected (and therefore visible)
@@ -115,6 +118,7 @@ type Model = {
     RegMap : Map<CommonData.RName, uint32>
     /// Contents of CPU flags
     Flags : CommonData.Flags
+    FlagsHasChanged : CommonData.Flags
     /// Values of all Defined Symols
     SymbolMap : Map<string, uint32 * ExecutionTop.SymbolType>
     /// Current state of simulator
@@ -169,13 +173,25 @@ type Msg =
     | RedoEditor
     | EditorTextChange
     | InitiateClose
-    | RunSimulation
     | ReadOnlineInfoSuccess of string * VisualEvent
     | ReadOnlineInfoFail of VisualEvent
     | UpdateModel of Model
     | ResetEmulator
     | InitialiseIExports of Monaco.IExports
-    | RunOnlineInfo of VisualEvent
+    | ReadOnlineInfo of VisualEvent
+    | RunSimulation
+    | IsItTestbench
+    | RunTestBench
+    | MatchActiveMode
+    | MatchRunMode
+    | SetCurrentModeActive of RunState * RunInfo
+    | RunEditorTab
+    | DeleteAllContentWidgets
+    | EnableEditors
+    | RemoveDecorations
+    | RrepareModeForExecution
+    | RunEditorRunMode
+    | AsmStepDisplay of BreakCondition * int64 * RunInfo
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
@@ -189,6 +205,11 @@ let uniqueTabId (editor : Map<int, Editor>) =
             |> List.rev
             |> List.head
         lastid + 1
+
+let dialogBoxUpdate newDialogBox =
+    function   
+    | Option.None -> Some newDialogBox
+    | x -> x 
 
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries

@@ -18,7 +18,6 @@ open Refs
 open Elmish
 open Fable.Core.JsInterop
 
-
 /// return the id of the last editor in the map of editors
 let selectLastTabId editors =
     editors
@@ -70,7 +69,7 @@ let attemptToDeleteTabUpdate (tabId, (editors: Map<int, Editor>), dialogBox)
     match id with
     | -1 -> dialogBox, Cmd.none
     | _ ->
-        match id = tabId, editors.[id].Saved, dialogBox with
-        | true, true, _ -> dialogBox, Cmd.ofMsg DeleteTab
-        | true, false, None -> Some UnsavedFileDl, Cmd.none
+        match id = tabId, editors.[id].Saved with
+        | true, true -> dialogBox, Cmd.ofMsg DeleteTab
+        | true, false -> dialogBoxUpdate UnsavedFileDl dialogBox, Cmd.none
         | _ -> dialogBox, Cmd.none

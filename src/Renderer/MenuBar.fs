@@ -28,7 +28,7 @@ let interlock (actionName : string) (action : Unit -> Unit) debugLevel runMode =
             printf "button %A" buttonNum
             match buttonNum with
             | false -> ()
-            | _ -> resetEmulator(); action()
+            | _ -> ()//resetEmulator(); action()
         match runMode with
         | ExecutionTop.ResetMode
         | ExecutionTop.ParseErrorMode -> action() :> obj
@@ -164,32 +164,32 @@ let popupMenu (items) =
     menu.popup (electron.remote.getCurrentWindow())
     ()
 
-let testMenu (m : Model) (dispatch : (Msg -> Unit)) =
-        let runToBranch() = ()
-        let menu = electron.remote.Menu.Create()
-        let runSteps() =
-            showVexValidatedPrompt "steps forward" validPosInt (fun x -> Integration.runEditorTab ExecutionTop.NoBreak m (int64 x) |> UpdateModel |> dispatch) "Number of steps forward"
-        let runStepsBack() =
-            showVexValidatedPrompt "steps back" validPosInt (fun x -> Integration.stepCodeBackBy m (int64 x) |> UpdateModel |> dispatch) "Number of steps back"
-        let runSingleTest() =
-            match Testbench.getTestList m with
-            | [] -> showVexAlert "Can't find any tests. Have you loaded a valid testbench?"
-            | lst -> popupMenu (List.map (fun (test : ExecutionTop.Test) ->
-                        let name = sprintf "Step code with initial data from Test %d" test.TNum
-                        let actFun = fun () -> Integration.startTest test m
-                        makeItem name Core.None actFun) lst)
-        let runTo cond = Integration.runEditorTab cond m System.Int64.MaxValue
-        makeMenu "Test" [
-            makeItem "Step <-" (Some "F3") (fun () -> Integration.stepCodeBack m |> UpdateModel |> dispatch)
-            makeItem "Step ->" (Some "F4") (fun () -> Integration.stepCode m.TabId m.Editors m |> UpdateModel |> dispatch )
-            makeItem "Step to next call" (Some "F5") (fun () -> runTo ExecutionTop.ToSubroutine |> UpdateModel |> dispatch )
-            makeItem "Step to next return" (Some "F6") (fun () -> runTo ExecutionTop.ToReturn |> UpdateModel |> dispatch )
-            makeItem "Step forward by" Core.Option.None runSteps
-            makeItem "Step back by" Core.Option.None runStepsBack
-            menuSeparator
-            makeItem "Step into test" Core.Option.None (interlockAction "Test" runSingleTest m.DebugLevel m.RunMode )
-            makeItem "Run all tests" Core.Option.None (interlockAction "Testbench" (fun () -> Integration.runTestbenchOnCode m) m.DebugLevel m.RunMode)
-        ]
+//let testMenu (m : Model) (dispatch : (Msg -> Unit)) =
+        //let runToBranch() = ()
+        //let menu = electron.remote.Menu.Create()
+        //let runSteps() =
+        //    showVexValidatedPrompt "steps forward" validPosInt (fun x -> Integration.runEditorTab ExecutionTop.NoBreak m (int64 x) |> UpdateModel |> dispatch) "Number of steps forward"
+        //let runStepsBack() =
+        //    showVexValidatedPrompt "steps back" validPosInt (fun x -> Integration.stepCodeBackBy m (int64 x) |> UpdateModel |> dispatch) "Number of steps back"
+        //let runSingleTest() =
+        //    match Testbench.getTestList m with
+        //    | [] -> showVexAlert "Can't find any tests. Have you loaded a valid testbench?"
+        //    | lst -> popupMenu (List.map (fun (test : ExecutionTop.Test) ->
+        //                let name = sprintf "Step code with initial data from Test %d" test.TNum
+        //                let actFun = fun () -> Integration.startTest test m
+        //                makeItem name Core.None actFun) lst)
+        //let runTo cond = Integration.runEditorTab cond m System.Int64.MaxValue
+        //makeMenu "Test" [
+        //    makeItem "Step <-" (Some "F3") (fun () -> Integration.stepCodeBack m |> UpdateModel |> dispatch)
+        //    makeItem "Step ->" (Some "F4") (fun () -> Integration.stepCode m.TabId m.Editors m |> UpdateModel |> dispatch )
+        //    makeItem "Step to next call" (Some "F5") (fun () -> runTo ExecutionTop.ToSubroutine |> UpdateModel |> dispatch )
+        //    makeItem "Step to next return" (Some "F6") (fun () -> runTo ExecutionTop.ToReturn |> UpdateModel |> dispatch )
+        //    makeItem "Step forward by" Core.Option.None runSteps
+        //    makeItem "Step back by" Core.Option.None runStepsBack
+        //    menuSeparator
+        //    makeItem "Step into test" Core.Option.None (interlockAction "Test" runSingleTest m.DebugLevel m.RunMode )
+        //    makeItem "Run all tests" Core.Option.None (interlockAction "Testbench" (fun () -> Integration.runTestbenchOnCode m) m.DebugLevel m.RunMode)
+        //]
 
 let helpMenu dispatch m =
         makeMenu "Help" (
@@ -200,8 +200,8 @@ let helpMenu dispatch m =
                 makeItem "Official ARM documentation" Core.Option.None (runExtPage "http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0234b/i1010871.html")
                 menuSeparator
                 makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" (fun _ -> Refs.LoadDemoCode |> dispatch) m.DebugLevel m.RunMode)
-                makeCondItem (m.DebugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (fun () -> runTestbench m) m.DebugLevel m.RunMode)
-                makeCondItem (m.DebugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" (fun () -> Tests.runAllEmulatorTests m) m.DebugLevel m.RunMode)
+                //makeCondItem (m.DebugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (fun () -> runTestbench m) m.DebugLevel m.RunMode)
+                //makeCondItem (m.DebugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" (fun () -> Tests.runAllEmulatorTests m) m.DebugLevel m.RunMode)
                 menuSeparator
                 makeItem "About" Core.option.None (fun _ -> AboutDialog |> dispatch)
             ])
@@ -215,7 +215,7 @@ let mainMenu (dispatch : (Msg -> Unit)) (m : Model) =
             editMenu dispatch m.DebugLevel m.RunMode
             viewMenu()
             helpMenu dispatch m
-            testMenu m dispatch
+            //testMenu m dispatch
         ]
     template
     |> electron.remote.Menu.buildFromTemplate

@@ -275,83 +275,83 @@ let processTestResults (fn : string) (res : Map<TestT, (TestT * TestSetup * RunI
     else Result.Ok "Passed"
 
 /// on small test files print more info
-let RunEmulatorTest (m : Refs.Model) allowed ts =
-    let maxSteps = 1000L
+//let RunEmulatorTest (m : Refs.Model) allowed ts =
+    //let maxSteps = 1000L
 
-    //let more = size < 4
-    let more = false // disable printout
+    ////let more = size < 4
+    //let more = false // disable printout
 
-    let asm =
-        ts.Asm.Split([| '\r'; '\n' |])
-        |> Array.filter (fun s -> s <> "")
-        |> Array.toList
+    //let asm =
+    //    ts.Asm.Split([| '\r'; '\n' |])
+    //    |> Array.filter (fun s -> s <> "")
+    //    |> Array.toList
 
-    let lim = reLoadProgram asm
+    //let lim = reLoadProgram asm
 
-    if more then printfn "\n\nIndented ASM:\n%s\n" (lim.EditorText |> String.concat "\n")
+    //if more then printfn "\n\nIndented ASM:\n%s\n" (lim.EditorText |> String.concat "\n")
 
-    let ri = lim |> getRunInfoFromImage NoBreak m
+    //let ri = lim |> getRunInfoFromImage NoBreak m
 
-    if lim.Errors <> [] then
-        match ts.After with
-        | Some _ -> ErrorTests, ts, ri, "Visual2 cannot parse test assembler"
-        | Core.None -> OkTests, ts, ri, "Visual2 cannot parse assembler: however this test returns an error in the model"
-    else
-        let dpBefore =
-            { ri.dpInit with
-                Regs =
-                    ts.Before.TRegs
-                    |> List.indexed
-                    |> fun lis -> (15, 0u) :: lis
-                    |> List.map (fun (n, u) -> inverseRegNums.[n], u)
-                    |> Map.ofList
-                Fl =
-                    match ts.Before.TFlags with
-                    | { FC = c; FV = v; FZ = z; FN = n } -> { C = c; V = v; N = n; Z = z }
-            }
+    //if lim.Errors <> [] then
+    //    match ts.After with
+    //    | Some _ -> ErrorTests, ts, ri, "Visual2 cannot parse test assembler"
+    //    | Core.None -> OkTests, ts, ri, "Visual2 cannot parse assembler: however this test returns an error in the model"
+    //else
+        //let dpBefore =
+        //    { ri.dpInit with
+        //        Regs =
+        //            ts.Before.TRegs
+        //            |> List.indexed
+        //            |> fun lis -> (15, 0u) :: lis
+        //            |> List.map (fun (n, u) -> inverseRegNums.[n], u)
+        //            |> Map.ofList
+        //        Fl =
+        //            match ts.Before.TFlags with
+        //            | { FC = c; FV = v; FZ = z; FN = n } -> { C = c; V = v; N = n; Z = z }
+        //    }
 
-        let ri' = asmStep maxSteps { ri with dpInit = dpBefore }
+        //let ri' = asmStep maxSteps { ri with dpInit = dpBefore }
 
-        match ri' with
-        | { State = PSExit } -> handleTestRunError EXIT ri' ts
-        | { State = PSError e } -> handleTestRunError e ri' ts
-        | _ ->
-            ErrorTests, ts, ri', sprintf "Test code timed out after %d Visual2 instructions" maxSteps
+        //match ri' with
+        //| { State = PSExit } -> handleTestRunError EXIT ri' ts
+        //| { State = PSError e } -> handleTestRunError e ri' ts
+        //| _ ->
+            //ErrorTests, ts, ri', sprintf "Test code timed out after %d Visual2 instructions" maxSteps
 
-let runEmulatorTestFile (m : Refs.Model) allowed fn  =
-    let testF = Refs.appDirName + @"/test-data/" + fn
-    let results = loadStateFile testF
-    let resultsBySuccess =
-        results
-        |> List.map (RunEmulatorTest m allowed)
-        |> List.groupBy (fun (rt, _, _, _) -> rt)
-        |> Map.ofList
-    let resultSummary = processTestResults fn resultsBySuccess allowed
+//let runEmulatorTestFile (m : Refs.Model) allowed fn  =
+    //let testF = Refs.appDirName + @"/test-data/" + fn
+    //let results = loadStateFile testF
+    //let resultsBySuccess =
+    //    results
+    //    |> List.map (RunEmulatorTest m allowed)
+    //    |> List.groupBy (fun (rt, _, _, _) -> rt)
+    //    |> Map.ofList
+    //let resultSummary = processTestResults fn resultsBySuccess allowed
 
-    match resultSummary with
-    | Result.Ok s
-    | Result.Error s -> s
-    |> printfn "%s with %d tests...%s" (fnWithoutSuffix fn) results.Length
+    //match resultSummary with
+    //| Result.Ok s
+    //| Result.Error s -> s
+    //|> printfn "%s with %d tests...%s" (fnWithoutSuffix fn) results.Length
 
-let runAllEmulatorTests (m : Refs.Model) =
-    let allowed = readAllowedTests()
-    printfn "Errors allowed in tests: %A" allowed
-    let contents = electron.remote.getCurrentWebContents()
-    if not (contents.isDevToolsOpened()) then contents.toggleDevTools()
-    let files =
-        try
-            fs.readdirSync (U2.Case1(Refs.appDirName + "/test-data"))
-        with
-            | _ -> ResizeArray()
-        |> Seq.toList
-        |> (fun lis ->
-                if List.contains "focus.txt" lis
-                then [ "focus.txt" ]
-                else lis)
-        |> List.filter (String.startsWith "ALLOWED" >> not)
+//let runAllEmulatorTests (m : Refs.Model) =
+    //let allowed = readAllowedTests()
+    //printfn "Errors allowed in tests: %A" allowed
+    //let contents = electron.remote.getCurrentWebContents()
+    //if not (contents.isDevToolsOpened()) then contents.toggleDevTools()
+    //let files =
+    //    try
+    //        fs.readdirSync (U2.Case1(Refs.appDirName + "/test-data"))
+    //    with
+    //        | _ -> ResizeArray()
+    //    |> Seq.toList
+    //    |> (fun lis ->
+    //            if List.contains "focus.txt" lis
+    //            then [ "focus.txt" ]
+    //            else lis)
+    //    |> List.filter (String.startsWith "ALLOWED" >> not)
 
-    List.iter (runEmulatorTestFile m allowed) files
-    printfn "Finished. See './test-results' for result files"
+    //List.iter (runEmulatorTestFile m allowed) files
+    //printfn "Finished. See './test-results' for result files"
 
 //*************************************************************************************
 //                              CUSTOM TESTBENCH CODE

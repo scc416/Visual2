@@ -71,38 +71,38 @@ let addResultsToTestbench (test : Test) (dp : DataPath) editors =
 /// Top-level testbench parse. Locate loaded testbench, generate pair of testbench tab ID
 /// and Test list, or Error message. If testbench lines contain errors these are highlighted in buffer.
 /// Previous error highlights are removed from buffer.
-let getParsedTests dStart (m : Model) =
-    let processParseErrors (eLst : Result<Test, (int * string) list> list) =
-        let highlightErrors tab =
-            List.iter (fun (lNum, mess) ->
-                printfn "Testbench error %d %s." lNum mess
-                Editors.highlightLine tab m.Editors lNum "editor-line-error" m |> ignore)
-        match getTBWithTab m.Editors with
-        | Error mess -> Error mess
-        | Ok(tab, _) ->
-            let newDecorations = Editors.removeEditorDecorations m.TabId m.Decorations m.Editors
-            List.iter (Result.mapError (highlightErrors m.TabId) >> ignore) eLst
-            match List.errorList eLst with
-            | [] -> List.okList eLst |> Ok
-            | x ->
-                //Tabs.selectFileTab tab //TODO: t
-                printfn "%A" x
-                Error "Parse errors in testbench"
+//let getParsedTests dStart (m : Model) =
+    //let processParseErrors (eLst : Result<Test, (int * string) list> list) =
+    //    let highlightErrors tab =
+    //        List.iter (fun (lNum, mess) ->
+    //            printfn "Testbench error %d %s." lNum mess
+    //            Editors.highlightLine tab m.Editors lNum "editor-line-error" m |> ignore)
+    //    match getTBWithTab m.Editors with
+    //    | Error mess -> Error mess
+    //    | Ok(tab, _) ->
+    //        let newDecorations = Editors.removeEditorDecorations m.TabId m.Decorations m.Editors
+    //        List.iter (Result.mapError (highlightErrors m.TabId) >> ignore) eLst
+    //        match List.errorList eLst with
+    //        | [] -> List.okList eLst |> Ok
+    //        | x ->
+    //            //Tabs.selectFileTab tab //TODO: t
+    //            printfn "%A" x
+    //            Error "Parse errors in testbench"
 
-    let initStack = 0xFF000000u
-    getTBWithTab m.Editors
-    |> Result.bind (
-            fun (tab, tb) ->
-                String.toUpper tb
-                |> String.splitString [| "\n" |]
-                |> Array.toList
-                |> parseTests initStack dStart
-                |> processParseErrors
-                |> Result.map (fun x -> tab, x))
+    //let initStack = 0xFF000000u
+    //getTBWithTab m.Editors
+    //|> Result.bind (
+            //fun (tab, tb) ->
+                //String.toUpper tb
+                //|> String.splitString [| "\n" |]
+                //|> Array.toList
+                //|> parseTests initStack dStart
+                //|> processParseErrors
+                //|> Result.map (fun x -> tab, x))
 
-let getTestList m =
-    getParsedTests 0x10000000u m
-    |> function
-        | Error e -> showVexAlert e; []
-        | Ok(_, tests) ->
-            tests
+//let getTestList m =
+    //getParsedTests 0x10000000u m
+    //|> function
+        //| Error e -> showVexAlert e; []
+        //| Ok(_, tests) ->
+            //tests

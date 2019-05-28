@@ -5,8 +5,6 @@ open Fable.Core.JsInterop
 open Fable.Import
 open Fable.Import.Electron
 open Refs
-open Tabs
-open MenuBar
 
 /// merge 2 maps into 1
 /// if key repeated, the ones in the old map are kept
@@ -112,16 +110,10 @@ let saveFileUpdate (tabId, editors : Map<int, Editor>) =
 
 /// top-level function for save file as
 /// open the save file dialog when necessary
-let saveAsFileDialogUpdate (tabId, dialogBox) : DialogBox option =
-    match dialogBox, tabId with
-    | _, -1 | Some _, _ -> dialogBox /// make sure sure no other dialog is opened and there is at least one tab
-    | _ -> Some SaveAsDl
-
-/// top-level function for opening up the open file dialog
-let openFileDialogUpdate =
+let saveAsFileDialogUpdate dialogBox =
     function
-    | Option.None -> Some OpenFileDl /// make sure no other dialog is opened
-    | x -> x
+    | -1 -> dialogBox /// make sure sure no other dialog is opened and there is at least one tab
+    | _ -> dialogBoxUpdate SaveAsDl dialogBox
 
 /// top-level function for opening up the open file dialog
 let saveAsFileUpdate (editors : Map<int, Editor>, tabId, filePathSettingStr)

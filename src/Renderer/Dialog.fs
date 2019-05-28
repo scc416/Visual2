@@ -10,6 +10,7 @@ open Fable.Import.Electron
 open Files
 open Elmish
 
+
 let closeTabDialog (fileName : string option, settingTab : int option, currentId)
                    dispatch = 
     let showFileName =
@@ -34,12 +35,16 @@ let aboutDialog dispatch =
                        " Lorenzo Silvestri, and HLP Team 10")) 
                    (fun _ -> CloseDialog |> dispatch )
                    
+
+let alertDialog txt dispatch = 
+    showVexAlert2 txt (fun _ -> CloseDialog |> dispatch )
+                   
 let aboutDialogUpdate =
     function
     | Some x -> Some x
     | Option.None -> Some AboutDl
 
-let showQuitMessage (callBack : bool -> unit) = //TODO: double check if it works
+let showQuitMessage (callBack : bool -> unit) =
     let mess = "You have unsaved changes. Are you sure you want to exit and lose changes?"
     let buttons = [ "Save"; "Exit without saving" ]
     Refs.showVexConfirm mess callBack
@@ -56,9 +61,9 @@ let ExitIfOK dispatch =
     showQuitMessage callback
 
 /// determine if any dialog box has to be opened
-let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: int, settingTab : int option)
+let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingTab : int option)
               dispatch =
-    match dialogBox with
+    function
     | Some x when x = OpenFileDl ->
         openFile currentFilePath 
                  dispatch
@@ -73,6 +78,10 @@ let dialogBox (dialogBox, currentFilePath, editors : Map<int, Editor>, tabId: in
         aboutDialog dispatch
     | Some x when x = QuitDl ->
         ExitIfOK dispatch
+    | Some x when x = NoFileTabDl ->
+        alertDialog "No file tab in editor to run!" dispatch
+    | Some x when x = ResettingEmulatorDl ->
+        alertDialog "Resetting emulator for new execution" dispatch
     | _ -> 
         ()
 
