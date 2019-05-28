@@ -5,6 +5,10 @@ open Refs
 open Fable.Import.React
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
+open Fable.Core.JsInterop
+open Fable.Import
+open Fable.Helpers.React
+open Fable.Helpers.React.Props
 open Tabs
 
 /// string for the id, to obtain the value in input
@@ -150,10 +154,16 @@ let selectSettingsTabUpdate (settingsTab, editors) =
     | Some x -> editors, x
 
 /// top-level function to save settings
-let saveSettingsUpdate (settings, editors, settingsTab) = 
+let saveSettingsUpdate (settings, editors, settingsTab, tabId, iExports) = 
     let newSettings =
         getFormSettings settings
     // close and remove the setting tab after settings are saved
     let newEditors = Map.remove settingsTab editors
-    let newId = selectLastTabId newEditors
+    let newId = 
+        match Map.isEmpty newEditors with
+        | true -> -1
+        | _ -> selectLastTabId newEditors
+    match newSettings.EditorTheme = settings.EditorTheme with
+    | false -> iExports?editor?setTheme (newSettings.EditorTheme)
+    | true -> ()
     newSettings, newEditors, newId

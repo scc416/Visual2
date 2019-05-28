@@ -545,33 +545,36 @@ let startTest test (m : Model) =
 
 /// Top-level simulation execute
 /// If current tab is TB run TB if this is possible
-let runCode breakCondition (m : Model) : Model =
-    match currentTabIsTB m.TabId m.Editors with
-    | true -> m//TODO: runTestbenchOnCode()
-    | false ->
-        match m.RunMode with
-        | ActiveMode(RunState.Running, ri) -> 
-            { m with RunMode = ActiveMode((RunState.Stopping), ri) }
-        | _ ->
-            let m2 = 
-                match m.RunMode with
-                | FinishedMode _
-                | RunErrorMode _ -> 
-                    let newDecorations = 
-                        removeEditorDecorations m.TabId m.Decorations m.Editors
-                    let newCurrentWidgets =
-                        Tooltips.deleteAllContentWidgets m
-                    { m with MemoryMap = Map.empty
-                                         SymbolMap = Map.empty
-                                         RegMap = initialRegMap
-                                         RunMode = ResetMode
-                                         ClockTime = (0uL, 0uL)
-                                         Decorations = newDecorations
-                                         CurrentTabWidgets = newCurrentWidgets() }//TODO: resetEmulator()
-                | _ ->
-                    m
-            runEditorTab breakCondition m2 <|
-                match int64 m.Settings.SimulatorMaxSteps with
-                | 0L -> System.Int64.MaxValue
-                | n when n > 0L -> n
-                | _ -> System.Int64.MaxValue
+let runCode (m : Model) : Model =
+    match m.TabId with
+    | -1 -> { m with DialogBox = None }
+    | _ ->
+        match currentTabIsTB m.TabId m.Editors with
+        | true -> m//TODO: runTestbenchOnCode()
+        | false ->
+            match m.RunMode with
+            | ActiveMode(RunState.Running, ri) -> 
+                { m with RunMode = ActiveMode((RunState.Stopping), ri) }
+            | _ ->
+                let m2 = 
+                    match m.RunMode with
+                    | FinishedMode _
+                    | RunErrorMode _ -> 
+                        let newDecorations = 
+                            removeEditorDecorations m.TabId m.Decorations m.Editors
+                        let newCurrentWidgets =
+                            Tooltips.deleteAllContentWidgets m
+                        { m with MemoryMap = Map.empty
+                                             SymbolMap = Map.empty
+                                             RegMap = initialRegMap
+                                             RunMode = ResetMode
+                                             ClockTime = (0uL, 0uL)
+                                             Decorations = newDecorations
+                                             CurrentTabWidgets = newCurrentWidgets() }//TODO: resetEmulator()
+                    | _ ->
+                        m
+                runEditorTab ExecutionTop.NoBreak m2 <|
+                    match int64 m.Settings.SimulatorMaxSteps with
+                    | 0L -> System.Int64.MaxValue
+                    | n when n > 0L -> n
+                    | _ -> System.Int64.MaxValue

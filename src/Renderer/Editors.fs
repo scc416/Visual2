@@ -278,7 +278,6 @@ type Props =
 
 let editorOptions vs =
     createObj [
-
         // User defined settings
         "theme" ==> vs.EditorTheme
         "renderWhitespace" ==> vs.EditorRenderWhitespace
@@ -294,7 +293,6 @@ let editorOptions vs =
         "automaticLayout" ==> true;
         "minimap" ==> createObj [ "enabled" ==> false ];
         "glyphMargin" ==> true
-        //"model" ==> model
     ]
 
 

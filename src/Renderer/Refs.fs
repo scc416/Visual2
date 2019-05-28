@@ -134,6 +134,8 @@ type Model = {
     Decorations : obj list
     EditorEnable : bool
     ClockTime : uint64 * uint64
+    /// Use to set theme for Editors
+    IExports : Monaco.IExports option
     }
 
 type Msg =
@@ -173,6 +175,7 @@ type Msg =
     | UpdateModel of Model
     | ResetEmulator
     | InitialiseIExports of Monaco.IExports
+    | RunOnlineInfo of VisualEvent
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
@@ -343,29 +346,15 @@ let fileViewIdFormatter = sprintf "file-view-%d"
 /// get element of editor window containing file
 let fileView id = getHtml <| fileViewIdFormatter id
 
-/// get pane element containing for tab menu and editors
-let fileViewPane = getHtml "file-view-pane"
-
 /// get id of element containing tab name as dispalyed
 let tabNameIdFormatter = sprintf "file-view-name-%d"
 
 /// get element containing tab name as displayed
 let fileTabName id = getHtml <| tabNameIdFormatter id
 
-/// get id of element containing file path
-let tabFilePathIdFormatter = sprintf "file-view-path-%d"
-/// get (invisible)  element containing file path
-let tabFilePath id = getHtml <| tabFilePathIdFormatter id
-/// get the editor window overlay element
-
 //--------------- Simulation Indicator elements----------------------
 
 let darkenOverlay = getHtml "darken-overlay"
-
-/// Set the background of file panes.
-/// This is done based on theme (light or dark) to prevent flicker
-let setFilePaneBackground color =
-    fileViewPane.setAttribute ("style", sprintf "background: %s" color)
 
 // ************************************************************************************
 //                         Utility functions used in this module

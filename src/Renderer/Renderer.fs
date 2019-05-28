@@ -65,10 +65,9 @@ let init _ =
             EditorEnable = true
             ClockTime = (0uL, 0uL)
             LastDisplayStepsDone = 0L
+            IExports = None
         }
-    let cmd = 
-        readOnlineInfo Startup m.LastOnlineFetchTime m.Settings.OnlineFetchText m.LastRemindTime m.DebugLevel
-    m, cmd
+    m, RunOnlineInfo Startup |> Cmd.ofMsg
 
 let update (msg : Msg) (m : Model) =
     match msg with
@@ -143,7 +142,7 @@ let update (msg : Msg) (m : Model) =
                  SettingsTab = Some newTabId }, Cmd.none
     | SaveSettings ->
         let newSettings, newEditors, newId =
-            saveSettingsUpdate (m.Settings, m.Editors, m.SettingsTab.Value)
+            saveSettingsUpdate (m.Settings, m.Editors, m.SettingsTab.Value, m.TabId, m.IExports)
         { m with Settings = newSettings 
                  Editors = newEditors 
                  TabId = newId 
@@ -153,10 +152,12 @@ let update (msg : Msg) (m : Model) =
         { m with Editors = newEditors 
                  TabId = newId }, Cmd.none
     | IncreaseFontSize ->
-        let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) + 2) }
+        let newSettings = 
+            { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) + 2) }
         { m with Settings = newSettings }, Cmd.none
     | DecreaseFontSize ->
-        let newSettings = { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) - 2) }
+        let newSettings = 
+            { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) - 2) }
         { m with Settings = newSettings }, Cmd.none
     | AboutDialog ->
         let newDialog = aboutDialogUpdate m.DialogBox
@@ -191,11 +192,14 @@ let update (msg : Msg) (m : Model) =
         m, Cmd.none
     | InitiateClose ->
         { m with InitClose = true }, Cmd.none
-    | RunSimulation ->
+    | RunOnlineInfo ve ->
         let cmd = 
-            readOnlineInfo RunningCode m.LastOnlineFetchTime m.Settings.OnlineFetchText m.LastRemindTime m.DebugLevel        
-        let newM = runCode ExecutionTop.NoBreak m
-        newM, cmd
+            readOnlineInfo ve
+                           m.LastOnlineFetchTime
+                           m.Settings.OnlineFetchText
+                           m.LastRemindTime
+                           m.DebugLevel
+        m, cmd
     | ReadOnlineInfoSuccess (newOnlineFetchText, ve) -> 
         let newLastOnlineFetchTime, newLastRemindTime = 
             readOnlineInfoSuccessUpdate newOnlineFetchText ve m.LastRemindTime
@@ -222,10 +226,13 @@ let update (msg : Msg) (m : Model) =
                              ClockTime = (0uL, 0uL)
                              Decorations = newDecorations
                              CurrentTabWidgets = newCurrentWidgets() }, Cmd.none
-        | InitialiseIExports iExports -> 
-            //iExports?languages?register (registerLanguage)
-            //iExports?languages?setMonarchTokensProvider (token)
-            m, Cmd.none
+    | InitialiseIExports iExports -> 
+        //iExports?languages?register (registerLanguage)
+        //iExports?languages?setMonarchTokensProvider (token)
+        { m with IExports = Some iExports } , Cmd.none
+    | RunSimulation ->
+        let newM = runCode m
+        newM, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
