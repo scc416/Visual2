@@ -363,10 +363,12 @@ let update (msg : Msg) (m : Model) =
             stepCode m.TabId m.Editors 
         let newDialogBox = defaultValue m.DialogBox dialogBox
         { m with DialogBox = dialogBoxUpdate m.DialogBox newDialogBox }, cmd
-    | StepCodeBack -> 
-        m, Cmd.none//TODO:
     | StepCodeBackBy steps ->
-        m, Cmd.none//TODO:
+        let dialogBox, newRunMode, editorEnable, cmd = stepCodeBackBy steps m.RunMode m.Editors.[m.TabId].IEditor
+        let newDialogBox = dialogBoxUpdate dialogBox m.DialogBox
+        { m with DialogBox = newDialogBox
+                 RunMode = newRunMode
+                 EditorEnable = defaultValue m.EditorEnable editorEnable }, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
@@ -391,7 +393,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                   DOMAttr.OnClick (fun _ -> ResetEmulator |> dispatch) ]
                                 [ str "Reset" ]
                          button [ ClassName "btn btn-default button-back"
-                                  DOMAttr.OnClick (fun _ -> StepCodeBack |> dispatch) ]
+                                  DOMAttr.OnClick (fun _ -> StepCodeBackBy 1L |> dispatch) ]
                                 [ str " Step" ]
                          button [ ClassName "btn btn-default button-forward"
                                   DOMAttr.OnClick (fun _ -> StepCode |> dispatch ) ]

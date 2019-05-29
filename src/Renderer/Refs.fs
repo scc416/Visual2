@@ -208,8 +208,7 @@ type Msg =
     | MakeShiftTooltip of int * int * string * DataPath * DataPath * DP.UFlags * RName * DP.ArmShiftType Option * bool * uint32 * DP.Op2
     | MakeEditorInfoButton of string * bool * int * int * string * HTMLElement * string
     | StepCode
-    | StepCodeBack
-    | StepCodeBackBy of int
+    | StepCodeBackBy of int64
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =

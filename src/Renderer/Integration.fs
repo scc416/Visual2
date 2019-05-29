@@ -70,7 +70,7 @@ let showInfoFromCurrentMode runMode =
 /// Apply GUI decorations to instruction line of last PC and current PC.
 /// Move current instruction line to middle of window if not visible.
 let highlightCurrentAndNextIns classname pInfo editor decorations =
-    let (newDecorations : obj list), cmd = 
+    let (newDecorations : obj list), cmd1 = 
         match pInfo.LastDP with
         | None -> decorations, Cmd.none
         | Some(dp, _uFl) ->
@@ -92,11 +92,11 @@ let highlightCurrentAndNextIns classname pInfo editor decorations =
         let newDecorations2 = 
             highlightNextInstruction editor lineNo newDecorations
         let cmd2 = 
-            Cmd.batch [ cmd
-                        (lineNo - 1, "bottom", fst pInfo.dpCurrent, condInstr) |> MakeToolTipInfo |> Cmd.ofMsg ]
-        newDecorations2, cmd2
+            (lineNo - 1, "bottom", fst pInfo.dpCurrent, condInstr) |> MakeToolTipInfo |> Cmd.ofMsg
+        let allCmd = Cmd.batch [ cmd1 ; cmd2 ]
+        newDecorations2, allCmd
     | _ -> 
-        newDecorations, cmd
+        newDecorations, cmd1
 
 let stepCode tabId editors : DialogBox option option * Cmd<Msg> =
     match currentTabIsTB tabId editors with
@@ -127,13 +127,17 @@ let updateGUIFromRunState (pInfo : RunInfo) :
         FinishedMode (pInfo) |> Some, 
         Some true, 
         None,
-        Cmd.batch [ ("editor-line-highlight", (pInfo)) |> HighlightCurrentAndNextIns |> Cmd.ofMsg
+        Cmd.batch [ Cmd.ofMsg RemoveDecorations
+                    Cmd.ofMsg DeleteAllContentWidgets
+                    ("editor-line-highlight", (pInfo)) |> HighlightCurrentAndNextIns |> Cmd.ofMsg
                     Cmd.ofMsg ShowInfoFromCurrentMode ]
     | PSBreak ->
         ActiveMode(Paused, pInfo) |> Some, 
         Some true, 
         None,
-        Cmd.batch [ ("editor-line-highlight", (pInfo)) |> HighlightCurrentAndNextIns |> Cmd.ofMsg
+        Cmd.batch [ Cmd.ofMsg RemoveDecorations
+                    Cmd.ofMsg DeleteAllContentWidgets
+                    ("editor-line-highlight", (pInfo)) |> HighlightCurrentAndNextIns |> Cmd.ofMsg
                     Cmd.ofMsg ShowInfoFromCurrentMode ]
     | PSError(NotInstrMem x) ->
         (RunErrorMode pInfo)|> Some,
@@ -145,7 +149,9 @@ let updateGUIFromRunState (pInfo : RunInfo) :
         (RunMode.RunErrorMode pInfo) |> Some,
         None,
         None,
-        Cmd.batch [ ("editor-line-highlight-error", (pInfo)) |> HighlightCurrentAndNextIns |> Cmd.ofMsg
+        Cmd.batch [ Cmd.ofMsg RemoveDecorations
+                    Cmd.ofMsg DeleteAllContentWidgets
+                    ("editor-line-highlight-error", (pInfo)) |> HighlightCurrentAndNextIns |> Cmd.ofMsg
                     Cmd.ofMsg ShowInfoFromCurrentMode ]
         //Browser.window.setTimeout ((fun () ->
             //showVexAlert (sprintf "Error %s: %s" lineMess msg)
@@ -201,6 +207,8 @@ let asmStepDisplay (breakc : BreakCondition) steps ri' simulatorMaxSteps runMode
     | ActiveMode(Stopping, ri') -> // pause execution from GUI button
         ActiveMode(RunState.Paused, ri'), 
         Cmd.batch [ Cmd.ofMsg ShowInfoFromCurrentMode
+                    Cmd.ofMsg RemoveDecorations
+                    Cmd.ofMsg DeleteAllContentWidgets
                     ("editor-line-highlight", ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg ]
     | ResetMode -> 
         runMode, Cmd.none // stop everything after reset
@@ -213,6 +221,8 @@ let asmStepDisplay (breakc : BreakCondition) steps ri' simulatorMaxSteps runMode
             let ri' = asmStep steps { ri with BreakCond = NoBreak } // finally run the simulator!
             ActiveMode(Paused, ri'), // mark the fact that we have paused
             Cmd.batch [ (ri', running, ri) |> DisplayState |> Cmd.ofMsg // update GUI
+                        Cmd.ofMsg RemoveDecorations
+                        Cmd.ofMsg DeleteAllContentWidgets
                         ("editor-line-highlight",  ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg ]
         else // in this case we are running indefinitely, or else for a long time
              // if indefinitely, we could stop on display update timeout, or error, or end of program exit
@@ -230,6 +240,8 @@ let asmStepDisplay (breakc : BreakCondition) steps ri' simulatorMaxSteps runMode
                 //| [] -> 
                     newRMode, Cmd.batch [ Cmd.ofMsg ShowInfoFromCurrentMode 
                                           (ri', false, ri) |> DisplayState |> Cmd.ofMsg 
+                                          Cmd.ofMsg RemoveDecorations
+                                          Cmd.ofMsg DeleteAllContentWidgets
                                           ("editor-line-highlight", ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg ]
                 //| tests -> 
                     //runTests false tests (asmStepDisplay NoBreak)
@@ -395,6 +407,73 @@ let isItTestbench editor : Cmd<Msg> =
     | true -> Cmd.ofMsg RunTestBench
     | _ -> Cmd.ofMsg MatchActiveMode
 
+/// Step simulation back by numSteps
+let stepCodeBackBy numSteps runMode editor : 
+        DialogBox option * RunMode * bool option * Cmd<Msg> =
+    match runMode with
+    | ActiveMode(Paused, ri')
+    | RunErrorMode ri'
+    | FinishedMode ri' ->
+        let ri = { ri' with BreakCond = NoBreak }
+        if currentFileTabProgramIsChanged ri editor then
+            let dialogBox =
+                "can't step backwards because execution state is no longer valid"
+                |> Alert
+                |> Some
+            dialogBox, runMode, None, Cmd.none
+        else
+            //printf "Stepping back with done=%d  PC=%A" ri.StepsDone ri.dpCurrent
+            let target =
+                match runMode with
+                | RunErrorMode ri -> ri.StepsDone + 1L - numSteps
+                | _ -> ri.StepsDone - numSteps
+            let runMode = ActiveMode(RunState.Running, ri)
+            if target <= 0L then
+                None,
+                runMode,
+                None,
+                Cmd.batch [
+                    Cmd.ofMsg ResetEmulator
+                    Cmd.ofMsg RemoveDecorations
+                    Cmd.ofMsg ShowInfoFromCurrentMode
+                    ]
+            else
+                printfn "Stepping back to step %d" target
+                let ri' = asmStep target ri
+                let runMode2 = ActiveMode(RunState.Paused, ri')
+                let editorsEnable = Some false
+                let cmd = Cmd.ofMsg ShowInfoFromCurrentMode
+                let cmd2 = 
+                    match ri'.State with
+                    | PSRunning ->
+                        Cmd.batch 
+                            [ Cmd.ofMsg RemoveDecorations
+                              Cmd.ofMsg DeleteAllContentWidgets
+                              ("editor-line-highlight", ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg ]
+                    | PSError _ | PSExit | PSBreak -> 
+                        failwithf "What? Error can't happen when stepping backwards!"
+                        Cmd.none
+                let allCmd = 
+                    [ cmd ]
+                    |> List.append [ cmd2 ]
+                    |> Cmd.batch
+                None, runMode2, editorsEnable, allCmd
+
+    | ParseErrorMode -> 
+        let dialogBox =
+            "Can't execute when code has errors"
+            |> Alert
+            |> Some
+        dialogBox, runMode, None, Cmd.none
+    | ResetMode -> 
+        let dialogBox =
+            "Execution has not started"
+            |> Alert
+            |> Some
+        dialogBox, runMode, None, Cmd.none
+    | _ -> 
+        None, runMode, None, Cmd.none
+
 /// Top-level simulation execute
 /// If current tab is TB run TB if this is possible
 let runSimulation tabId : DialogBox option option * Cmd<Msg> =
@@ -405,3 +484,5 @@ let runSimulation tabId : DialogBox option option * Cmd<Msg> =
     | _ -> 
         Browser.console.log("")
         None, Cmd.ofMsg IsItTestbench
+
+        
