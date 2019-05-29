@@ -69,7 +69,7 @@ let init _ =
             ClockTime = (0uL, 0uL)
             LastDisplayStepsDone = 0L
             IExports = None
-            FlagsHasChanged = initialFlags
+            FlagsHasChanged = false
         }
     let cmd = Startup |> ReadOnlineInfo |> Cmd.ofMsg         
     m, cmd
@@ -214,8 +214,6 @@ let update (msg : Msg) (m : Model) =
             readOnlineInfoFailUpdate m.Settings.OnlineFetchText ve m.LastRemindTime
         { m with LastOnlineFetchTime = newLastOnlineFetchTime 
                  LastRemindTime = newLastRemindTime}, cmd
-    | UpdateModel m -> //TODO:
-        m, Cmd.none
     | InitialiseIExports iExports -> 
         //iExports?languages?register (registerLanguage)
         //iExports?languages?setMonarchTokensProvider (token)
@@ -258,7 +256,7 @@ let update (msg : Msg) (m : Model) =
         { m with RunMode = defaultValue m.RunMode newRunMode
                  Decorations = newDecorations }, 
         Cmd.ofMsg msg
-    | MatchLoadImageTest (info) -> //Todo::
+    | MatchLoadImageTest (info) -> //TODO:
         m, Cmd.none
     | MatchLoadImage (info, steps, bkCon) ->
         let newEnableEditors, newRunMode, cmd = 
@@ -286,7 +284,7 @@ let update (msg : Msg) (m : Model) =
                  RunMode = ResetMode
                  ClockTime = (0uL, 0uL)
                  Flags = initialFlags
-                 FlagsHasChanged = initialFlags 
+                 FlagsHasChanged = false
                  EditorEnable = true }, 
         Cmd.batch [ Cmd.ofMsg DeleteAllContentWidgets
                     Cmd.ofMsg RemoveDecorations ]
@@ -303,7 +301,6 @@ let update (msg : Msg) (m : Model) =
     | ShowInfoFromCurrentMode ->
         let newSymbolTable, newClkTime, newRegMap, newFlags, newMemoryMap, newFlagsHasChanged = 
             showInfoFromCurrentMode m.RunMode
-        Browser.console.log("")
         { m with SymbolMap = defaultValue m.SymbolMap newSymbolTable 
                  ClockTime = defaultValue m.ClockTime newClkTime 
                  RegMap = defaultValue m.RegMap newRegMap
@@ -376,6 +373,7 @@ let view (m : Model) (dispatch : Msg -> unit) =
     dialogBox (m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab)
               dispatch
               m.DialogBox
+    Browser.console.log(string m.FlagsHasChanged)
     div [ ClassName "window" ] 
         [ header [ ClassName "toolbar toolbar-header" ] 
                  [ div [ ClassName "toolbar-actions" ] 

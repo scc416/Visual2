@@ -351,8 +351,8 @@ let footerColour =
     | false -> "#fcfcfc"
     | _ -> "#4285f4"
 
-let footer (flags : CommonData.Flags) (flagsChanged : CommonData.Flags) =
-    let footerDiv (letter) (flag : bool) (flagHasChanged : bool) =
+let footer (flags : CommonData.Flags) (flagsChanged : bool) =
+    let footerDiv (letter) (flag : bool)=
         let text =
             match flag with
             | true -> "1"
@@ -362,12 +362,12 @@ let footer (flags : CommonData.Flags) (flagsChanged : CommonData.Flags) =
             [ button [ ClassName "btn btn-flag" ] 
                      [ str letter ]
               button [ ClassName "btn btn-flag-con" 
-                       Style [ Background (flagHasChanged |> footerColour) ] ] 
+                       Style [ Background (flagsChanged |> footerColour) ] ] 
                      [ str text ] ]
     footer [ ClassName "toolbar toolbar-footer" ] 
            [ tooltips (Content flagTooltipStr :: Placement "top" :: basicTooltipsPropsLst)
                       [ div [ ClassName "pull-right" ]
-                            [ footerDiv "N" flags.N flagsChanged.N
-                              footerDiv "Z" flags.Z flagsChanged.Z
-                              footerDiv "C" flags.C flagsChanged.C
-                              footerDiv "V" flags.V flagsChanged.V ] ] ]
+                            [ footerDiv "N" flags.N
+                              footerDiv "Z" flags.Z
+                              footerDiv "C" flags.C
+                              footerDiv "V" flags.V ] ] ]

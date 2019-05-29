@@ -53,11 +53,7 @@ let showInfoFromCurrentMode runMode =
     | RunErrorMode ri ->
         let dp, uFl = ri.dpCurrent
         let memoryMap = makeDataLocMemoryMap dp.MM
-        let newFlagsHasChanged = 
-            { N = uFl.NZU
-              C = uFl.CU
-              Z = uFl.NZU
-              V = uFl.VU }
+        let newFlagsHasChanged = uFl.NZU
         Some ri.st, 
         Some ((ri.StepsDone |> uint64), (ri.CyclesDone |> uint64)), 
         Some dp.Regs,
@@ -119,7 +115,6 @@ let updateGUIFromRunState (pInfo : RunInfo) :
             match Map.tryFind (WA dp.Regs.[R15]) pInfo.IMem with
             | Some(_, lineNo) -> sprintf "on line %d" lineNo
             | _ -> ""
-    Browser.console.log("")
     match pInfo.State with
     | PSError EXIT
     | PSError TBEXIT
@@ -202,7 +197,6 @@ let displayState ri' running tabId ri lastDisplayStepsDone simulatorMaxSteps =
 ///// Stored history means that backward stepping will always be fast.
 let asmStepDisplay (breakc : BreakCondition) steps ri' simulatorMaxSteps runMode =
     let ri = { ri' with BreakCond = breakc }
-    Browser.console.log("")
     match runMode with
     | ActiveMode(Stopping, ri') -> // pause execution from GUI button
         ActiveMode(RunState.Paused, ri'), 
@@ -256,7 +250,6 @@ let matchLI regMap flags memoryMap steps breakCon =
     function
     | Some(lim, _) ->
         let ri = getRunInfoFromImage breakCon lim regMap flags memoryMap
-        Browser.console.log("")
         Some false, Some (ActiveMode(RunState.Running, ri)), 
         (breakCon, steps, ri) |> AsmStepDisplay |> Cmd.ofMsg 
     | _ -> 
@@ -341,18 +334,13 @@ let runEditorRunMode breakCondition steps =
     function
     | ResetMode
     | ParseErrorMode _ ->
-        Browser.console.log("")
         Cmd.batch [ Cmd.ofMsg RemoveDecorations 
                     (false, steps, breakCondition) |> TryParseAndIndentCode |> Cmd.ofMsg ]
     | ActiveMode(RunState.Paused, ri) ->
-        Browser.console.log("")
-        Browser.console.log("")
         (breakCondition, (steps + ri.StepsDone), ri) |> AsmStepDisplay |> Cmd.ofMsg
     | ActiveMode _
     | RunErrorMode _
     | FinishedMode _ -> 
-        Browser.console.log("")
-        Browser.console.log("")
         Cmd.none
 
 let stepsFromSettings =
@@ -387,7 +375,6 @@ let matchRunMode bkCon steps =
         Cmd.batch [ Cmd.ofMsg ResetEmulator
                     (bkCon, steps) |> RunEditorTab |> Cmd.ofMsg ]
     | _ -> 
-        Browser.console.log("")
         (bkCon, steps) |> RunEditorTab |> Cmd.ofMsg
 
 let matchActiveMode =
@@ -395,7 +382,6 @@ let matchActiveMode =
     | ActiveMode(RunState.Running, ri) -> 
         (RunState.Running, ri) |> SetCurrentModeActive |> Cmd.ofMsg  
     | _ -> 
-        Browser.console.log("")
         Cmd.ofMsg MatchRunMode
 
 let isItTestbench editor : Cmd<Msg> =
@@ -482,7 +468,6 @@ let runSimulation tabId : DialogBox option option * Cmd<Msg> =
         let newDialogBox = Alert "No file tab in editor to run!"
         newDialogBox |> Some |> Some , Cmd.none
     | _ -> 
-        Browser.console.log("")
         None, Cmd.ofMsg IsItTestbench
 
         

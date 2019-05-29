@@ -67,6 +67,24 @@ let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingT
         ExitIfOK dispatch
     | Some (Alert txt) ->
         alertDialog txt dispatch
+    | Some StepBackDl ->
+        showVexValidatedPrompt 
+            "steps back" 
+            validPosInt 
+            (fun x -> 
+                CloseDialog |> dispatch
+                x |> int64 |> StepCodeBackBy |> dispatch) 
+            "Number of steps back"
+            (CloseDialog |> dispatch)
+    | Some StepDl ->
+        showVexValidatedPrompt 
+            "steps forward" 
+            validPosInt 
+            (fun x -> 
+                CloseDialog |> dispatch
+                (ExecutionTop.NoBreak, (int64 x)) |> RunEditorTab |> dispatch) 
+            "Number of steps forward" 
+            (CloseDialog |> dispatch)
     | Option.None -> 
         ()
 

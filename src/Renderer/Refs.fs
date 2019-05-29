@@ -86,6 +86,8 @@ type DialogBox =
     | QuitDl
     | SaveAsDl
     | UnsavedFileDl
+    | StepDl
+    | StepBackDl
 
 /// Position of widget on editor buffer character grid.
 /// AboveBelow => offset form position, Exact => centered on position
@@ -124,7 +126,7 @@ type Model = {
     RegMap : Map<CommonData.RName, uint32>
     /// Contents of CPU flags
     Flags : CommonData.Flags
-    FlagsHasChanged : CommonData.Flags
+    FlagsHasChanged : bool
     /// Values of all Defined Symols
     SymbolMap : Map<string, uint32 * ExecutionTop.SymbolType>
     /// Current state of simulator
@@ -180,7 +182,6 @@ type Msg =
     | InitiateClose
     | ReadOnlineInfoSuccess of string * VisualEvent
     | ReadOnlineInfoFail of VisualEvent
-    | UpdateModel of Model
     | ResetEmulator
     | InitialiseIExports of Monaco.IExports
     | ReadOnlineInfo of VisualEvent
@@ -306,16 +307,23 @@ let validPosInt s =
             | true, n -> Error "number must be greater than 0"
             | false, _ -> Error "Input a positive integer"
 
-//let showVexValidatedPrompt (placeHolder : string) (validator : string -> Result<'T, string>) (callBack : 'T -> unit) (htmlMessage : string) =
-    //let cb (s : string) =
-    //    match (unbox s) with
-    //    | false -> ()
-    //    | _ ->
-    //        validator s
-    //        |> function
-    //            | Ok valid -> callBack valid
-    //            | Error errMess -> showVexAlert errMess
-    //showVexPrompt placeHolder cb htmlMessage
+let showVexValidatedPrompt (placeHolder : string) 
+                           (validator : string -> Result<'T, string>) 
+                           (callBack : 'T -> unit) 
+                           (htmlMessage : string) 
+                           (callBack2 : Unit) =
+    let cb (s : string) =
+        match (unbox s) with
+        | false -> ()
+        | _ ->
+            validator s
+            |> function
+                | Ok valid -> 
+                    callBack valid
+                    callBack2
+                | Error _ -> 
+                    callBack2
+    showVexPrompt placeHolder cb htmlMessage
 
 let showSimpleVexPrompt (callBack : string -> unit) (htmlMessage : string) =
     showVexPrompt "" callBack htmlMessage
