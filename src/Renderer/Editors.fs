@@ -652,16 +652,13 @@ let lineTipsClickable = false
 /// Does nothing if opcode is not documented with execution tooltip
 let toolTipInfo (v : int, orientation : string)
                 (dp : DataPath)
-                ({ Cond = cond; InsExec = instruction; InsOpCode = opc } : ParseTop.CondInstr) 
-                editorTheme 
-                editor 
-                widgets
-                fontSize =
+                ({ Cond = cond; InsExec = instruction; InsOpCode = opc } : ParseTop.CondInstr)
+                editor : Cmd<Msg> =
     match Helpers.condExecute cond dp, instruction with
-    | false, _ -> ()
+    | false, _ -> Cmd.none
     | true, ParseTop.IMEM ins ->
         match Memory.executeMem ins dp with
-        | Error _ -> ()
+        | Error _ -> Cmd.none
         | Ok res ->
             let TROWS s =
                 (List.map (fun s -> s |> toDOM |> TD) >> TROW) s
@@ -715,28 +712,29 @@ let toolTipInfo (v : int, orientation : string)
 
             let makeTip memInfo =
                 let (hOffset, label), tipDom = memInfo dp
-                makeEditorInfoButton Tooltips.lineTipsClickable (hOffset, (v + 1), orientation) editorTheme widgets editor fontSize label tipDom
+                (Tooltips.lineTipsClickable, hOffset, (v + 1), orientation, tipDom) 
+                |> MakeEditorInfoButton 
+                |> Cmd.ofMsg
             match ins with
             | Memory.LDR ins -> makeTip <| memPointerInfo ins MemRead
             | Memory.STR ins -> makeTip <| memPointerInfo ins MemWrite
             | Memory.LDM ins -> makeTip <| memStackInfo ins MemRead
             | Memory.STM ins -> makeTip <| memStackInfo ins MemWrite
-            | _ -> ()
+            | _ -> Cmd.none
     | true, ParseTop.IDP(exec, op2) ->
         let alu = ExecutionTop.isArithmeticOpCode opc
-        let pos = findCodeEnd v editor, v, orientation
+        let pos1, pos2, pos3 = findCodeEnd v editor, v, orientation
         match exec dp with
-        | Error _ -> ()
+        | Error _ -> Cmd.none
         | Ok(dp', uF') ->
             match op2 with
             | DP.Op2.NumberLiteral _
-            | DP.Op2.RegisterWithShift(_, _, 0u) -> ()
+            | DP.Op2.RegisterWithShift(_, _, 0u) -> Cmd.none
             | DP.Op2.RegisterWithShift(rn, shiftT, shiftAmt) ->
-                    makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) shiftAmt op2 widgets editor fontSize
-                    
+                (pos1, pos2, pos3, dp, dp', uF', rn, Some shiftT, alu, shiftAmt, op2) |> MakeShiftTooltip |> Cmd.ofMsg
             | DP.Op2.RegisterWithRegisterShift(rn, shiftT, sRn) ->
-                    makeShiftTooltip pos (dp, dp', uF') rn (Some shiftT, alu) (dp.Regs.[sRn] % 32u) op2 widgets editor fontSize
-
-            | DP.Op2.RegisterWithRRX rn -> makeShiftTooltip pos (dp, dp', uF') rn (None, alu) 1u op2 widgets editor fontSize
-    | _ -> ()
+                (pos1, pos2, pos3, dp, dp', uF', rn, Some shiftT, alu, (dp.Regs.[sRn] % 32u), op2) |> MakeShiftTooltip |> Cmd.ofMsg
+            | DP.Op2.RegisterWithRRX rn -> 
+                (pos1, pos2, pos3, dp, dp', uF', rn, None, alu, 1u, op2) |> MakeShiftTooltip |> Cmd.ofMsg
+    | _ -> Cmd.none
 

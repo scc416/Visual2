@@ -195,16 +195,19 @@ type Msg =
     | RemoveDecorations
     | RrepareModeForExecution
     | RunEditorRunMode
-    | AsmStepDisplay1 of BreakCondition * int64 * RunInfo
+    | AsmStepDisplay of BreakCondition * int64 * RunInfo
     | MatchLoadImage of (LoadImage * string list) option * int64 * BreakCondition
     | MatchLoadImageTest of (LoadImage * string list) option
     | UpdateDialogBox of DialogBox
-    | UpdateDecorations of obj list
     | TryParseAndIndentCode of bool * int64 * BreakCondition
     | UpdateGUIFromRunState of RunInfo
     | ShowInfoFromCurrentMode
     | HighlightCurrentAndNextIns of string * RunInfo
     | MakeToolTipInfo of int * string * DataPath * ParseTop.CondInstr
+    | MakeEditorInfoButtonWithTheme of string * bool * int * int * string
+    | DisplayState of RunInfo * bool * RunInfo
+    | MakeShiftTooltip of int * int * string * DataPath * DataPath * DP.UFlags * RName * DP.ArmShiftType Option * bool * uint32 * DP.Op2
+    | MakeEditorInfoButton of bool * int * int * string * HTMLElement
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =

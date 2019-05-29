@@ -376,7 +376,7 @@ let makeEditorInfoButtonWithTheme theme (clickable : bool) (h, v, orientation)
                                   currentContentWidget editor editorFontSize 
                                   (buttonText : string) (toolTipDOM : HTMLElement) 
                                    =
-    Cmd.ofMsg DeleteAllContentWidgets
+    Cmd.ofMsg DeleteAllContentWidgets |> ignore
     /// Ratio of char width / char size for editor buffer font.
     /// TODO: work this out properly from a test
     let editorFontWidthRatio = 0.6 // works OK for Fira Code Mono
@@ -410,4 +410,6 @@ let makeShiftTooltip (h, v, orientation) (dp : DataPath, dpAfter : DataPath, uFA
     printfn "After': %d,%d" after after'
     printfn "Making shift tooltip"
     let diagram = displayShiftDiagram rn (before, bToi dp.Fl.C) (after', final, bToi uF.Ca, finalC, finalFWrite, alu) shiftT (shiftAmt |> int)
-    makeEditorInfoButtonWithTheme "light" lineTipsClickable (h, (v + 1), orientation) currentWidget editor fontSize "Shift" diagram 
+    Cmd.batch []
+
+    //makeEditorInfoButtonWithTheme "light" lineTipsClickable (h, (v + 1), orientation) currentWidget editor fontSize "Shift" diagram 

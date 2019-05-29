@@ -254,8 +254,8 @@ let update (msg : Msg) (m : Model) =
                 m.Decorations
         let msg =
             match test with
-            | true -> MatchLoadImage (loadImage, steps, bkCon)
-            | false -> MatchLoadImageTest loadImage
+            | false -> MatchLoadImage (loadImage, steps, bkCon)
+            | _ -> MatchLoadImageTest loadImage
         { m with RunMode = defaultValue m.RunMode newRunMode
                  Decorations = newDecorations }, 
         Cmd.ofMsg msg
@@ -264,9 +264,12 @@ let update (msg : Msg) (m : Model) =
     | MatchLoadImage (info, steps, bkCon) ->
         let newEnableEditors, newRunMode, cmd = 
             matchLI m.RegMap m.Flags m.MemoryMap steps bkCon info 
-        m, cmd
-    | AsmStepDisplay1 (breakCon, steps, ri) -> //TODO:
-        m, Cmd.none
+        { m with EditorEnable = defaultValue m.EditorEnable newEnableEditors
+                 RunMode = defaultValue m.RunMode newRunMode }, cmd
+    | AsmStepDisplay (breakCon, steps, ri) ->
+        let newRunMode, cmd =
+            asmStepDisplay breakCon steps ri m.Settings.SimulatorMaxSteps m.RunMode
+        { m with RunMode = newRunMode }, cmd
     | RrepareModeForExecution ->
         let cmd, newDialogBox = 
             prepareModeForExecution m.Editors.[m.TabId].IEditor m.RunMode
@@ -295,17 +298,41 @@ let update (msg : Msg) (m : Model) =
     | DeleteAllContentWidgets ->
         deleteAllContentWidgets m.CurrentTabWidgets m.Editors.[m.TabId].IEditor
         { m with CurrentTabWidgets = Map.empty }, Cmd.none
-    | UpdateDecorations deco ->
-        { m with Decorations = deco }, Cmd.none
-    | ShowInfoFromCurrentMode -> //TODO: 
-        m, Cmd.none
-    | UpdateGUIFromRunState ri -> //TODO: 
-        m, Cmd.none
+    | ShowInfoFromCurrentMode ->
+        let newSymbolTable, newClkTime, newRegMap, newFlags, newMemoryMap, newFlagsHasChanged = 
+            showInfoFromCurrentMode m.RunMode
+        Browser.console.log("")
+        { m with SymbolMap = defaultValue m.SymbolMap newSymbolTable 
+                 ClockTime = defaultValue m.ClockTime newClkTime 
+                 RegMap = defaultValue m.RegMap newRegMap
+                 Flags = defaultValue m.Flags newFlags 
+                 MemoryMap = defaultValue m.MemoryMap newMemoryMap
+                 FlagsHasChanged = defaultValue m.FlagsHasChanged newFlagsHasChanged }, 
+        Cmd.none
+    | UpdateGUIFromRunState ri ->
+        let newRunMode, newEditorEnable, newDialogBox, cmd = updateGUIFromRunState ri
+        { m with RunMode = defaultValue m.RunMode newRunMode
+                 EditorEnable = defaultValue m.EditorEnable newEditorEnable
+                 DialogBox = defaultValue m.DialogBox newDialogBox 
+                 }, cmd
     | HighlightCurrentAndNextIns (className, ri) -> 
-        //let c = highlightCurrentAndNextIns className ri//TODO: 
+        let newDecorations, cmd = 
+            highlightCurrentAndNextIns className ri m.Editors.[m.TabId].IEditor m.Decorations 
+        { m with Decorations = newDecorations }, cmd
+    | MakeToolTipInfo (v, orientation, dp, condInstr) -> //TODO:
+            m, Cmd.none
+    | MakeEditorInfoButtonWithTheme (v, orientation, dp, condInstr, c) -> //TODO: 
         m, Cmd.none
-    | MakeToolTipInfo (a, b, c, d) -> //TODO: 
-        m, Cmd.none
+    | DisplayState (ri', running, ri) ->
+        let newLastDisplayStepsDone, newDialogBox, cmd =
+            displayState ri' running m.TabId ri m.LastDisplayStepsDone m.Settings.SimulatorMaxSteps
+        { m with LastDisplayStepsDone = defaultValue m.LastDisplayStepsDone newLastDisplayStepsDone
+                 DialogBox = defaultValue m.DialogBox newDialogBox }, 
+        cmd
+    | MakeShiftTooltip (h, v, orientation, dp, dpAfter, uFAfter, rn, shiftT, alu, shiftAmt, op2) ->
+        m, Cmd.none //TODO: 
+    | MakeEditorInfoButton (clickable, h, v, orientation, el) ->
+        m, Cmd.none //TODO: 
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
