@@ -13,7 +13,6 @@ open Fable.Core.JsInterop
 open Fable.Import
 open Fable.Import.Browser
 open Microsoft.FSharp.Collections
-open Node.Exports
 open EEExtensions
 open Monaco
 open ExecutionTop
@@ -88,6 +87,33 @@ type DialogBox =
     | UnsavedFileDl
     | StepDl
     | StepBackDl
+
+type CodeType = DP3 | DP2 | CMP | LDRSTR | LDMSTM | MISC | EQU | UNIMPLEMENTED
+
+
+type TooltipsProps =
+    | Content of string
+    | Animation of string
+    | Arrow of bool
+    | Theme of string
+    | Distance of int
+    | HideOnClick of bool
+    | Placement of string
+    | Delay of int * int
+
+type EditorsProps =
+    | Width of obj
+    | Height of obj
+    | DefaultValue of obj
+    | Language of string
+    | Theme of string
+    | Options of obj
+    | EditorWillMount of (Monaco.IExports -> unit)
+    | EditorDidMount of (Monaco.Editor.IEditor -> unit)
+    | RequireConfig of obj
+    | OnChange of (string -> unit)
+    | Value of string
+    | IsReadOnly of bool
 
 /// Position of widget on editor buffer character grid.
 /// AboveBelow => offset form position, Exact => centered on position
@@ -248,79 +274,7 @@ let initialClose (dispatch : Msg -> unit) =
         InitiateClose |> dispatch
     | _ ->
         ()
-
-//------------------------------------------TIPPY.JS----------------------------------------------
-
-/// top-level function from tippy.js to make tooltips
-let tippy (rClass : string, tippyOpts : obj) : unit = importDefault "tippy.js"
-
-//-------------------------------------------VEX-JS-----------------------------------------------
-
-/// interfaces to vex.js
-[<Emit("require('vex-js');")>]
-let vex : obj = jsNative
-
-[<Emit("require('vex-dialog');")>]
-let vexDialog : obj = jsNative
-
-vex?defaultOptions?className <- "vex-theme-default"
-
-vex?registerPlugin vexDialog
-
-let vButton (caption : string) =
-    createObj [
-        "text" ==> caption
-        "click" ==> fun () -> "abc"
-    ]
-
-let showVexConfirm (htmlMessage : string) (callBack : bool -> unit) =
-    vex?dialog?confirm (createObj [
-        "unsafeMessage" ==> htmlMessage;
-        "callback" ==> callBack ])
-    ()
-
-let showVexPrompt (placeHolder : string) (callBack : string -> unit) (htmlMessage : string) =
-    vex?dialog?prompt (createObj [
-        "unsafeMessage" ==> htmlMessage
-        "placeholder" ==> placeHolder
-        "callback" ==> callBack
-        ])
-    ()
-
-let showVexAlert (htmlMessage : string) (callBack : bool -> unit) =
-    vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage 
-                                  "callback" ==> callBack ])
-    ()
-
-let validPosInt s =
-    match s with
-    | null -> Error ""
-    | x ->
-        printfn "Error %s" x
-        x
-        |> System.Int32.TryParse
-        |> function
-            | true, n when n > 0 -> Ok n
-            | true, n -> Error "number must be greater than 0"
-            | false, _ -> Error "Input a positive integer"
-
-let showVexValidatedPrompt (placeHolder : string) 
-                           (validator : string -> Result<'T, string>) 
-                           (callBack : 'T -> unit) 
-                           (htmlMessage : string) 
-                           (callBack2 : Unit) =
-    let cb (s : string) =
-        match (unbox s) with
-        | false -> ()
-        | _ ->
-            validator s
-            |> function
-                | Ok valid -> 
-                    callBack valid
-                    callBack2
-                | Error _ -> 
-                    callBack2
-    showVexPrompt placeHolder cb htmlMessage
+        
     
 //---------------------------------------------SVG------------------------------------------------
 
@@ -408,10 +362,6 @@ let isUndefined (_ : 'a) : bool = jsNative
 [<Emit("__dirname")>]
 
 let appDirName : string = jsNative
-            
-/// A reference to the settings for the app
-/// persistent using electron-settings
-let settings : obj = electron.remote.require "electron-settings"
 
 let initSettings = {
     EditorFontSize = "16"
@@ -434,135 +384,13 @@ let themes = [
 let minFontSize = 6L
 let maxFontSize = 60L
 
-let checkPath (p : string) =
-    let p' = path.dirname p
-    try
-        let stat' = fs.statSync (U2.Case1 p')
-        let stat = fs.statSync (U2.Case1 p)
-        match (stat.isDirectory(), stat'.isDirectory()) with
-        | true, _ -> p
-        | false, true -> p'
-        | _ -> os.homedir()
-    with
-        | e -> os.homedir()
-
-
-let checkSettings (vs : VSettings) vso =
-    try
-        let checkNum (n : string) (min : int64) (max : int64) (def : string) =
-            match int64 n with
-            | x when x > max -> def
-            | x when x < min -> def
-            | x -> x.ToString()
-        {
-        vs with
-            EditorTheme =
-                match List.tryFind (fun (th, _) -> (th = vs.EditorTheme)) themes with
-                | Some _ -> vs.EditorTheme
-                | _ -> printfn "Setting theme to default"
-                       vso.EditorTheme
-            SimulatorMaxSteps =
-                checkNum vs.SimulatorMaxSteps 0L System.Int64.MaxValue vso.SimulatorMaxSteps
-            EditorFontSize =
-                checkNum vs.EditorFontSize minFontSize maxFontSize vso.EditorFontSize
-            CurrentFilePath = checkPath vs.CurrentFilePath
-        }
-    with
-        | _ -> printf "Error parsing stored settings: %A" vs
-               vs
-
-let setJSONSettings setting =
-    let setSetting (name : string) (value : string) =
-        printf "Saving JSON: %A" value
-        settings?set (name, value) |> ignore
-    printfn "Saving settings to this PC: %A" setting
-    setSetting "JSON" (Fable.Import.JS.JSON.stringify setting)
-
-
-let getJSONSettings initSettings =
-    let json = settings?get ("JSON", "undefined")
-    printfn "Getting settings"
-    match json = "undefined" with
-    | true ->
-            printfn "No JSON settings found on this PC"
-            setJSONSettings()
-            initSettings
-    | false ->
-        try
-            let vs = (Fable.Import.JS.JSON.parse json) :?> VSettings
-            vs
-        with
-        | e ->
-            printfn "Parse failed: using default settings"
-            initSettings
-
-let showMessage1 (callBack : int -> unit) (message : string) (detail : string) (buttons : string list) =
-    let rem = electron.remote
-    let retFn = unbox callBack
-    rem.dialog.showMessageBox (
-       (let opts = createEmpty<Fable.Import.Electron.ShowMessageBoxOptions>
-        opts.title <- FSharp.Core.Option.None
-        opts.message <- message |> Some
-        opts.detail <- detail |> Some
-        opts.``type`` <- "none" |> Some
-        opts.buttons <- buttons |> List.toSeq |> ResizeArray |> Some
-        opts), retFn)
-    |> ignore
-
-let showAlert (message : string) (detail : string) =
-    showVexAlert <|
-        sprintf """<p style="text-align:center"><b>%s</b><br>%s</p>""" detail message
-
-let showAlert1 (message : string) (detail : string) =
-    let rem = electron.remote
-    rem.dialog.showMessageBox (
-       (let opts = createEmpty<Fable.Import.Electron.ShowMessageBoxOptions>
-        opts.title <- FSharp.Core.Option.None
-        opts.message <- message |> Some
-        opts.detail <- detail |> Some
-        opts.``type`` <- "error" |> Some
-        opts))
-    |> ignore
-
 let visualDocsPage name =
     match EEExtensions.String.split [| '#' |] name |> Array.toList with
     | [ "" ] -> @"https://tomcl.github.io/visual2.github.io/guide.html#content"
     | [ page ] -> sprintf "https://tomcl.github.io/visual2.github.io/%s.html#content" page
     | [ page; tag ] -> sprintf @"https://tomcl.github.io/visual2.github.io/%s.html#%s" page tag
     | _ -> failwithf "What? Split must return non-empty list!"
-
-/// Run an external URL url in a separate window.
-/// Second parameter triggers action (for use in menus)
-let runPage url () =
-    printf "Running page %s" url
-    let rem = electron.remote
-    let options = createEmpty<Electron.BrowserWindowOptions>
-    // Complete list of window options
-    // https://electronjs.org/docs/api/browser-window#new-browserwindowoptions
-    options.width <- Some 1200.
-    options.height <- Some 800.
-    //options.show <- Some false
-    let prefs = createEmpty<Electron.WebPreferences>
-    prefs.devTools <- Some false
-    prefs.nodeIntegration <- Some false
-    options.webPreferences <- Some prefs
-
-    options.frame <- Some true
-    options.hasShadow <- Some true
-    options.backgroundColor <- None
-    options.icon <- Some(U2.Case2 "app/visual.ico")
-    let window = rem.BrowserWindow.Create(options)
-    window.setMenuBarVisibility true
-    window.loadURL url
-    window.show()
-
-let runExtPage url () =
-    electron.shell.openExternal url |> ignore
-
-let writeToFile str path =
-    let errorHandler _err = // TODO: figure out how to handle errors which can occur
-        ()
-    fs.writeFile (path, str, errorHandler)
+    
 
 let initialFlags = { N = false; Z = false; C = false; V = false }
 

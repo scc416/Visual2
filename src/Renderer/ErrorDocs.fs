@@ -10,8 +10,6 @@ open EEExtensions
 open Refs
 open Fable.PowerPack
 
-type CodeType = DP3 | DP2 | CMP | LDRSTR | LDMSTM | MISC | EQU | UNIMPLEMENTED
-
 
 let opCodeData = [
     "ADD","dest := op1 + op2", DP3

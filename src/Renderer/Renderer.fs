@@ -11,7 +11,6 @@ open Fable.Core.JsInterop
 open Fable.Import
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
-open Monaco
 open Views
 open Tabs
 open MenuBar
@@ -23,7 +22,6 @@ open Dialog
 open Stats
 open Integration
 open ExecutionTop
-open CommonData
 open Core.Option
 
 let init _ =
@@ -398,10 +396,10 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                 [ str "Step " ]
                          (statusBar m.RunMode)
                          div [ ClassName "btn-group clock" ]
-                             [ tooltips (Content clockSymTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
+                             [ tooltips (Refs.Content clockSymTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
                                         [ button [ ClassName "btn btn-large btn-default clock-symbol" ]
                                                  [ str "\U0001F551" ]]
-                               tooltips (Content clockTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
+                               tooltips (Refs.Content clockTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
                                         [ button [ ClassName "btn btn-large btn-default clock-time" ]//; Disabled true ]
                                                  [ m.ClockTime |> clockText |> str  ] ] ]
                          repButtons m.CurrentRep dispatch ] ]

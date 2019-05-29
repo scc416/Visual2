@@ -4,7 +4,13 @@ open EEExtensions
 open Fable.Core.JsInterop
 open Fable.Import
 open Fable.Import.Electron
+open Node.Exports
 open Refs
+
+let writeToFile str path =
+    let errorHandler _err = // TODO: figure out how to handle errors which can occur
+        ()
+    fs.writeFile (path, str, errorHandler)
 
 /// merge 2 maps into 1
 /// if key repeated, the ones in the old map are kept

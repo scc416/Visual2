@@ -469,5 +469,3 @@ let runSimulation tabId : DialogBox option option * Cmd<Msg> =
         newDialogBox |> Some |> Some , Cmd.none
     | _ -> 
         None, Cmd.ofMsg IsItTestbench
-
-        

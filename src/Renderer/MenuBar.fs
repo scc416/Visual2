@@ -9,7 +9,10 @@ open Node.Base
 open Refs
 open Tabs
 open Integration
+open Dialog
 
+let runExtPage url () =
+    electron.shell.openExternal url |> ignore
 
 let display runMode =
     match runMode with

@@ -28,6 +28,11 @@ open Refs
 open CommonData
 open Monaco
 
+//------------------------------------------TIPPY.JS----------------------------------------------
+
+/// top-level function from tippy.js to make tooltips
+let tippy (rClass : string, tippyOpts : obj) : unit = importDefault "tippy.js"
+
 let deleteContentWidget currentTabWidgets editor name =
     match Map.tryFind name currentTabWidgets with
     | None -> ()
@@ -37,15 +42,7 @@ let deleteContentWidget currentTabWidgets editor name =
 let deleteAllContentWidgets currentTabWidgets editor =
     Array.iter (deleteContentWidget currentTabWidgets editor) (Map.keys currentTabWidgets)
 
-type TooltipsProps =
-    | Content of string
-    | Animation of string
-    | Arrow of bool
-    | Theme of string
-    | Distance of int
-    | HideOnClick of bool
-    | Placement of string
-    | Delay of int * int
+
     
 let inline tooltips (props: TooltipsProps list) 
                     (elLst: React.ReactElement list) : React.ReactElement =
@@ -54,11 +51,11 @@ let inline tooltips (props: TooltipsProps list)
              (keyValueList CaseRules.LowerFirst props) 
              elLst
 
-let basicTooltipsPropsLst =
+let basicTooltipsPropsLst : TooltipsProps list =
     [ Animation "fade"
       Arrow true
       Animation "fade"
-      Theme "bootstrap"
+      Refs.Theme "bootstrap"
       Distance 7
       HideOnClick false ]   
 

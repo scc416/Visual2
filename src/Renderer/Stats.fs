@@ -14,16 +14,11 @@ open Fable.Core
 open EEExtensions
 open Node.Exports
 open Refs
-open Elmish
-open Elmish.React
-open Elmish.HMR
-open Elmish.Debug
-open Elmish.Browser.Navigation
-
 open Fable.PowerPack
 open Fable.PowerPack.Fetch
-
 open System
+open Settings
+open Elmish
 
 let logFileName = "Visual2eventLog.txt"
 
@@ -199,7 +194,7 @@ let doFetch (onlineFetchText, ve, lastRemindTime, debugLevel) =
         let newOnlineFetchText = txt
         if onlineFetchText <> txt
         then
-            Refs.setJSONSettings()
+            setJSONSettings()
             printfn "-----updating online text to-----\n%s\n------------------------" txt
         txt
     )

@@ -66,7 +66,7 @@ let repButtons (currentRep : Representations)
             function
             | x when x = currentRep -> ClassName "btn btn-rep btn-rep-enabled"
             | _ -> ClassName "btn btn-rep"
-        tooltips ((rep |> repTooltipStr |> Content) :: 
+        tooltips ((rep |> repTooltipStr |> Refs.Content) :: 
                   Placement "bottom" :: 
                   defaultTooltipsPropsLst)
                  [ button [ currentRepButtonsClass rep
@@ -96,7 +96,7 @@ let viewButtons currentView dispatch =
 
     /// return a view button
     let viewButton view =
-        tooltips ((view |> viewTooltipStr |> Content) :: Placement "bottom" :: defaultTooltipsPropsLst)
+        tooltips ((view |> viewTooltipStr |> Refs.Content) :: Placement "bottom" :: defaultTooltipsPropsLst)
                  [ div [ currentViewClass view
                          DOMAttr.OnClick (fun _ -> view |> ChangeView |> dispatch) ] 
                        [ view |> string |> str ]]
@@ -322,7 +322,7 @@ let regView (regMap : Map<CommonData.RName, uint32>) currentRep =
     let registerLi rName  = 
         li [ ClassName "list-group-item" ] 
            [ div [ ClassName "btn-group full-width" ] 
-                 [ tooltips ((rName |> regTooltipStr |> Content) :: Placement "bottom" :: basicTooltipsPropsLst)
+                 [ tooltips ((rName |> regTooltipStr |> Refs.Content) :: Placement "bottom" :: basicTooltipsPropsLst)
                             [ button [ ClassName "btn btn-reg" ] 
                                      [  rName |> string |> str ] ]
                    span [ ClassName "btn btn-reg-con selectable-text" ] 
@@ -365,7 +365,7 @@ let footer (flags : CommonData.Flags) (flagsChanged : bool) =
                        Style [ Background (flagsChanged |> footerColour) ] ] 
                      [ str text ] ]
     footer [ ClassName "toolbar toolbar-footer" ] 
-           [ tooltips (Content flagTooltipStr :: Placement "top" :: basicTooltipsPropsLst)
+           [ tooltips (Refs.Content flagTooltipStr :: Placement "top" :: basicTooltipsPropsLst)
                       [ div [ ClassName "pull-right" ]
                             [ footerDiv "N" flags.N
                               footerDiv "Z" flags.Z

@@ -7,9 +7,77 @@ open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Fable.Core.JsInterop
 open Fable.Import
-open Fable.Helpers.React
-open Fable.Helpers.React.Props
 open Tabs
+open CommonData
+open Fable.Core
+open Node.Exports
+
+/// A reference to the settings for the app
+/// persistent using electron-settings
+let settings : obj = electron.remote.require "electron-settings"
+
+let checkPath (p : string) =
+    let p' = path.dirname p
+    try
+        let stat' = fs.statSync (U2.Case1 p')
+        let stat = fs.statSync (U2.Case1 p)
+        match (stat.isDirectory(), stat'.isDirectory()) with
+        | true, _ -> p
+        | false, true -> p'
+        | _ -> os.homedir()
+    with
+        | e -> os.homedir()
+
+let setJSONSettings setting =
+    let setSetting (name : string) (value : string) =
+        printf "Saving JSON: %A" value
+        settings?set (name, value) |> ignore
+    printfn "Saving settings to this PC: %A" setting
+    setSetting "JSON" (Fable.Import.JS.JSON.stringify setting)
+
+
+let getJSONSettings initSettings =
+    let json = settings?get ("JSON", "undefined")
+    printfn "Getting settings"
+    match json = "undefined" with
+    | true ->
+            printfn "No JSON settings found on this PC"
+            setJSONSettings()
+            initSettings
+    | false ->
+        try
+            let vs = (Fable.Import.JS.JSON.parse json) :?> VSettings
+            vs
+        with
+        | e ->
+            printfn "Parse failed: using default settings"
+            initSettings
+
+
+let checkSettings (vs : VSettings) vso =
+    try
+        let checkNum (n : string) (min : int64) (max : int64) (def : string) =
+            match int64 n with
+            | x when x > max -> def
+            | x when x < min -> def
+            | x -> x.ToString()
+        {
+        vs with
+            EditorTheme =
+                match List.tryFind (fun (th, _) -> (th = vs.EditorTheme)) themes with
+                | Some _ -> vs.EditorTheme
+                | _ -> printfn "Setting theme to default"
+                       vso.EditorTheme
+            SimulatorMaxSteps =
+                checkNum vs.SimulatorMaxSteps 0L System.Int64.MaxValue vso.SimulatorMaxSteps
+            EditorFontSize =
+                checkNum vs.EditorFontSize minFontSize maxFontSize vso.EditorFontSize
+            CurrentFilePath = checkPath vs.CurrentFilePath
+        }
+    with
+        | _ -> printf "Error parsing stored settings: %A" vs
+               vs
+
 
 /// string for the id, to obtain the value in input
 let editorFontSize = "editor-font-size"
