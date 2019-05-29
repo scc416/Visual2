@@ -113,7 +113,7 @@ let saveFileUpdate (tabId, editors : Map<int, Editor>) =
 let saveAsFileDialogUpdate dialogBox =
     function
     | -1 -> dialogBox /// make sure sure no other dialog is opened and there is at least one tab
-    | _ -> dialogBoxUpdate SaveAsDl dialogBox
+    | _ -> dialogBoxUpdate (Some SaveAsDl) dialogBox
 
 /// top-level function for opening up the open file dialog
 let saveAsFileUpdate (editors : Map<int, Editor>, tabId, filePathSettingStr)

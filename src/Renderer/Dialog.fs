@@ -78,6 +78,8 @@ let attemptToExitUpdate editors (dialogBox: DialogBox option) =
             |> Map.forall (fun _ value -> value.Saved = true) 
         match allSaved with
         | true -> dialogBox, Cmd.ofMsg Exit
-        | _ -> dialogBoxUpdate QuitDl dialogBox, Cmd.none
+        | _ -> 
+            dialogBox 
+            |> dialogBoxUpdate (Some QuitDl), Cmd.none
     | _ -> 
         dialogBox, Cmd.none

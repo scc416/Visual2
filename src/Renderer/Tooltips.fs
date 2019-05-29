@@ -376,7 +376,7 @@ let makeEditorInfoButtonWithTheme theme (clickable : bool) (h, v, orientation)
                                   currentContentWidget editor editorFontSize 
                                   (buttonText : string) (toolTipDOM : HTMLElement) 
                                    =
-    Cmd.ofMsg DeleteAllContentWidgets |> ignore
+    //Cmd.ofMsg DeleteAllContentWidgets |> ignore
     /// Ratio of char width / char size for editor buffer font.
     /// TODO: work this out properly from a test
     let editorFontWidthRatio = 0.6 // works OK for Fira Code Mono
@@ -391,15 +391,15 @@ let makeEditorInfoButtonWithTheme theme (clickable : bool) (h, v, orientation)
     dom.addEventListener_click (fun _ ->
         Browser.console.log (sprintf "Clicking button %s" buttonText) |> (fun _ -> createObj [])
         )
-    deleteContentWidget currentContentWidget editor domID // in some cases we may be updating an existing widget
+    //deleteContentWidget currentContentWidget editor domID // in some cases we may be updating an existing widget
     let newWidget = makeContentWidget domID dom editor currentContentWidget <| Exact(0, v)
     makeTooltip theme orientation clickable false domID tooltip
+    newWidget
 
 let lineTipsClickable = false
 
 /// Drive the displayShiftDiagram function from a tooltip with correct parameters for given line
-let makeShiftTooltip (h, v, orientation) (dp : DataPath, dpAfter : DataPath, uFAfter : DP.UFlags) (rn : RName) (shiftT : DP.ArmShiftType Option, alu : bool) (shiftAmt : uint32) (op2 : DP.Op2) 
-                     currentWidget editor fontSize =
+let makeShiftTooltip (h, v, orientation) (dp : DataPath, dpAfter : DataPath, uFAfter : DP.UFlags) (rn : RName) (shiftT : DP.ArmShiftType Option, alu : bool) (shiftAmt : uint32) (op2 : DP.Op2) =
     let bToi = function | true -> 1 | false -> 0
     let before = dp.Regs.[rn]
     let (after, uF) = DP.evalOp2 op2 dp
@@ -410,6 +410,8 @@ let makeShiftTooltip (h, v, orientation) (dp : DataPath, dpAfter : DataPath, uFA
     printfn "After': %d,%d" after after'
     printfn "Making shift tooltip"
     let diagram = displayShiftDiagram rn (before, bToi dp.Fl.C) (after', final, bToi uF.Ca, finalC, finalFWrite, alu) shiftT (shiftAmt |> int)
-    Cmd.batch []
-
-    //makeEditorInfoButtonWithTheme "light" lineTipsClickable (h, (v + 1), orientation) currentWidget editor fontSize "Shift" diagram 
+    Cmd.batch [
+        Cmd.ofMsg DeleteAllContentWidgets 
+        Cmd.ofMsg DeleteAllContentWidgets
+        ("light", lineTipsClickable, h, (v + 1), orientation, diagram, "Shift") |> MakeEditorInfoButton |> Cmd.ofMsg 
+        ]

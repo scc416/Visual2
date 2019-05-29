@@ -77,7 +77,7 @@ let init _ =
 let update (msg : Msg) (m : Model) =
     match msg with
     | UpdateDialogBox dialogBox ->
-        let newDialogBox = dialogBoxUpdate dialogBox m.DialogBox
+        let newDialogBox = dialogBoxUpdate (Some dialogBox) m.DialogBox
         { m with DialogBox = newDialogBox }, Cmd.none
     | ChangeView view -> 
         { m with CurrentView = view }, Cmd.none
@@ -120,7 +120,7 @@ let update (msg : Msg) (m : Model) =
                  TabId = newTabId
                  Settings = newSettings }, Cmd.ofMsg CloseDialog
     | OpenFileDialog -> 
-        let newDialog = dialogBoxUpdate OpenFileDl m.DialogBox
+        let newDialog = dialogBoxUpdate (Some OpenFileDl) m.DialogBox
         { m with DialogBox = newDialog }, Cmd.none
     | SaveFile -> 
         let newDialog, newEditors = 
@@ -232,19 +232,18 @@ let update (msg : Msg) (m : Model) =
     | SetCurrentModeActive (rs, ri) ->
         { m with RunMode = ActiveMode(rs, ri) }, Cmd.none
     | MatchRunMode ->
-        let cmd = matchRunMode m.RunMode
-        m, cmd
-    | RunEditorTab ->
-        m, Cmd.batch [ Cmd.ofMsg ResetEmulator
-                       Cmd.ofMsg RrepareModeForExecution 
-                       Cmd.ofMsg RunEditorRunMode ]
-    | RunEditorRunMode ->
         let steps = 
             m.Settings.SimulatorMaxSteps
             |> int64 
             |> stepsFromSettings 
+        let cmd = matchRunMode NoBreak steps m.RunMode 
+        m, cmd
+    | RunEditorTab (bkCon, steps) ->
+        m, Cmd.batch [ Cmd.ofMsg RrepareModeForExecution 
+                       (bkCon, steps) |> RunEditorRunMode |> Cmd.ofMsg ]
+    | RunEditorRunMode (bkCon, steps)->
         let cmd = 
-            runEditorRunMode NoBreak steps m.RunMode
+            runEditorRunMode bkCon steps m.RunMode
         m, cmd
     | TryParseAndIndentCode (test, steps, bkCon) ->
         let loadImage, newRunMode, newDecorations = 
@@ -292,11 +291,14 @@ let update (msg : Msg) (m : Model) =
         Cmd.batch [ Cmd.ofMsg DeleteAllContentWidgets
                     Cmd.ofMsg RemoveDecorations ]
     | RemoveDecorations ->
-        List.iter (fun x -> removeDecorations m.Editors.[m.TabId].IEditor x) 
-                  m.Decorations
+        executeFunc 
+            (List.iter (fun x -> removeDecorations m.Editors.[m.TabId].IEditor x) m.Decorations)
+            m.TabId
         { m with Decorations = [] }, Cmd.none
     | DeleteAllContentWidgets ->
-        deleteAllContentWidgets m.CurrentTabWidgets m.Editors.[m.TabId].IEditor
+        executeFunc 
+            (deleteAllContentWidgets m.CurrentTabWidgets m.Editors.[m.TabId].IEditor)
+            m.TabId
         { m with CurrentTabWidgets = Map.empty }, Cmd.none
     | ShowInfoFromCurrentMode ->
         let newSymbolTable, newClkTime, newRegMap, newFlags, newMemoryMap, newFlagsHasChanged = 
@@ -319,10 +321,15 @@ let update (msg : Msg) (m : Model) =
         let newDecorations, cmd = 
             highlightCurrentAndNextIns className ri m.Editors.[m.TabId].IEditor m.Decorations 
         { m with Decorations = newDecorations }, cmd
-    | MakeToolTipInfo (v, orientation, dp, condInstr) -> //TODO:
-            m, Cmd.none
-    | MakeEditorInfoButtonWithTheme (v, orientation, dp, condInstr, c) -> //TODO: 
-        m, Cmd.none
+    | MakeToolTipInfo (v, orientation, dp, condInstr) ->
+        let cmd = 
+            toolTipInfo 
+                (v, orientation)
+                dp
+                condInstr
+                m.Editors.[m.TabId].IEditor
+                m.Settings.EditorTheme
+        m, cmd
     | DisplayState (ri', running, ri) ->
         let newLastDisplayStepsDone, newDialogBox, cmd =
             displayState ri' running m.TabId ri m.LastDisplayStepsDone m.Settings.SimulatorMaxSteps
@@ -330,9 +337,36 @@ let update (msg : Msg) (m : Model) =
                  DialogBox = defaultValue m.DialogBox newDialogBox }, 
         cmd
     | MakeShiftTooltip (h, v, orientation, dp, dpAfter, uFAfter, rn, shiftT, alu, shiftAmt, op2) ->
-        m, Cmd.none //TODO: 
-    | MakeEditorInfoButton (clickable, h, v, orientation, el) ->
-        m, Cmd.none //TODO: 
+        let cmd = 
+            makeShiftTooltip 
+                (h, v, orientation)
+                (dp, dpAfter,uFAfter)
+                rn
+                (shiftT, alu)
+                shiftAmt
+                op2
+        m, cmd
+    | MakeEditorInfoButton (theme, clickable, h, v, orientation, el, txt) ->
+        let newWidgets = 
+            makeEditorInfoButtonWithTheme 
+                theme
+                clickable 
+                (h, v, orientation)
+                m.CurrentTabWidgets
+                m.Editors.[m.TabId].IEditor
+                (int m.Settings.EditorFontSize)
+                txt
+                el
+        { m with CurrentTabWidgets = newWidgets }, Cmd.none
+    | StepCode ->
+        let dialogBox, cmd =
+            stepCode m.TabId m.Editors 
+        let newDialogBox = defaultValue m.DialogBox dialogBox
+        { m with DialogBox = dialogBoxUpdate m.DialogBox newDialogBox }, cmd
+    | StepCodeBack -> 
+        m, Cmd.none//TODO:
+    | StepCodeBackBy steps ->
+        m, Cmd.none//TODO:
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
@@ -356,11 +390,11 @@ let view (m : Model) (dispatch : Msg -> unit) =
                          button [ ClassName "btn btn-default"
                                   DOMAttr.OnClick (fun _ -> ResetEmulator |> dispatch) ]
                                 [ str "Reset" ]
-                         button [ ClassName "btn btn-default button-back" ]
-                                  //DOMAttr.OnClick (fun _ -> Integration.stepCodeBack m |> UpdateModel |> dispatch) ]
+                         button [ ClassName "btn btn-default button-back"
+                                  DOMAttr.OnClick (fun _ -> StepCodeBack |> dispatch) ]
                                 [ str " Step" ]
-                         button [ ClassName "btn btn-default button-forward" ]
-                                  //DOMAttr.OnClick (fun _ -> Integration.stepCode m.TabId m.Editors m |> UpdateModel |> dispatch )]
+                         button [ ClassName "btn btn-default button-forward"
+                                  DOMAttr.OnClick (fun _ -> StepCode |> dispatch ) ]
                                 [ str "Step " ]
                          (statusBar m.RunMode)
                          div [ ClassName "btn-group clock" ]

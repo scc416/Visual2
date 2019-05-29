@@ -643,8 +643,8 @@ let findCodeEnd (lineCol : int) editor =
 
 
 /// Make an editor tooltip info button with correct theme
-let makeEditorInfoButton clickable (h, v, orientation) editorTheme widgets editor fontSize = 
-    makeEditorInfoButtonWithTheme (tippyTheme editorTheme) clickable (h, v, orientation) widgets editor fontSize
+let makeEditorInfoButton clickable (h, v, orientation) editorTheme = 
+    makeEditorInfoButtonWithTheme (tippyTheme editorTheme) clickable (h, v, orientation)
 
 let lineTipsClickable = false
 
@@ -653,7 +653,8 @@ let lineTipsClickable = false
 let toolTipInfo (v : int, orientation : string)
                 (dp : DataPath)
                 ({ Cond = cond; InsExec = instruction; InsOpCode = opc } : ParseTop.CondInstr)
-                editor : Cmd<Msg> =
+                editor 
+                editorTheme : Cmd<Msg> =
     match Helpers.condExecute cond dp, instruction with
     | false, _ -> Cmd.none
     | true, ParseTop.IMEM ins ->
@@ -710,11 +711,16 @@ let toolTipInfo (v : int, orientation : string)
                                         | MByte -> sprintf "0x%02X" ((uint32 d) % 256u) ]
                     ]
 
+            let cmd = 
+                    [ Cmd.ofMsg DeleteAllContentWidgets 
+                      Cmd.ofMsg DeleteAllContentWidgets ]
             let makeTip memInfo =
                 let (hOffset, label), tipDom = memInfo dp
-                (Tooltips.lineTipsClickable, hOffset, (v + 1), orientation, tipDom) 
+                [ ((tippyTheme editorTheme), Tooltips.lineTipsClickable, hOffset, (v + 1), orientation, tipDom, label) 
                 |> MakeEditorInfoButton 
-                |> Cmd.ofMsg
+                |> Cmd.ofMsg ]
+                |> List.append cmd
+                |> Cmd.batch
             match ins with
             | Memory.LDR ins -> makeTip <| memPointerInfo ins MemRead
             | Memory.STR ins -> makeTip <| memPointerInfo ins MemWrite

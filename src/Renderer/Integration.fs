@@ -98,6 +98,15 @@ let highlightCurrentAndNextIns classname pInfo editor decorations =
     | _ -> 
         newDecorations, cmd
 
+let stepCode tabId editors : DialogBox option option * Cmd<Msg> =
+    match currentTabIsTB tabId editors with
+    | false -> 
+        None, 
+        (NoBreak, 1L) |> RunEditorTab |> Cmd.ofMsg 
+    | true -> 
+        "Current file is a testbench: switch to an assembly tab" |> Alert |> Some |> Some ,
+        Cmd.none
+
 /// Update GUI after a runtime error or exit. Highlight error line (and make it visible).
 /// Set suitable error message hover. Update GUI to 'finished' state on program exit.
 /// If running a testbench check results on finish and start next test if passed.
@@ -359,15 +368,15 @@ let prepareModeForExecution editor =
             else Cmd.none, None
     | _ -> Cmd.none, None
 
-let matchRunMode =
+let matchRunMode bkCon steps =
     function
     | FinishedMode _
     | RunErrorMode _ -> 
         Cmd.batch [ Cmd.ofMsg ResetEmulator
-                    Cmd.ofMsg RunEditorTab ]
+                    (bkCon, steps) |> RunEditorTab |> Cmd.ofMsg ]
     | _ -> 
         Browser.console.log("")
-        Cmd.ofMsg RunEditorTab
+        (bkCon, steps) |> RunEditorTab |> Cmd.ofMsg
 
 let matchActiveMode =
     function

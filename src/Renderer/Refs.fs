@@ -190,11 +190,11 @@ type Msg =
     | MatchActiveMode
     | MatchRunMode
     | SetCurrentModeActive of RunState * RunInfo
-    | RunEditorTab
+    | RunEditorTab of BreakCondition * int64
     | DeleteAllContentWidgets
     | RemoveDecorations
     | RrepareModeForExecution
-    | RunEditorRunMode
+    | RunEditorRunMode of BreakCondition * int64
     | AsmStepDisplay of BreakCondition * int64 * RunInfo
     | MatchLoadImage of (LoadImage * string list) option * int64 * BreakCondition
     | MatchLoadImageTest of (LoadImage * string list) option
@@ -204,10 +204,12 @@ type Msg =
     | ShowInfoFromCurrentMode
     | HighlightCurrentAndNextIns of string * RunInfo
     | MakeToolTipInfo of int * string * DataPath * ParseTop.CondInstr
-    | MakeEditorInfoButtonWithTheme of string * bool * int * int * string
     | DisplayState of RunInfo * bool * RunInfo
     | MakeShiftTooltip of int * int * string * DataPath * DataPath * DP.UFlags * RName * DP.ArmShiftType Option * bool * uint32 * DP.Op2
-    | MakeEditorInfoButton of bool * int * int * string * HTMLElement
+    | MakeEditorInfoButton of string * bool * int * int * string * HTMLElement * string
+    | StepCode
+    | StepCodeBack
+    | StepCodeBackBy of int
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
@@ -224,9 +226,13 @@ let uniqueTabId (editor : Map<int, Editor>) =
 
 let dialogBoxUpdate newDialogBox =
     function   
-    | Option.None -> Some newDialogBox
+    | Option.None -> newDialogBox
     | x -> x 
 
+let executeFunc func =
+    function
+    | -1 -> ()
+    | _ -> func
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries
 // ***********************************************************************************************

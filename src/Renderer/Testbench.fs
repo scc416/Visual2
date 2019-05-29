@@ -65,7 +65,7 @@ let writeTest (test : Test) (editors : Map<int, Editor>) =
 /// Returns true if test has passed.
 let addResultsToTestbench (test : Test) (dp : DataPath) editors =
     let goodParse, resultLines = computeTestResults test dp
-    writeTest { test with CheckLines = resultLines } editors
+    writeTest { test with CheckLines = resultLines } editors,
     goodParse
 
 /// Top-level testbench parse. Locate loaded testbench, generate pair of testbench tab ID
