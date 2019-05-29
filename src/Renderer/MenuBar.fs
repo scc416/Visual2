@@ -111,7 +111,7 @@ let makeMenu (name : string) (table : MenuItemOptions list) =
  *                                         MENUS
  *
  ****************************************************************************************************)
-let fileMenu id (dispatch : (Msg -> Unit)) debugLevel runMode =
+let fileMenu (dispatch : (Msg -> Unit)) id debugLevel runMode =
     makeMenu "File" [
             makeItem "New" (Some "CmdOrCtrl+N") (interlockAction "make new file tab" (fun _ -> NewFile |> dispatch) debugLevel runMode)
             menuSeparator
@@ -164,7 +164,7 @@ let popupMenu (items) =
     menu.popup (electron.remote.getCurrentWindow())
     ()
 
-let testMenu (m : Model) (dispatch : (Msg -> Unit)) =
+let testMenu (dispatch : (Msg -> Unit)) =
         let runToBranch() = ()
         let menu = electron.remote.Menu.Create()
         //let runSteps() =
@@ -191,7 +191,7 @@ let testMenu (m : Model) (dispatch : (Msg -> Unit)) =
             //makeItem "Run all tests" Core.Option.None (interlockAction "Testbench" (fun () -> Integration.runTestbenchOnCode m) m.DebugLevel m.RunMode)
         ]
 
-let helpMenu dispatch m =
+let helpMenu dispatch debugLevel runMode =
         let newDialogBox = Alert (sprintf "<h4>VisUAL2 ARM Simulator v%s</h4> " Refs.appVersion +
                                "(c) 2018, Imperial College <br> Acknowledgements: Salman Arif (VisUAL), HLP 2018 class" +
                                " (F# reimplementation), with special mention to Thomas Carrotti," +
@@ -203,7 +203,7 @@ let helpMenu dispatch m =
                 makeItem "Testbenches" Core.Option.None (runExtPage <| visualDocsPage "testbench")
                 makeItem "Official ARM documentation" Core.Option.None (runExtPage "http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0234b/i1010871.html")
                 menuSeparator
-                makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" (fun _ -> Refs.LoadDemoCode |> dispatch) m.DebugLevel m.RunMode)
+                makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" (fun _ -> Refs.LoadDemoCode |> dispatch) debugLevel runMode)
                 //makeCondItem (m.DebugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (fun () -> runTestbench m) m.DebugLevel m.RunMode)
                 //makeCondItem (m.DebugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" (fun () -> Tests.runAllEmulatorTests m) m.DebugLevel m.RunMode)
                 menuSeparator
@@ -212,14 +212,17 @@ let helpMenu dispatch m =
 
 
 /// Make all app menus
-let mainMenu (dispatch : (Msg -> Unit)) (m : Model) =
+let mainMenu tabId
+             debugLevel
+             runMode
+             (dispatch : (Msg -> Unit))=
     let template =
         ResizeArray<MenuItemOptions> [
-            fileMenu m.TabId dispatch m.DebugLevel m.RunMode
-            editMenu dispatch m.DebugLevel m.RunMode
+            fileMenu dispatch tabId debugLevel runMode
+            editMenu dispatch debugLevel runMode
             viewMenu()
-            helpMenu dispatch m
-            testMenu m dispatch
+            helpMenu dispatch debugLevel runMode
+            testMenu dispatch
         ]
     template
     |> electron.remote.Menu.buildFromTemplate

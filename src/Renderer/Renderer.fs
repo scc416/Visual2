@@ -369,7 +369,7 @@ let update (msg : Msg) (m : Model) =
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
-    mainMenu dispatch m
+    mainMenu m.TabId m.DebugLevel m.RunMode dispatch
     dialogBox (m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab)
               dispatch
               m.DialogBox

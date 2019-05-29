@@ -233,6 +233,7 @@ let executeFunc func =
     function
     | -1 -> ()
     | _ -> func
+
 // ***********************************************************************************************
 //                             Top-level Interfaces to Javascript libraries
 // ***********************************************************************************************
@@ -278,10 +279,6 @@ let showVexConfirm (htmlMessage : string) (callBack : bool -> unit) =
         "callback" ==> callBack ])
     ()
 
-//let showVexAlert (htmlMessage : string) =
-    //vex?dialog?alert (createObj [ "unsafeMessage" ==> htmlMessage ])
-    //()
-
 let showVexPrompt (placeHolder : string) (callBack : string -> unit) (htmlMessage : string) =
     vex?dialog?prompt (createObj [
         "unsafeMessage" ==> htmlMessage
@@ -324,14 +321,7 @@ let showVexValidatedPrompt (placeHolder : string)
                 | Error _ -> 
                     callBack2
     showVexPrompt placeHolder cb htmlMessage
-
-let showSimpleVexPrompt (callBack : string -> unit) (htmlMessage : string) =
-    showVexPrompt "" callBack htmlMessage
-
-let testVex() : unit =
-    printfn "%A" vex?dialog?buttons?NO
-    showVexPrompt "Test!" (fun value -> printfn "Callback value = %A" value) "My new Prompt"
-
+    
 //---------------------------------------------SVG------------------------------------------------
 
 // SVG (scalable vector graphics) library is interfaced via built-in FABLE libraries:
@@ -353,17 +343,8 @@ let INNERHTML html (ele : HTMLElement) = (ele.innerHTML <- html); ele
 let STYLE (name, value) (ele : HTMLElement) = ele.style.setProperty (name, value); ele
 
 let ID name (ele : HTMLElement) = (ele.id <- name); ele
-let CLICKLISTENER (listener : unit -> unit) (ele : HTMLElement) = (ele.addEventListener_click (fun _ -> listener() |> ignore; createObj [])); ele
 
 let DIV = ELEMENT "div"
-
-let BR() = document.createElement "br"
-
-let FORM classes contents =
-    let form = ELEMENT "form" classes contents
-        // disable form submission
-    form.onsubmit <- (fun _ -> false :> obj)
-    form
 
 let TABLE = ELEMENT "table"
 
@@ -384,27 +365,8 @@ let getHtml = Browser.document.getElementById
 //                       Functions Relating to Right-hand View Panel
 // ***********************************************************************************
 
-/// get ID of Tab for Tab number tabID
-let fileTabIdFormatter tabID = sprintf "file-tab-%d" tabID
-
-/// get element corresponding to file tab tabID
-let fileTab tabID = getHtml <| fileTabIdFormatter tabID
-
-/// get ID of editor window containing file
-let fileViewIdFormatter = sprintf "file-view-%d"
-
-/// get element of editor window containing file
-let fileView id = getHtml <| fileViewIdFormatter id
-
 /// get id of element containing tab name as dispalyed
 let tabNameIdFormatter = sprintf "file-view-name-%d"
-
-/// get element containing tab name as displayed
-let fileTabName id = getHtml <| tabNameIdFormatter id
-
-//--------------- Simulation Indicator elements----------------------
-
-let darkenOverlay = getHtml "darken-overlay"
 
 // ************************************************************************************
 //                         Utility functions used in this module
@@ -439,7 +401,6 @@ let formatterWithWidth width rep =
 
 let formatter = formatterWithWidth 32
 
-
 /// Determine whether JS value is undefined
 [<Emit("$0 === undefined")>]
 let isUndefined (_ : 'a) : bool = jsNative
@@ -469,8 +430,10 @@ let themes = [
                 "solarised-dark", "Solarised Dark";
                 "solarised-light", "Solarised Light";
               ]
+
 let minFontSize = 6L
 let maxFontSize = 60L
+
 let checkPath (p : string) =
     let p' = path.dirname p
     try
@@ -507,8 +470,6 @@ let checkSettings (vs : VSettings) vso =
     with
         | _ -> printf "Error parsing stored settings: %A" vs
                vs
-
-
 
 let setJSONSettings setting =
     let setSetting (name : string) (value : string) =
