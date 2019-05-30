@@ -154,12 +154,20 @@ let addResultsToTestbench (test : Test) (dp : DataPath) editors =
     writeTest { test with CheckLines = resultLines } editors,
     goodParse
 
-//let getTestList editors =
-    //let r,a,b = 
-    //    getParsedTests 0x10000000u editors
-    //r
-    //|> function
-        //| Error e -> 
-        //    showVexAlert e; []
-        //| Ok(_, tests) ->
-            //tests
+let getTestList editors =
+    let result, cmd1, decorations = 
+        getParsedTests 0x10000000u editors
+    let cmd2, testLst = 
+        result
+        |> function
+            | Error e -> 
+                e
+                |> Alert
+                |> UpdateDialogBox
+                |> Cmd.ofMsg,
+                []
+            | Ok(_, tests) ->
+                Cmd.none,
+                tests
+    let allCmd = Cmd.batch (cmd1 @ [ cmd2 ])
+    decorations, allCmd, testLst

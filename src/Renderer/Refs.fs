@@ -245,6 +245,7 @@ type Msg =
     | RunTestBenchOnCode
     | RunEditorTabOnTests of Test list
     | GetTestRunInfo of Result<RunInfo, string> option * bool * Test list
+    | RunSingleTest
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =

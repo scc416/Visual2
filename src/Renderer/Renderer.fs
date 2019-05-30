@@ -388,6 +388,9 @@ let update (msg : Msg) (m : Model) =
         let cmd = (resultOpt, false, tests) |> GetTestRunInfo |> Cmd.ofMsg
         { m with EditorEnable = defaultValue m.EditorEnable editorEnable}, 
         cmd
+    | RunSingleTest ->
+        //let r = runSingleTest m.Editors
+        m, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose

@@ -10,6 +10,8 @@ open Refs
 open Tabs
 open Integration
 open Dialog
+open Testbench
+open Elmish
 
 let runExtPage url () =
     electron.shell.openExternal url |> ignore
@@ -167,16 +169,23 @@ let popupMenu (items) =
     menu.popup (electron.remote.getCurrentWindow())
     ()
 
+//let runSingleTest editors =
+    //let decorations, cmd, testLst = getTestList editors
+    //match testLst with
+    //| [] -> 
+    //    "Can't find any tests. Have you loaded a valid testbench?"
+    //    |> Alert
+    //    |> UpdateDialogBox
+    //    |> Cmd.ofMsg
+    //| lst -> 
+        //popupMenu (List.map (fun (test : ExecutionTop.Test) ->
+            //let name = sprintf "Step code with initial data from Test %d" test.TNum
+            //let actFun = fun () -> Integration.startTest test editors
+            //makeItem name Core.None actFun) lst)
+
 let testMenu (dispatch : (Msg -> Unit)) debugLevel runMode =
         let runToBranch() = ()
         let menu = electron.remote.Menu.Create()
-        //let runSingleTest() =
-            //match Testbench.getTestList  with
-            //| [] -> showVexAlert "Can't find any tests. Have you loaded a valid testbench?"
-            //| lst -> popupMenu (List.map (fun (test : ExecutionTop.Test) ->
-                        //let name = sprintf "Step code with initial data from Test %d" test.TNum
-                        //let actFun = fun () -> Integration.startTest test m
-                        //makeItem name Core.None actFun) lst)
         let runTo cond = (cond, System.Int64.MaxValue) |> RunEditorTab |> dispatch
         makeMenu "Test" [
             makeItem "Step <-" (Some "F3") (fun () -> StepCodeBackBy 1L |> dispatch)
@@ -186,7 +195,7 @@ let testMenu (dispatch : (Msg -> Unit)) debugLevel runMode =
             makeItem "Step forward by" Core.Option.None (fun () -> UpdateDialogBox StepDl |> dispatch )
             makeItem "Step back by" Core.Option.None (fun () -> UpdateDialogBox StepBackDl |> dispatch )
             menuSeparator
-            //makeItem "Step into test" Core.Option.None (interlockAction "Test" runSingleTest m.DebugLevel m.RunMode )
+            makeItem "Step into test" Core.Option.None (fun () -> RunSingleTest |> dispatch )
             makeItem 
                 "Run all tests" 
                 Core.Option.None 

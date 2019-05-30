@@ -572,3 +572,8 @@ let runSimulation tabId : Cmd<Msg> =
         |> Cmd.ofMsg
     | _ -> 
         Cmd.ofMsg IsItTestbench
+
+let startTest (test: Test) editors =
+    runThingOnCode 
+        editors
+        (runTests [ test ])
