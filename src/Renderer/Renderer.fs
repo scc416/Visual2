@@ -242,7 +242,7 @@ let update (msg : Msg) (m : Model) =
         let cmd = 
             runEditorRunMode bkCon steps m.RunMode
         m, cmd
-    | TryParseAndIndentCode (test, steps, bkCon) ->
+    | TryParseAndIndentCode (test, steps, bkCon, testOpt) ->
         let loadImage, newRunMode, newDecorations = 
             tryParseAndIndentCode 
                 m.Editors.[m.TabId].IEditor 
@@ -251,7 +251,7 @@ let update (msg : Msg) (m : Model) =
         let msg =
             match test with
             | false -> MatchLoadImage (loadImage, steps, bkCon)
-            | _ -> MatchLoadImageTest loadImage
+            | _ -> MatchLoadImageTest (loadImage, testOpt.Value)
         { m with RunMode = defaultValue m.RunMode newRunMode
                  Decorations = newDecorations }, 
         Cmd.ofMsg msg
@@ -262,7 +262,7 @@ let update (msg : Msg) (m : Model) =
                  RunMode = defaultValue m.RunMode newRunMode }, cmd
     | AsmStepDisplay (breakCon, steps, ri) ->
         let newRunMode, cmd =
-            asmStepDisplay breakCon steps ri m.Settings.SimulatorMaxSteps m.RunMode
+            asmStepDisplay breakCon m.Settings.SimulatorMaxSteps m.RunMode steps ri m.Editors
         { m with RunMode = newRunMode }, cmd
     | RrepareModeForExecution ->
         let cmd = 
@@ -353,7 +353,11 @@ let update (msg : Msg) (m : Model) =
             stepCode m.TabId m.Editors 
         m, cmd
     | StepCodeBackBy steps ->
-        let newRunMode, editorEnable, cmd = stepCodeBackBy steps m.RunMode m.Editors.[m.TabId].IEditor
+        let newRunMode, editorEnable, cmd = 
+            stepCodeBackBy 
+                steps 
+                m.RunMode
+                m.Editors.[m.TabId].IEditor
         { m with RunMode = newRunMode
                  EditorEnable = defaultValue m.EditorEnable editorEnable }, cmd
     | RunTestBenchOnCode ->
@@ -363,13 +367,27 @@ let update (msg : Msg) (m : Model) =
                 (Cmd.ofMsg RunTestBench)
         m, cmd
     | RunTestBench ->
-        let r = getParsedTests 0x80000000u m.Editors
-        let cmd = runTestbench m.TabId m.Editors r
-        m, cmd
+        let results, cmdLst, decorations = getParsedTests 0x80000000u m.Editors
+        let cmd = runTestbench m.TabId m.Editors results
+        let newDecorations = m.Decorations @ decorations
+        let allCmd = 
+            Cmd.batch (cmdLst @ [ cmd ])
+        { m with Decorations = newDecorations }, allCmd
     | RunEditorTabOnTests lst -> 
-        m, Cmd.none
-    | MatchLoadImageTest (info) ->
-        m, Cmd.none
+        let cmd1 = 
+            prepareModeForExecution 
+                m.Editors.[m.TabId].IEditor
+                m.RunMode
+        let cmd2 = runEditorTabOnTests lst m.RunMode
+        m, Cmd.batch [ cmd1 ; cmd2 ]
+    | GetTestRunInfo (result, startTest, tests) ->
+        let runMode, cmd = getTestRunInfoMatch startTest tests result
+        { m with RunMode = defaultValue m.RunMode runMode}, cmd
+    | MatchLoadImageTest (info, tests) ->
+        let editorEnable, resultOpt = getTestRunInfo tests info
+        let cmd = (resultOpt, false, tests) |> GetTestRunInfo |> Cmd.ofMsg
+        { m with EditorEnable = defaultValue m.EditorEnable editorEnable}, 
+        cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose

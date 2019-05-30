@@ -160,6 +160,46 @@ let updateGUIFromRunState (pInfo : RunInfo) :
         None,
         Cmd.ofMsg ShowInfoFromCurrentMode
 
+let handleTest (pInfo : RunInfo) editors =
+    match pInfo.TestState, pInfo.State with
+    | _, PSExit
+    | _, PSError EXIT
+    | _, PSError TBEXIT ->
+        match pInfo.TestState with
+        | NoTest -> 
+            printfn "No test!"
+            Cmd.none, []
+        | Testing [] ->
+            Cmd.batch [
+                "Bad TestState: Testing []" |> Alert |> UpdateDialogBox |> Cmd.ofMsg
+                Cmd.ofMsg ResetEmulator ],
+            []
+        | Testing(test :: rest) ->
+            printfn "Test %d finished!" test.TNum
+            let dp = fst pInfo.dpCurrent
+            let cmd1, passed = addResultsToTestbench test dp editors
+            match passed, rest with
+            | true, [] ->
+                Cmd.batch 
+                    [ "Tests all passed!" |> Alert |> UpdateDialogBox |> Cmd.ofMsg
+                      Cmd.ofMsg ResetEmulator ],
+                []
+            | true, rest -> Cmd.none, rest
+            | false, _ ->
+                let cmd1 = 
+                    Cmd.batch 
+                        [ test.TNum |> sprintf "Test %d has errors!" |> Alert |> UpdateDialogBox |> Cmd.ofMsg
+                          Cmd.ofMsg ResetEmulator ]
+                let cmd2 =   
+                    match Testbench.getTBWithTab editors with
+                    | Ok(tbTab, _) -> tbTab |> SelectFileTab |> Cmd.ofMsg
+                    | _ -> Cmd.none
+                Cmd.batch [ cmd1 ; cmd2 ], []
+    | NoTest, _ -> Cmd.none, []
+    | _ -> 
+        "Test terminated because program has runtime error" |> Alert |> UpdateDialogBox |> Cmd.ofMsg,
+        []
+
 /// Main subfunction that updates GUI after a bit of simulation.
 /// running: true if trying to run program to end, false if pausing or single stepping.
 /// ri': simulator state including whether we have a program end or break or error termination.
@@ -193,7 +233,7 @@ let displayState ri' running tabId ri lastDisplayStepsDone simulatorMaxSteps =
 ///// Keep GUI updated from time to time if steps is large positive.
 ///// Always update GUI at end.
 ///// Stored history means that backward stepping will always be fast.
-let asmStepDisplay (breakc : BreakCondition) steps ri' simulatorMaxSteps runMode =
+let asmStepDisplay (breakc : BreakCondition) simulatorMaxSteps runMode steps ri' editors =
     let ri = { ri' with BreakCond = breakc }
     match runMode with
     | ActiveMode(Stopping, ri') -> // pause execution from GUI button
@@ -228,18 +268,22 @@ let asmStepDisplay (breakc : BreakCondition) steps ri' simulatorMaxSteps runMode
                 newRMode, Cmd.batch [ Cmd.ofMsg ShowInfoFromCurrentMode
                                       (ri'.BreakCond, steps, ri') |> AsmStepDisplay |> Cmd.ofMsg ]
             | _ ->
-                //match handleTest ri' with //TODO:
-                //| [] -> 
-                    newRMode, Cmd.batch [ Cmd.ofMsg ShowInfoFromCurrentMode 
+                let cmd, testLst = handleTest ri' editors
+                match testLst with
+                | [] -> 
+                    newRMode, Cmd.batch [ cmd
+                                          Cmd.ofMsg ShowInfoFromCurrentMode 
                                           (ri', false, ri) |> DisplayState |> Cmd.ofMsg 
                                           Cmd.ofMsg RemoveDecorations
                                           Cmd.ofMsg DeleteAllContentWidgets
                                           ("editor-line-highlight", ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg ]
-                //| tests -> 
-                    //runTests false tests (asmStepDisplay NoBreak)
-                    //newRMode, Cmd.batch [ Cmd.ofMsg ShowInfoFromCurrentMode 
-                                          //(ri', false) |> DisplayState |> Cmd.ofMsg
-                                          //("editor-line-highlight", ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg ]
+                | tests -> 
+                    let cmd2 = runTests tests
+                    newRMode, Cmd.batch [ cmd
+                                          Cmd.ofMsg ShowInfoFromCurrentMode 
+                                          (ri', false, ri) |> DisplayState |> Cmd.ofMsg
+                                          ("editor-line-highlight", ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg 
+                                          cmd2 ]
 
 let getRunInfoFromImage bc (lim : LoadImage) regMap flags memoryMap =
     getRunInfoFromImageWithInits bc lim regMap flags memoryMap lim.Mem
@@ -333,7 +377,7 @@ let runEditorRunMode breakCondition steps =
     | ResetMode
     | ParseErrorMode _ ->
         Cmd.batch [ Cmd.ofMsg RemoveDecorations 
-                    (false, steps, breakCondition) |> TryParseAndIndentCode |> Cmd.ofMsg ]
+                    (false, steps, breakCondition, None) |> TryParseAndIndentCode |> Cmd.ofMsg ]
     | ActiveMode(RunState.Paused, ri) ->
         (breakCondition, (steps + ri.StepsDone), ri) |> AsmStepDisplay |> Cmd.ofMsg
     | ActiveMode _
@@ -478,6 +522,23 @@ let runThingOnCode editors cmd : Cmd<Msg> =
             |> Alert 
             |> UpdateDialogBox
             |> Cmd.ofMsg
+
+let runEditorTabOnTests (tests : Test list) runMode =
+    let cmd1 = 
+        match tests with
+        | [] -> "There are no Tests to run in the testbench!" |> Alert |> UpdateDialogBox |> Cmd.ofMsg
+        | _ -> Cmd.none
+    let cmd2 = runTests tests
+    match runMode with
+    | ResetMode
+    | ParseErrorMode _ ->
+        Cmd.batch 
+            [ cmd1 ; Cmd.ofMsg RemoveDecorations ; cmd2 ]
+    | ActiveMode _
+    | RunErrorMode _
+    | FinishedMode _ ->
+        Cmd.batch 
+            [ cmd1 ; Cmd.ofMsg ResetEmulator ; cmd2 ]
 
 let runTestbench currentTabId editors (result : Result<(int * Test list), string>) =
     match result with

@@ -40,25 +40,25 @@ let currentTabIsTB tabId (editors : Map<int, Editor>) =
 /// and Test list, or Error message. If testbench lines contain errors these are highlighted in buffer.
 /// Previous error highlights are removed from buffer.
 let getParsedTests dStart (editors : Map<int, Editor>) =
+    let mutable decorations = []
+    let mutable cmd = []
     let processParseErrors (eLst : Result<Test, (int * string) list> list) =
-        let highlightErrors tab x =
-            x
-            |> List.map (fun (lNum, mess) ->
+        let highlightErrors tab =
+            List.iter (fun (lNum, mess) ->
                 printfn "Testbench error %d %s." lNum mess
-                Editors.highlightLine editors.[tab].IEditor lNum "editor-line-error" [] )
-            |> List.collect (fun x -> x )
+                decorations <- 
+                    Editors.highlightLine editors.[tab].IEditor lNum "editor-line-error" decorations )
         match getTBWithTab editors with
         | Error mess -> Error mess
         | Ok(tab, _) ->
-            //Cmd.ofMsg RemoveEditorDecorations
+            // delete decorations
             List.iter (Result.mapError (highlightErrors tab) >> ignore) eLst
             match List.errorList eLst with
             | [] -> 
-                //Cmd.none,
                 List.okList eLst |> Ok
             | x ->
                 printfn "%A" x
-                //tab |> SelectFileTab |> Cmd.ofMsg,
+                cmd <- cmd @ [ tab |> SelectFileTab |> Cmd.ofMsg ]
                 Error "Parse errors in testbench"
 
     let initStack = 0xFF000000u
@@ -70,5 +70,96 @@ let getParsedTests dStart (editors : Map<int, Editor>) =
                 |> Array.toList
                 |> parseTests initStack dStart
                 |> processParseErrors
-                |> Result.map (fun x -> tab, x))
+                |> Result.map (fun x -> tab, x)),
+    cmd,
+    decorations
 
+let getTestRunInfo (test : Test list) =
+    function
+    | Some(lim, _) ->
+        let dp = initTestDP (lim.Mem, lim.SymInf.SymTab) test.[0]
+        match dp with
+        | Ok dp -> Some false, getRunInfoFromImageWithInits NoBreak lim dp.Regs dp.Fl Map.empty dp.MM |> Ok |> Some
+        | Error e -> Some false, Error e |> Some
+    | None -> None, None
+
+let runTests tests =
+    match tests with
+    | test :: _ ->
+        printfn "Running tests"
+        (true, 0L, NoBreak, Some tests) |> TryParseAndIndentCode |> Cmd.ofMsg
+    | [] -> 
+        Cmd.none
+
+let getTestRunInfoMatch startTest tests =
+    function
+    | Some(Ok ri) ->
+        let ri' = { ri with TestState = if startTest then NoTest else Testing tests }
+        let steps =
+            if startTest then 1L else System.Int64.MaxValue
+        ActiveMode(RunState.Running, ri') |> Some,
+        (NoBreak, steps, ri')
+        |> AsmStepDisplay
+        |> Cmd.ofMsg
+    | Some(Error eMess) -> 
+        None,
+        eMess
+        |> Alert
+        |> UpdateDialogBox
+        |> Cmd.ofMsg
+    | _ -> 
+        None,
+        "Can't run tests: current tab must have valid assembler"
+        |> Alert
+        |> UpdateDialogBox
+        |> Cmd.ofMsg
+
+/// Write test Checklines to the buffer containing the testbench file
+let writeTest (test : Test) editors =
+    editors
+    |> getTBWithTab
+    |> Result.map (fun (tabId, dat) ->
+        dat
+        |> String.splitString [| "\n" |]
+        |> Array.toList
+        |> List.map String.trim
+        |> List.chunkAt (String.trim >> String.startsWith "#TEST")
+        |> List.collect (fun chunk ->
+                    let testLst = String.splitOnWhitespace (List.head chunk) |> Array.toList
+                    let testData = List.filter (String.trim >> String.startsWith ">>" >> not) (chunk |> List.tail)
+                    match testLst with
+                    | "#TEST" :: LITERALNUMB(n, "") :: _ when int n = test.TNum ->
+                        (sprintf "#TEST %d" n) :: testData @ test.CheckLines
+                    | _ -> chunk) // no change
+        |> List.filter ((<>) "")
+        |> String.concat "\n"
+        |> fun r -> tabId, r)
+    |> function | Ok(tabId, txt) ->
+                    let editor = editors.[tabId].IEditor
+                    editor?setValue txt
+                    Cmd.none
+                | Error _ -> 
+                    "Error! What? can't find testbench to write results!"
+                    |> Alert
+                    |> UpdateDialogBox
+                    |> Cmd.ofMsg
+
+/// Generate one Test of result messages and add them to the testbench buffer.
+/// If no errors mark the Test as Passed.
+/// test: test to add (one of those in the testbench).
+/// dp: DataPath after test simulation ends.
+/// Returns true if test has passed.
+let addResultsToTestbench (test : Test) (dp : DataPath) editors =
+    let goodParse, resultLines = computeTestResults test dp
+    writeTest { test with CheckLines = resultLines } editors,
+    goodParse
+
+//let getTestList editors =
+    //let r,a,b = 
+    //    getParsedTests 0x10000000u editors
+    //r
+    //|> function
+        //| Error e -> 
+        //    showVexAlert e; []
+        //| Ok(_, tests) ->
+            //tests

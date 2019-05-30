@@ -230,9 +230,9 @@ type Msg =
     | RunEditorRunMode of BreakCondition * int64
     | AsmStepDisplay of BreakCondition * int64 * RunInfo
     | MatchLoadImage of (LoadImage * string list) option * int64 * BreakCondition
-    | MatchLoadImageTest of (LoadImage * string list) option
+    | MatchLoadImageTest of (LoadImage * string list) option * Test list
     | UpdateDialogBox of DialogBox
-    | TryParseAndIndentCode of bool * int64 * BreakCondition
+    | TryParseAndIndentCode of bool * int64 * BreakCondition * Test list option
     | UpdateGUIFromRunState of RunInfo
     | ShowInfoFromCurrentMode
     | HighlightCurrentAndNextIns of string * RunInfo
@@ -244,6 +244,7 @@ type Msg =
     | StepCodeBackBy of int64
     | RunTestBenchOnCode
     | RunEditorTabOnTests of Test list
+    | GetTestRunInfo of Result<RunInfo, string> option * bool * Test list
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
