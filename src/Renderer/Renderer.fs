@@ -23,6 +23,7 @@ open Stats
 open Integration
 open ExecutionTop
 open Core.Option
+open Testbench
 
 let init _ =
     let debugLevel =
@@ -97,10 +98,10 @@ let update (msg : Msg) (m : Model) =
         let newTabId = selectFileTabUpdate id m.Editors
         { m with TabId = newTabId }, Cmd.none
     | AttemptToDeleteTab id ->
-        let newDialog, newCmd =
+        let newCmd =
             attemptToDeleteTabUpdate (m.TabId, m.Editors, m.DialogBox) 
                                      id
-        { m with DialogBox = newDialog }, newCmd
+        m, newCmd
     | DeleteTab -> 
         let newTabId, newEditors, newSettingsTab = 
             deleteTabUpdate (m.TabId, m.Editors, m.SettingsTab)
@@ -165,8 +166,8 @@ let update (msg : Msg) (m : Model) =
     | CloseDialog ->
         { m with DialogBox = None }, Cmd.none
     | AttemptToExit ->
-        let newDialogBox, newCmd = attemptToExitUpdate m.Editors m.DialogBox
-        { m with DialogBox = newDialogBox }, newCmd
+        let newCmd = attemptToExitUpdate m.Editors m.DialogBox
+        m, newCmd
     | Exit ->
         close()
         m, Cmd.ofMsg CloseDialog
@@ -217,9 +218,9 @@ let update (msg : Msg) (m : Model) =
         //iExports?languages?setMonarchTokensProvider (token)
         { m with IExports = Some iExports }, Cmd.none
     | RunSimulation ->
-        let newDialogBox, cmd = 
+        let cmd = 
             runSimulation m.TabId
-        { m with DialogBox = defaultValue m.DialogBox newDialogBox }, 
+        m, 
         Cmd.batch [ RunningCode |> ReadOnlineInfo |> Cmd.ofMsg
                     cmd ]
     | MatchActiveMode ->
@@ -254,8 +255,6 @@ let update (msg : Msg) (m : Model) =
         { m with RunMode = defaultValue m.RunMode newRunMode
                  Decorations = newDecorations }, 
         Cmd.ofMsg msg
-    | MatchLoadImageTest (info) -> //TODO:
-        m, Cmd.none
     | MatchLoadImage (info, steps, bkCon) ->
         let newEnableEditors, newRunMode, cmd = 
             matchLI m.RegMap m.Flags m.MemoryMap steps bkCon info 
@@ -266,11 +265,9 @@ let update (msg : Msg) (m : Model) =
             asmStepDisplay breakCon steps ri m.Settings.SimulatorMaxSteps m.RunMode
         { m with RunMode = newRunMode }, cmd
     | RrepareModeForExecution ->
-        let cmd, newDialogBox = 
+        let cmd = 
             prepareModeForExecution m.Editors.[m.TabId].IEditor m.RunMode
-        { m with DialogBox = defaultValue m.DialogBox newDialogBox }, cmd
-    | RunTestBench -> //TODO:
-        m, Cmd.none
+        m, cmd
     | IsItTestbench ->
         let cmd = isItTestbench m.Editors.[m.TabId].IEditor
         m, cmd
@@ -307,10 +304,9 @@ let update (msg : Msg) (m : Model) =
                  FlagsHasChanged = defaultValue m.FlagsHasChanged newFlagsHasChanged }, 
         Cmd.none
     | UpdateGUIFromRunState ri ->
-        let newRunMode, newEditorEnable, newDialogBox, cmd = updateGUIFromRunState ri
+        let newRunMode, newEditorEnable, cmd = updateGUIFromRunState ri
         { m with RunMode = defaultValue m.RunMode newRunMode
                  EditorEnable = defaultValue m.EditorEnable newEditorEnable
-                 DialogBox = defaultValue m.DialogBox newDialogBox 
                  }, cmd
     | HighlightCurrentAndNextIns (className, ri) -> 
         let newDecorations, cmd = 
@@ -326,10 +322,9 @@ let update (msg : Msg) (m : Model) =
                 m.Settings.EditorTheme
         m, cmd
     | DisplayState (ri', running, ri) ->
-        let newLastDisplayStepsDone, newDialogBox, cmd =
+        let newLastDisplayStepsDone, cmd =
             displayState ri' running m.TabId ri m.LastDisplayStepsDone m.Settings.SimulatorMaxSteps
-        { m with LastDisplayStepsDone = defaultValue m.LastDisplayStepsDone newLastDisplayStepsDone
-                 DialogBox = defaultValue m.DialogBox newDialogBox }, 
+        { m with LastDisplayStepsDone = defaultValue m.LastDisplayStepsDone newLastDisplayStepsDone}, 
         cmd
     | MakeShiftTooltip (h, v, orientation, dp, dpAfter, uFAfter, rn, shiftT, alu, shiftAmt, op2) ->
         let cmd = 
@@ -354,16 +349,27 @@ let update (msg : Msg) (m : Model) =
                 el
         { m with CurrentTabWidgets = newWidgets }, Cmd.none
     | StepCode ->
-        let dialogBox, cmd =
+        let cmd =
             stepCode m.TabId m.Editors 
-        let newDialogBox = defaultValue m.DialogBox dialogBox
-        { m with DialogBox = dialogBoxUpdate m.DialogBox newDialogBox }, cmd
+        m, cmd
     | StepCodeBackBy steps ->
-        let dialogBox, newRunMode, editorEnable, cmd = stepCodeBackBy steps m.RunMode m.Editors.[m.TabId].IEditor
-        let newDialogBox = dialogBoxUpdate dialogBox m.DialogBox
-        { m with DialogBox = newDialogBox
-                 RunMode = newRunMode
+        let newRunMode, editorEnable, cmd = stepCodeBackBy steps m.RunMode m.Editors.[m.TabId].IEditor
+        { m with RunMode = newRunMode
                  EditorEnable = defaultValue m.EditorEnable editorEnable }, cmd
+    | RunTestBenchOnCode ->
+        let cmd = 
+            runTestbenchOnCode 
+                m.Editors
+                (Cmd.ofMsg RunTestBench)
+        m, cmd
+    | RunTestBench ->
+        let r = getParsedTests 0x80000000u m.Editors
+        let cmd = runTestbench m.TabId m.Editors r
+        m, cmd
+    | RunEditorTabOnTests lst -> 
+        m, Cmd.none
+    | MatchLoadImageTest (info) ->
+        m, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose

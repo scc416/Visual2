@@ -46,6 +46,7 @@ type LogMessage = {
     Time: int64
     }
 
+/// information stored for each tab(s)
 type Editor = { 
     DefaultValue : string
     FileName : string Option
@@ -68,6 +69,7 @@ type Views =
     | Memory
     | Symbols
 
+/// user's settings that will be stored on user's computer by electron settings
 type VSettings = {
     CurrentFilePath : string
     EditorFontSize : string
@@ -79,6 +81,7 @@ type VSettings = {
     SimulatorMaxSteps : string
     }
 
+/// type of dialog boxes that comes up in view
 type DialogBox =
     | Alert of string
     | OpenFileDl
@@ -90,7 +93,7 @@ type DialogBox =
 
 type CodeType = DP3 | DP2 | CMP | LDRSTR | LDMSTM | MISC | EQU | UNIMPLEMENTED
 
-
+/// Properties for react-tippy
 type TooltipsProps =
     | Content of string
     | Animation of string
@@ -101,6 +104,7 @@ type TooltipsProps =
     | Placement of string
     | Delay of int * int
 
+/// Propertis for react-monaco-editor
 type EditorsProps =
     | Width of obj
     | Height of obj
@@ -123,6 +127,7 @@ type WidgetPlace =
 
 type MemDirection = | MemRead | MemWrite
 
+/// the main model for MVU
 type Model = { 
     /// File Tab currently selected (and therefore visible)
     TabId : int
@@ -176,6 +181,7 @@ type Model = {
     IExports : Monaco.IExports option
     }
 
+/// possible messages when user interact with VisUAL2
 type Msg =
     | ChangeView of Views
     | ChangeRep of Representations
@@ -236,6 +242,8 @@ type Msg =
     | MakeEditorInfoButton of string * bool * int * int * string * HTMLElement * string
     | StepCode
     | StepCodeBackBy of int64
+    | RunTestBenchOnCode
+    | RunEditorTabOnTests of Test list
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
@@ -250,11 +258,14 @@ let uniqueTabId (editor : Map<int, Editor>) =
             |> List.head
         lastid + 1
 
+/// return the new dialog box when there is no current dialog box
 let dialogBoxUpdate newDialogBox =
     function   
     | Option.None -> newDialogBox
     | x -> x 
 
+/// execute the function only if the current tab Id is not -1
+/// tabId = -1 means no tab is opened
 let executeFunc func =
     function
     | -1 -> ()
@@ -284,7 +295,7 @@ let initialClose (dispatch : Msg -> unit) =
 // see tooltips.fs for examples and some documentation of SVG helpers
 
 // ***********************************************************************************************
-//                                  Mini DSL for creating DOM objects
+//                              Mini DSL for creating DOM objects
 // ***********************************************************************************************
 
 let ELEMENT elName classes (htmlElements : HTMLElement list) =
@@ -394,8 +405,8 @@ let visualDocsPage name =
 
 let initialFlags = { N = false; Z = false; C = false; V = false }
 
-/// Return list of lines in editor
-let formatText (editor : Monaco.Editor.IEditor option) =   
+/// Return list of lines in IEditor
+let formatText (editor : Monaco.Editor.IEditor option) = 
     editor?getValue ()
     |> (fun (x : string) -> x.Split [| '\n' |])
     |> Array.toList

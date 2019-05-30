@@ -105,7 +105,7 @@ let showAlert (message : string) (detail : string) =
 
 let close() = electron.ipcRenderer.send "doClose" |> ignore
 
-/// Display dialog asking for confirmation.
+/// Display dialog asking for confirmation as there is unsaved file(s)
 let ExitIfOK dispatch =
     //let close() = electron.ipcRenderer.send "doClose" |> ignore
     let callback (result : bool) =
@@ -114,7 +114,7 @@ let ExitIfOK dispatch =
         | true -> Exit |> dispatch
     showQuitMessage callback
 
-/// determine if any dialog box has to be opened
+/// determine if any dialog box has to be opened in view
 let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingTab : int option)
               dispatch =
     function
@@ -160,9 +160,7 @@ let attemptToExitUpdate editors (dialogBox: DialogBox option) =
             editors 
             |> Map.forall (fun _ value -> value.Saved = true) 
         match allSaved with
-        | true -> dialogBox, Cmd.ofMsg Exit
-        | _ -> 
-            dialogBox 
-            |> dialogBoxUpdate (Some QuitDl), Cmd.none
+        | true -> Cmd.ofMsg Exit
+        | _ -> QuitDl |> UpdateDialogBox |> Cmd.ofMsg
     | _ -> 
-        dialogBox, Cmd.none
+        Cmd.none

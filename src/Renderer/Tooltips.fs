@@ -30,6 +30,7 @@ open Monaco
 
 //------------------------------------------TIPPY.JS----------------------------------------------
 
+/// TIPPY.JS is for the 
 /// top-level function from tippy.js to make tooltips
 let tippy (rClass : string, tippyOpts : obj) : unit = importDefault "tippy.js"
 
@@ -42,7 +43,7 @@ let deleteContentWidget currentTabWidgets editor name =
 let deleteAllContentWidgets currentTabWidgets editor =
     Array.iter (deleteContentWidget currentTabWidgets editor) (Map.keys currentTabWidgets)
 
-
+//------------------------------------------REACT-TIPPY----------------------------------------------
     
 let inline tooltips (props: TooltipsProps list) 
                     (elLst: React.ReactElement list) : React.ReactElement =

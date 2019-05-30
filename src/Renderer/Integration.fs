@@ -94,20 +94,21 @@ let highlightCurrentAndNextIns classname pInfo editor decorations =
     | _ -> 
         newDecorations, cmd1
 
-let stepCode tabId editors : DialogBox option option * Cmd<Msg> =
+let stepCode tabId editors : Cmd<Msg> =
     match currentTabIsTB tabId editors with
     | false -> 
-        None, 
         (NoBreak, 1L) |> RunEditorTab |> Cmd.ofMsg 
     | true -> 
-        "Current file is a testbench: switch to an assembly tab" |> Alert |> Some |> Some ,
-        Cmd.none
+        "Current file is a testbench: switch to an assembly tab"
+        |> Alert 
+        |> UpdateDialogBox
+        |> Cmd.ofMsg
 
 /// Update GUI after a runtime error or exit. Highlight error line (and make it visible).
 /// Set suitable error message hover. Update GUI to 'finished' state on program exit.
 /// If running a testbench check results on finish and start next test if passed.
 let updateGUIFromRunState (pInfo : RunInfo) : 
-                          RunMode option * bool option * DialogBox option option * Cmd<Msg>=
+                          RunMode option * bool option * Cmd<Msg>=
     let getCodeLineMess pInfo =
         match pInfo.LastDP with
         | None -> ""
@@ -121,15 +122,13 @@ let updateGUIFromRunState (pInfo : RunInfo) :
     | PSExit ->
         FinishedMode (pInfo) |> Some, 
         Some true, 
-        None,
         Cmd.batch [ Cmd.ofMsg RemoveDecorations
                     Cmd.ofMsg DeleteAllContentWidgets
                     ("editor-line-highlight", (pInfo)) |> HighlightCurrentAndNextIns |> Cmd.ofMsg
                     Cmd.ofMsg ShowInfoFromCurrentMode ]
     | PSBreak ->
         ActiveMode(Paused, pInfo) |> Some, 
-        Some true, 
-        None,
+        Some true,
         Cmd.batch [ Cmd.ofMsg RemoveDecorations
                     Cmd.ofMsg DeleteAllContentWidgets
                     ("editor-line-highlight", (pInfo)) |> HighlightCurrentAndNextIns |> Cmd.ofMsg
@@ -137,12 +136,11 @@ let updateGUIFromRunState (pInfo : RunInfo) :
     | PSError(NotInstrMem x) ->
         (RunErrorMode pInfo)|> Some,
         None,
-        x |> sprintf "Trying to access non-instruction memory 0x%x" |> Alert |> Some |> Some,
-        Cmd.ofMsg ShowInfoFromCurrentMode
+        Cmd.batch [ x |> sprintf "Trying to access non-instruction memory 0x%x" |> Alert |> UpdateDialogBox |> Cmd.ofMsg
+                    Cmd.ofMsg ShowInfoFromCurrentMode ]
     | PSError(``Run time error`` (_pos, msg)) ->
         let lineMess = getCodeLineMess pInfo
         (RunMode.RunErrorMode pInfo) |> Some,
-        None,
         None,
         Cmd.batch [ Cmd.ofMsg RemoveDecorations
                     Cmd.ofMsg DeleteAllContentWidgets
@@ -154,11 +152,10 @@ let updateGUIFromRunState (pInfo : RunInfo) :
     | PSError(``Unknown symbol runtime error`` undefs) ->
         RunMode.RunErrorMode pInfo |> Some,
         None,
-        undefs |> sprintf "What? Undefined symbols: %A" |> Alert |> Some |> Some,
-        Cmd.ofMsg ShowInfoFromCurrentMode
+        Cmd.batch [ undefs |> sprintf "What? Undefined symbols: %A" |> Alert |> UpdateDialogBox |> Cmd.ofMsg
+                    Cmd.ofMsg ShowInfoFromCurrentMode ]
     | PSRunning -> 
         failwithf "What? Invalid pInfo.State=PSRunning. Can't update GUI here if still running"
-        None,
         None,
         None,
         Cmd.ofMsg ShowInfoFromCurrentMode
@@ -174,21 +171,22 @@ let displayState ri' running tabId ri lastDisplayStepsDone simulatorMaxSteps =
     match ri'.State with
     | PSRunning -> // simulation stopped without error or exit
         //highlightCurrentAndNextIns "editor-line-highlight" ri' tabId
-        let newDialog = 
+        let cmd = 
             match running && (int64 simulatorMaxSteps) <> 0L with
-            | true -> loopMessage |> Alert |> Some |> Some
-            | false -> None
+            | true -> loopMessage |> Alert |> UpdateDialogBox |> Cmd.ofMsg
+            | false -> Cmd.none
         if ri.StepsDone < slowDisplayThreshold || (ri.StepsDone - lastDisplayStepsDone) > maxStepsBeforeSlowDisplay then
-            Some ri.StepsDone, newDialog, 
-            Cmd.batch [ Cmd.ofMsg RemoveDecorations
+            Some ri.StepsDone, 
+            Cmd.batch [ cmd
+                        Cmd.ofMsg RemoveDecorations
                         Cmd.ofMsg DeleteAllContentWidgets
                         ("editor-line-highlight", ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg 
                         Cmd.ofMsg ShowInfoFromCurrentMode ]
-        else None, None, Cmd.none
+        else None, Cmd.none
     | PSError _
     | PSBreak // execution met a valid break condition
     | PSExit -> // end-of-program termination (from END or implicit drop off code section)
-        None, None, ri' |> UpdateGUIFromRunState |> Cmd.ofMsg
+        None, ri' |> UpdateGUIFromRunState |> Cmd.ofMsg
 
 ///// Run the simulation from state ri for steps instructions.
 ///// Steps can be positive or negative, for forward or backward stepping.
@@ -363,10 +361,11 @@ let prepareModeForExecution editor =
     | ActiveMode(_, ri) ->
         if currentFileTabProgramIsChanged ri editor 
             then 
-                let newDialogBox = Alert "Resetting emulator for new execution"
-                Cmd.ofMsg ResetEmulator, newDialogBox |> Some |> Some
-            else Cmd.none, None
-    | _ -> Cmd.none, None
+                Cmd.batch 
+                    [ Cmd.ofMsg ResetEmulator
+                      "Resetting emulator for new execution" |> Alert |> UpdateDialogBox |> Cmd.ofMsg ]
+            else Cmd.none
+    | _ -> Cmd.none
 
 let matchRunMode bkCon steps =
     function
@@ -394,19 +393,18 @@ let isItTestbench editor : Cmd<Msg> =
     | _ -> Cmd.ofMsg MatchActiveMode
 
 /// Step simulation back by numSteps
-let stepCodeBackBy numSteps runMode editor : 
-        DialogBox option * RunMode * bool option * Cmd<Msg> =
+let stepCodeBackBy numSteps runMode editor : RunMode * bool option * Cmd<Msg> =
     match runMode with
     | ActiveMode(Paused, ri')
     | RunErrorMode ri'
     | FinishedMode ri' ->
         let ri = { ri' with BreakCond = NoBreak }
         if currentFileTabProgramIsChanged ri editor then
-            let dialogBox =
-                "can't step backwards because execution state is no longer valid"
-                |> Alert
-                |> Some
-            dialogBox, runMode, None, Cmd.none
+            runMode, None, 
+            "can't step backwards because execution state is no longer valid"
+            |> Alert
+            |> UpdateDialogBox
+            |> Cmd.ofMsg
         else
             //printf "Stepping back with done=%d  PC=%A" ri.StepsDone ri.dpCurrent
             let target =
@@ -415,7 +413,6 @@ let stepCodeBackBy numSteps runMode editor :
                 | _ -> ri.StepsDone - numSteps
             let runMode = ActiveMode(RunState.Running, ri)
             if target <= 0L then
-                None,
                 runMode,
                 None,
                 Cmd.batch [
@@ -443,29 +440,74 @@ let stepCodeBackBy numSteps runMode editor :
                     [ cmd ]
                     |> List.append [ cmd2 ]
                     |> Cmd.batch
-                None, runMode2, editorsEnable, allCmd
+                runMode2, editorsEnable, allCmd
 
     | ParseErrorMode -> 
-        let dialogBox =
-            "Can't execute when code has errors"
-            |> Alert
-            |> Some
-        dialogBox, runMode, None, Cmd.none
+        runMode, None, 
+        "Can't execute when code has errors"
+        |> Alert
+        |> UpdateDialogBox
+        |> Cmd.ofMsg
     | ResetMode -> 
-        let dialogBox =
-            "Execution has not started"
-            |> Alert
-            |> Some
-        dialogBox, runMode, None, Cmd.none
+        runMode, None, 
+        "Execution has not started"
+        |> Alert
+        |> UpdateDialogBox
+        |> Cmd.ofMsg
     | _ -> 
-        None, runMode, None, Cmd.none
+        runMode, None, Cmd.none
+
+let runThingOnCode editors cmd : Cmd<Msg> =
+    match Testbench.getTBWithTab editors with
+    | Ok(tbTab, _) ->
+        match editors |> Map.filter (fun id _ -> id <> tbTab) |> Map.toList with
+        | [] -> 
+            "Can't run Tests because no assembly file is loaded!" 
+            |> Alert 
+            |> UpdateDialogBox
+            |> Cmd.ofMsg
+        | [ (id, _) ] ->
+            Cmd.batch [ SelectFileTab id |> Cmd.ofMsg ; cmd ]
+        | _ -> 
+            "Can't run Tests because more than one assembler file is currently loaded. Select the file you wish to test and use Run-> Tests."
+            |> Alert 
+            |> UpdateDialogBox
+            |> Cmd.ofMsg
+    | Error e ->
+            e
+            |> Alert 
+            |> UpdateDialogBox
+            |> Cmd.ofMsg
+
+let runTestbench currentTabId editors (result : Result<(int * Test list), string>) =
+    match result with
+    | Error(mess) ->
+        mess 
+        |> Alert
+        |> UpdateDialogBox
+        |> Cmd.ofMsg
+    | Ok(tabId, tests) when currentTabId = tabId ->
+        "Please select the program tab which you want to test - not the testbench"
+        |> Alert 
+        |> UpdateDialogBox
+        |> Cmd.ofMsg
+    | Ok(_, tests) ->
+        printfn "Running %d Tests" tests.Length
+        tests |> RunEditorTabOnTests |> Cmd.ofMsg 
+
+let runTestbenchOnCode editors cmd =
+    runThingOnCode 
+            editors 
+            cmd
 
 /// Top-level simulation execute
 /// If current tab is TB run TB if this is possible
-let runSimulation tabId : DialogBox option option * Cmd<Msg> =
+let runSimulation tabId : Cmd<Msg> =
     match tabId with
     | -1 -> 
-        let newDialogBox = Alert "No file tab in editor to run!"
-        newDialogBox |> Some |> Some , Cmd.none
+        "No file tab in editor to run!"
+        |> Alert 
+        |> UpdateDialogBox
+        |> Cmd.ofMsg
     | _ -> 
-        None, Cmd.ofMsg IsItTestbench
+        Cmd.ofMsg IsItTestbench
