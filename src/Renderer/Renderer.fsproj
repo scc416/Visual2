@@ -18,9 +18,8 @@
     <Compile Include="Integration.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Files.fs" />
-    <Compile Include="Dialog.fs" />
-    <Compile Include="MenuBar.fs" />
     <Compile Include="Views.fs" />
+    <Compile Include="MenuBar.fs" />
     <Compile Include="Renderer.fs" />
     <ProjectReference Include="..\Emulator\Emulator.fsproj" />
   </ItemGroup>

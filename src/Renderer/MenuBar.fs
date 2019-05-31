@@ -7,10 +7,7 @@ open Fable.Import
 open Fable.Import.Electron
 open Node.Base
 open Refs
-open Tabs
-open Integration
-open Dialog
-open Testbench
+open Views
 open Elmish
 
 let runExtPage url () =

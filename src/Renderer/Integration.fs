@@ -140,15 +140,21 @@ let updateGUIFromRunState (pInfo : RunInfo) :
                     Cmd.ofMsg ShowInfoFromCurrentMode ]
     | PSError(``Run time error`` (_pos, msg)) ->
         let lineMess = getCodeLineMess pInfo
+        let sub dispatch =
+            Browser.window.setTimeout (
+                msg
+                |> (sprintf "Error %s: %s" lineMess )
+                |> Alert
+                |> UpdateDialogBox, 100, []) |> ignore
+                //RunErrorMode pInfo
         (RunMode.RunErrorMode pInfo) |> Some,
         None,
         Cmd.batch [ Cmd.ofMsg RemoveDecorations
                     Cmd.ofMsg DeleteAllContentWidgets
+                    Cmd.ofSub sub
                     ("editor-line-highlight-error", (pInfo)) |> HighlightCurrentAndNextIns |> Cmd.ofMsg
                     Cmd.ofMsg ShowInfoFromCurrentMode ]
-        //Browser.window.setTimeout ((fun () ->
-            //showVexAlert (sprintf "Error %s: %s" lineMess msg)
-            //RunErrorMode pInfo), 100, []) |> ignore
+
     | PSError(``Unknown symbol runtime error`` undefs) ->
         RunMode.RunErrorMode pInfo |> Some,
         None,
@@ -261,12 +267,13 @@ let asmStepDisplay (breakc : BreakCondition) simulatorMaxSteps runMode steps ri'
             let ri' = asmStep (stepsMax + ri.StepsDone - 1L) ri // finally run the simulator!
             let newRMode = ActiveMode(RunState.Running, ri') // mark the fact that we are running
             match ri'.State with
-            | PSRunning -> //
-                 //Browser.window.setTimeout ((fun () ->
-                        //// schedule more simulation in the event loop allowing button-press events
-                        //asmStepDisplay ri'.BreakCond steps ri'), 0, []) |> ignore
+            | PSRunning ->
+                let sub dispatch = 
+                    Browser.window.setTimeout (
+                        // schedule more simulation in the event loop allowing button-press events
+                        (ri'.BreakCond, steps, ri') |> AsmStepDisplay |> dispatch, 0, []) |> ignore
                 newRMode, Cmd.batch [ Cmd.ofMsg ShowInfoFromCurrentMode
-                                      (ri'.BreakCond, steps, ri') |> AsmStepDisplay |> Cmd.ofMsg ]
+                                      Cmd.ofSub sub ]
             | _ ->
                 let cmd, testLst = handleTest ri' editors
                 match testLst with

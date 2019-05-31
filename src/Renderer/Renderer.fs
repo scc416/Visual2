@@ -18,7 +18,6 @@ open Tooltips
 open Files
 open Settings
 open Editors
-open Dialog
 open Stats
 open Integration
 open ExecutionTop
