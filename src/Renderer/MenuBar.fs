@@ -9,6 +9,9 @@ open Node.Base
 open Refs
 open Views
 open Elmish
+open Integration
+open Tests
+open Testbench
 
 let runExtPage url () =
     electron.shell.openExternal url |> ignore
@@ -166,21 +169,23 @@ let popupMenu (items) =
     menu.popup (electron.remote.getCurrentWindow())
     ()
 
-//let runSingleTest editors =
-    //let decorations, cmd, testLst = getTestList editors
-    //match testLst with
-    //| [] -> 
-    //    "Can't find any tests. Have you loaded a valid testbench?"
-    //    |> Alert
-    //    |> UpdateDialogBox
-    //    |> Cmd.ofMsg
-    //| lst -> 
-        //popupMenu (List.map (fun (test : ExecutionTop.Test) ->
-            //let name = sprintf "Step code with initial data from Test %d" test.TNum
-            //let actFun = fun () -> Integration.startTest test editors
-            //makeItem name Core.None actFun) lst)
+let runSingleTest editors (disptach : Msg -> unit) =
+    let decorations, cmd, testLst = getTestList editors
+    match testLst with
+    | [] -> 
+        "Can't find any tests. Have you loaded a valid testbench?"
+        |> Alert
+        |> UpdateDialogBox
+    | lst -> 
+        let testLst = 
+            List.map (fun (test : ExecutionTop.Test) ->
+                let name = sprintf "Step code with initial data from Test %d" test.TNum
+                let actFun = fun () -> test |> StartTest |> disptach
+                makeItem name Core.None actFun) lst
+        testLst
+        |> PopupMenu
 
-let testMenu (dispatch : (Msg -> Unit)) debugLevel runMode =
+let testMenu (dispatch : (Msg -> Unit)) debugLevel runMode editors =
         let runToBranch() = ()
         let menu = electron.remote.Menu.Create()
         let runTo cond = (cond, System.Int64.MaxValue) |> RunEditorTab |> dispatch
@@ -192,15 +197,8 @@ let testMenu (dispatch : (Msg -> Unit)) debugLevel runMode =
             makeItem "Step forward by" Core.Option.None (fun () -> UpdateDialogBox StepDl |> dispatch )
             makeItem "Step back by" Core.Option.None (fun () -> UpdateDialogBox StepBackDl |> dispatch )
             menuSeparator
-            makeItem "Step into test" Core.Option.None (fun () -> RunSingleTest |> dispatch )
-            makeItem 
-                "Run all tests" 
-                Core.Option.None 
-                (interlockAction 
-                    "Testbench" 
-                    (fun () -> RunTestBenchOnCode |> dispatch) 
-                    debugLevel 
-                    runMode)
+            makeItem "Step into test" Core.Option.None (fun () -> dispatch |> runSingleTest editors |> dispatch )
+            makeItem "Run all tests" Core.Option.None (interlockAction "Testbench" (fun () -> RunTestBenchOnCode |> dispatch) debugLevel runMode)
         ]
 
 let helpMenu dispatch debugLevel runMode =
@@ -216,8 +214,8 @@ let helpMenu dispatch debugLevel runMode =
                 makeItem "Official ARM documentation" Core.Option.None (runExtPage "http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0234b/i1010871.html")
                 menuSeparator
                 makeItem "Load complex demo code" Core.Option.None (interlockAction "load code" (fun _ -> Refs.LoadDemoCode |> dispatch) debugLevel runMode)
-                //makeCondItem (m.DebugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (fun () -> runTestbench m) m.DebugLevel m.RunMode)
-                //makeCondItem (m.DebugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" (fun () -> Tests.runAllEmulatorTests m) m.DebugLevel m.RunMode)
+                makeCondItem (debugLevel > 0) "Run dev tools FABLE checks" Core.Option.None (interlockAction "FABLE checks" (fun () -> RunTestBench |> dispatch) debugLevel runMode)
+                makeCondItem (debugLevel > 0) "Run Emulator Tests" Core.Option.None (interlockAction "run tests" (fun () -> RunAllEmulatorTests |> dispatch ) debugLevel runMode)
                 menuSeparator
                 makeItem "About" Core.option.None (fun _ -> (newDialogBox |> UpdateDialogBox |> dispatch ))
             ])
@@ -227,6 +225,7 @@ let helpMenu dispatch debugLevel runMode =
 let mainMenu tabId
              debugLevel
              runMode
+             editors
              (dispatch : (Msg -> Unit))=
     let template =
         ResizeArray<MenuItemOptions> [
@@ -234,7 +233,7 @@ let mainMenu tabId
             editMenu dispatch debugLevel runMode
             viewMenu()
             helpMenu dispatch debugLevel runMode
-            testMenu dispatch debugLevel runMode
+            testMenu dispatch debugLevel runMode editors
         ]
     template
     |> electron.remote.Menu.buildFromTemplate

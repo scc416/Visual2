@@ -427,11 +427,13 @@ let matchRunMode bkCon steps =
     | _ -> 
         (bkCon, steps) |> RunEditorTab |> Cmd.ofMsg
 
-let matchActiveMode =
-    function
+let matchActiveMode runMode =
+    match runMode with
     | ActiveMode(RunState.Running, ri) -> 
-        (RunState.Running, ri) |> SetCurrentModeActive |> Cmd.ofMsg  
+        (RunState.Running, ri)|> ActiveMode |> Some,
+        Cmd.none
     | _ -> 
+        None,
         Cmd.ofMsg MatchRunMode
 
 let isItTestbench editor : Cmd<Msg> =

@@ -23,6 +23,7 @@ open Integration
 open ExecutionTop
 open Core.Option
 open Testbench
+open Tests
 
 let init _ =
     let debugLevel =
@@ -165,7 +166,7 @@ let update (msg : Msg) (m : Model) =
     | CloseDialog ->
         { m with DialogBox = None }, Cmd.none
     | AttemptToExit ->
-        let newCmd = attemptToExitUpdate m.Editors m.DialogBox
+        let newCmd = attemptToExitUpdate m.Editors
         m, newCmd
     | Exit ->
         close()
@@ -223,10 +224,8 @@ let update (msg : Msg) (m : Model) =
         Cmd.batch [ RunningCode |> ReadOnlineInfo |> Cmd.ofMsg
                     cmd ]
     | MatchActiveMode ->
-        let cmd = matchActiveMode m.RunMode
-        m, cmd
-    | SetCurrentModeActive (rs, ri) ->
-        { m with RunMode = ActiveMode(rs, ri) }, Cmd.none
+        let runMode, cmd = matchActiveMode m.RunMode
+        { m with RunMode = defaultValue m.RunMode runMode}, cmd
     | MatchRunMode ->
         let steps = 
             m.Settings.SimulatorMaxSteps
@@ -387,13 +386,19 @@ let update (msg : Msg) (m : Model) =
         let cmd = (resultOpt, false, tests) |> GetTestRunInfo |> Cmd.ofMsg
         { m with EditorEnable = defaultValue m.EditorEnable editorEnable}, 
         cmd
-    | RunSingleTest ->
-        //let r = runSingleTest m.Editors
+    | PopupMenu lst ->
+        popupMenu lst
+        m, Cmd.none
+    | StartTest test ->
+        let cmd = startTest test m.Editors
+        m, cmd
+    | RunAllEmulatorTests ->
+        runAllEmulatorTests m.RegMap m.Flags m.MemoryMap 
         m, Cmd.none
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
-    mainMenu m.TabId m.DebugLevel m.RunMode dispatch
+    mainMenu m.TabId m.DebugLevel m.RunMode m.Editors dispatch
     dialogBox (m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab)
               dispatch
               m.DialogBox

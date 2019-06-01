@@ -160,17 +160,13 @@ let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingT
     | Option.None -> 
         ()
 
-let attemptToExitUpdate editors (dialogBox: DialogBox option) =
-    match dialogBox with
-    | Option.None -> 
-        let allSaved = 
-            editors 
-            |> Map.forall (fun _ value -> value.Saved = true) 
-        match allSaved with
-        | true -> Cmd.ofMsg Exit
-        | _ -> QuitDl |> UpdateDialogBox |> Cmd.ofMsg
-    | _ -> 
-        Cmd.none
+let attemptToExitUpdate editors =
+    let allSaved = 
+        editors 
+        |> Map.forall (fun _ value -> value.Saved = true) 
+    match allSaved with
+    | true -> Cmd.ofMsg Exit
+    | _ -> QuitDl |> UpdateDialogBox |> Cmd.ofMsg
 
 let maxSymbolWidth = 30
 let maxDataSymbolLength = 16

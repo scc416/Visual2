@@ -14,6 +14,7 @@ open Fable.Import
 open Fable.Import.Browser
 open Microsoft.FSharp.Collections
 open EEExtensions
+open Fable.Import.Electron
 open Monaco
 open ExecutionTop
 
@@ -81,6 +82,25 @@ type VSettings = {
     SimulatorMaxSteps : string
     }
 
+type Flags = {
+    FN : bool
+    FZ : bool
+    FC : bool
+    FV : bool
+ }
+
+type DPath = {
+    TRegs : uint32 list;
+    TFlags : Flags
+    }
+
+type TestSetup = {
+    Before : DPath;
+    Asm : string;
+    After : DPath option;
+    Name : string
+    }
+
 /// type of dialog boxes that comes up in view
 type DialogBox =
     | Alert of string
@@ -118,6 +138,8 @@ type EditorsProps =
     | OnChange of (string -> unit)
     | Value of string
     | IsReadOnly of bool
+
+type TestT = | OkTests | ErrorTests | BetterThanModelTests
 
 /// Position of widget on editor buffer character grid.
 /// AboveBelow => offset form position, Exact => centered on position
@@ -222,7 +244,6 @@ type Msg =
     | RunTestBench
     | MatchActiveMode
     | MatchRunMode
-    | SetCurrentModeActive of RunState * RunInfo
     | RunEditorTab of BreakCondition * int64
     | DeleteAllContentWidgets
     | RemoveDecorations
@@ -245,7 +266,9 @@ type Msg =
     | RunTestBenchOnCode
     | RunEditorTabOnTests of Test list
     | GetTestRunInfo of Result<RunInfo, string> option * bool * Test list
-    | RunSingleTest
+    | PopupMenu of MenuItemOptions List
+    | StartTest of Test
+    | RunAllEmulatorTests
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
