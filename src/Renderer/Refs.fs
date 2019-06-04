@@ -101,15 +101,7 @@ type TestSetup = {
     Name : string
     }
 
-/// type of dialog boxes that comes up in view
-type DialogBox =
-    | Alert of string
-    | OpenFileDl
-    | QuitDl
-    | SaveAsDl
-    | UnsavedFileDl
-    | StepDl
-    | StepBackDl
+
 
 type CodeType = DP3 | DP2 | CMP | LDRSTR | LDMSTM | MISC | EQU | UNIMPLEMENTED
 
@@ -149,62 +141,17 @@ type WidgetPlace =
 
 type MemDirection = | MemRead | MemWrite
 
-/// the main model for MVU
-type Model = { 
-    /// File Tab currently selected (and therefore visible)
-    TabId : int
-    /// tab containing current testbench specification (if testbench is loaded)
-    TestbenchTab : int option
-    /// Map tabIds to the editors which are contained in them
-    Editors : Map<int, Editor>
-    /// Map of content widgets currently on editor, indexed by id
-    CurrentTabWidgets : Map<string, obj>
-    /// id of tab containing settings form, if this exists
-    SettingsTab : int option
-    /// The current number representation being used
-    CurrentRep : Representations
-    /// indicates what the current DOM symbols display representation is
-    DisplayedCurrentRep : Representations
-    /// The current View in the right-hand pane
-    CurrentView : Views
-    /// Whether the Memory View is byte of word based
-    ByteView : bool
-    /// direction of memory addresses
-    ReverseDirection : bool
-    /// Number of instructions imulated before break. If 0 run forever
-    MaxStepsToRun : int
-    /// Contents of data memory
-    MemoryMap : Map<uint32, uint32>
-    /// Contents of CPU registers
-    RegMap : Map<CommonData.RName, uint32>
-    /// Contents of CPU flags
-    Flags : CommonData.Flags
-    FlagsHasChanged : bool
-    /// Values of all Defined Symols
-    SymbolMap : Map<string, uint32 * ExecutionTop.SymbolType>
-    /// Current state of simulator
-    RunMode : ExecutionTop.RunMode
-    /// Global debug level set from main process.
-    /// 0 => production. 1 => development. 2 => debug parameter.
-    DebugLevel : int
-    /// Execution Step number at which GUI was last updated
-    LastDisplayStepsDone : int64
-    LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
-    Activity : bool
-    Sleeping : bool
-    LastRemindTime : System.TimeSpan option
-    Settings : VSettings
-    DialogBox : DialogBox option
-    InitClose : bool
-    Decorations : obj list
-    EditorEnable : bool
-    ClockTime : uint64 * uint64
-    /// Use to set theme for Editors
-    IExports : Monaco.IExports option
-    }
-
-/// possible messages when user interact with VisUAL2
-type Msg =
+/// type of dialog boxes that comes up in view
+type DialogBox =
+    | Alert of string
+    | OpenFileDl
+    | QuitDl
+    | ResetEmulatorDl of string * Msg
+    | SaveAsDl
+    | UnsavedFileDl
+    | StepDl
+    | StepBackDl
+and Msg =
     | ChangeView of Views
     | ChangeRep of Representations
     | ToggleByteView
@@ -269,6 +216,63 @@ type Msg =
     | PopupMenu of MenuItemOptions List
     | StartTest of Test
     | RunAllEmulatorTests
+    | CheckRunMode of Msg * string
+
+/// the main model for MVU
+type Model = { 
+    /// File Tab currently selected (and therefore visible)
+    TabId : int
+    /// tab containing current testbench specification (if testbench is loaded)
+    TestbenchTab : int option
+    /// Map tabIds to the editors which are contained in them
+    Editors : Map<int, Editor>
+    /// Map of content widgets currently on editor, indexed by id
+    CurrentTabWidgets : Map<string, obj>
+    /// id of tab containing settings form, if this exists
+    SettingsTab : int option
+    /// The current number representation being used
+    CurrentRep : Representations
+    /// indicates what the current DOM symbols display representation is
+    DisplayedCurrentRep : Representations
+    /// The current View in the right-hand pane
+    CurrentView : Views
+    /// Whether the Memory View is byte of word based
+    ByteView : bool
+    /// direction of memory addresses
+    ReverseDirection : bool
+    /// Number of instructions imulated before break. If 0 run forever
+    MaxStepsToRun : int
+    /// Contents of data memory
+    MemoryMap : Map<uint32, uint32>
+    /// Contents of CPU registers
+    RegMap : Map<CommonData.RName, uint32>
+    /// Contents of CPU flags
+    Flags : CommonData.Flags
+    FlagsHasChanged : bool
+    /// Values of all Defined Symols
+    SymbolMap : Map<string, uint32 * ExecutionTop.SymbolType>
+    /// Current state of simulator
+    RunMode : ExecutionTop.RunMode
+    /// Global debug level set from main process.
+    /// 0 => production. 1 => development. 2 => debug parameter.
+    DebugLevel : int
+    /// Execution Step number at which GUI was last updated
+    LastDisplayStepsDone : int64
+    LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
+    Activity : bool
+    Sleeping : bool
+    LastRemindTime : System.TimeSpan option
+    Settings : VSettings
+    DialogBox : DialogBox option
+    InitClose : bool
+    Decorations : obj list
+    EditorEnable : bool
+    ClockTime : uint64 * uint64
+    /// Use to set theme for Editors
+    IExports : Monaco.IExports option
+    }
+
+
 
 /// look in the Editors and find the next unique id
 let uniqueTabId (editor : Map<int, Editor>) =
@@ -402,7 +406,7 @@ let appDirName : string = jsNative
 let initSettings = {
     EditorFontSize = "16"
     SimulatorMaxSteps = "20000"
-    EditorTheme = "solarised-dark"
+    EditorTheme = "vs" //"solarised-dark"
     EditorWordWrap = false
     EditorRenderWhitespace = false
     CurrentFilePath = Fable.Import.Node.Exports.os.homedir()
@@ -411,10 +415,13 @@ let initSettings = {
     }
 
 let themes = [
-                "one-dark-pro", "One Dark Pro";
-                "one-light-pro", "One Light Pro";
-                "solarised-dark", "Solarised Dark";
-                "solarised-light", "Solarised Light";
+                "vs", "vs";
+                "vs-dark", "vs-dark";
+                "hc-black", "hc-black";
+                //"one-dark-pro", "One Dark Pro";
+                //"one-light-pro", "One Light Pro";
+                //"solarised-dark", "Solarised Dark";
+                //"solarised-light", "Solarised Light";
               ]
 
 let minFontSize = 6L

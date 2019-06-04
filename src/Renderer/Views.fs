@@ -101,10 +101,8 @@ let closeTabDialog (fileName : string option, settingTab : int option, currentId
 let alertDialog txt dispatch = 
     showVexAlert txt (fun _ -> CloseDialog |> dispatch )
 
-let showQuitMessage (callBack : bool -> unit) =
-    let mess = "You have unsaved changes. Are you sure you want to exit and lose changes?"
-    let buttons = [ "Save"; "Exit without saving" ]
-    showVexConfirm mess callBack
+let showMessage (callBack : bool -> unit) message =
+    showVexConfirm message callBack
 
 let showAlert (message : string) (detail : string) =
     showVexAlert <|
@@ -119,7 +117,20 @@ let ExitIfOK dispatch =
         match result with
         | false -> CloseDialog |> dispatch
         | true -> Exit |> dispatch
-    showQuitMessage callback
+    let mess = "You have unsaved changes. Are you sure you want to exit and lose changes?"
+    showMessage callback mess
+
+let ResetIfOK dispatch str msg =
+    //let close() = electron.ipcRenderer.send "doClose" |> ignore
+    let callback (result : bool) =
+        match result with
+        | false -> 
+            CloseDialog |> dispatch
+        | true -> 
+            CloseDialog |> dispatch
+            ResetEmulator |> dispatch
+            msg |> dispatch
+    showMessage callback str
 
 /// determine if any dialog box has to be opened in view
 let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingTab : int option)
@@ -157,6 +168,9 @@ let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingT
                 (ExecutionTop.NoBreak, (int64 x)) |> RunEditorTab |> dispatch) 
             "Number of steps forward" 
             (CloseDialog |> dispatch)
+    | Some (ResetEmulatorDl (txt, msg)) ->
+        Browser.console.log(string msg)
+        ResetIfOK dispatch txt msg
     | Option.None -> 
         ()
 

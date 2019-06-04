@@ -225,7 +225,7 @@ let update (msg : Msg) (m : Model) =
                     cmd ]
     | MatchActiveMode ->
         let runMode, cmd = matchActiveMode m.RunMode
-        { m with RunMode = defaultValue m.RunMode runMode}, cmd
+        { m with RunMode = defaultValue m.RunMode runMode }, cmd
     | MatchRunMode ->
         let steps = 
             m.Settings.SimulatorMaxSteps
@@ -395,6 +395,17 @@ let update (msg : Msg) (m : Model) =
     | RunAllEmulatorTests ->
         runAllEmulatorTests m.RegMap m.Flags m.MemoryMap 
         m, Cmd.none
+    | CheckRunMode (msg, actionName) ->
+        let fMsg = 
+            match m.RunMode with
+            | ExecutionTop.ResetMode
+            | ExecutionTop.ParseErrorMode -> 
+                msg
+            | _ -> 
+                ((sprintf "Can't %s while simulator is running <br> <br>Reset and %s<br>" actionName actionName), msg)
+                |> ResetEmulatorDl
+                |> UpdateDialogBox 
+        m, Cmd.ofMsg fMsg
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
@@ -408,10 +419,10 @@ let view (m : Model) (dispatch : Msg -> unit) =
                  [ div [ ClassName "toolbar-actions" ] 
                        [ div [ ClassName "btn-group" ]
                              [ button [ ClassName "btn btn-default" 
-                                        DOMAttr.OnClick (fun _ -> OpenFileDialog |> dispatch) ]
+                                        DOMAttr.OnClick (fun _ -> (OpenFileDialog, "open file") |> CheckRunMode |> dispatch) ]
                                       [ span [ ClassName "icon icon-folder" ] [] ]
                                button [ ClassName "btn btn-default"
-                                        DOMAttr.OnClick (fun _ -> SaveFile |> dispatch) ]
+                                        DOMAttr.OnClick (fun _ -> (SaveFile, "save file") |> CheckRunMode |> dispatch) ]
                                       [ span [ ClassName "icon icon-floppy" ] [] ] ]
                          button [ ClassName "btn btn-fixed btn-default button-run"
                                   DOMAttr.OnClick (fun _ -> RunSimulation |> dispatch) ]

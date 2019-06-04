@@ -141,7 +141,7 @@ let inline editor (props: EditorsProps list) : React.ReactElement =
 
 let tabClickable id dispatch =
     function
-    | true -> SelectFileTab id |> dispatch
+    | true -> (SelectFileTab id, "select tab") |> CheckRunMode |> dispatch
     | _ -> ()
 
 /// decide whether this file name is gonna be bold or not (in the tab header)
@@ -225,7 +225,7 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
               DOMAttr.OnClick (fun _ -> tabClickable id dispatch editorEnable)] 
             [ span [ ClassName "invisible" ] []
               span [ ClassName "icon icon-cancel icon-close-tab" 
-                     DOMAttr.OnClick (fun _ -> AttemptToDeleteTab id |> dispatch)] []
+                     DOMAttr.OnClick (fun _ -> (AttemptToDeleteTab id, "close file") |> CheckRunMode |> dispatch)] []
               span [ tabNameClass id settingsTabId |> ClassName
                      tabHeaderTextStyle editor.Saved ] 
                    [ editor.Saved |> fileNameFormat fileName |> str ] ]
@@ -233,7 +233,7 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
     /// button (actually is a clickable div) that add new tab
     let addNewTabDiv =
         [ div [ ClassName "tab-item tab-item-fixed" 
-                DOMAttr.OnClick (fun _ -> NewFile |> dispatch) ]
+                DOMAttr.OnClick (fun _ -> (NewFile, "make new file tab")|> CheckRunMode |> dispatch) ]
               [ span [ ClassName "icon icon-plus" ] [] ] ]
 
     /// all tab headers plus the add new tab button
