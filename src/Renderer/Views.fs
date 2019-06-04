@@ -104,10 +104,6 @@ let alertDialog txt dispatch =
 let showMessage (callBack : bool -> unit) message =
     showVexConfirm message callBack
 
-let showAlert (message : string) (detail : string) =
-    showVexAlert <|
-        sprintf """<p style="text-align:center"><b>%s</b><br>%s</p>""" detail message
-
 let close() = electron.ipcRenderer.send "doClose" |> ignore
 
 /// Display dialog asking for confirmation as there is unsaved file(s)
@@ -133,46 +129,54 @@ let ResetIfOK dispatch str msg =
     showMessage callback str
 
 /// determine if any dialog box has to be opened in view
-let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingTab : int option)
+let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingTab : int option, dialogBox : DialogBox option)
               dispatch =
     function
-    | Some OpenFileDl ->
-        openFile currentFilePath 
-                 dispatch
-    | Some SaveAsDl ->
-        saveFileAs currentFilePath 
-                   editors.[tabId]
-                   dispatch
-    | Some UnsavedFileDl ->
-        closeTabDialog (editors.[tabId].FileName, settingTab, tabId)
-                       dispatch
-    | Some QuitDl ->
-        ExitIfOK dispatch
-    | Some (Alert txt) ->
-        alertDialog txt dispatch
-    | Some StepBackDl ->
-        showVexValidatedPrompt 
-            "steps back" 
-            validPosInt 
-            (fun x -> 
-                CloseDialog |> dispatch
-                x |> int64 |> StepCodeBackBy |> dispatch) 
-            "Number of steps back"
-            (CloseDialog |> dispatch)
-    | Some StepDl ->
-        showVexValidatedPrompt 
-            "steps forward" 
-            validPosInt 
-            (fun x -> 
-                CloseDialog |> dispatch
-                (ExecutionTop.NoBreak, (int64 x)) |> RunEditorTab |> dispatch) 
-            "Number of steps forward" 
-            (CloseDialog |> dispatch)
-    | Some (ResetEmulatorDl (txt, msg)) ->
-        Browser.console.log(string msg)
-        ResetIfOK dispatch txt msg
-    | Option.None -> 
-        ()
+   | true -> ()
+   | _ ->
+        match dialogBox with
+        | Option.None -> ()
+        | _ ->
+            DialogUpdated |> dispatch
+            match dialogBox with
+            | Some OpenFileDl ->
+                openFile currentFilePath 
+                         dispatch
+            | Some SaveAsDl ->
+                saveFileAs currentFilePath 
+                           editors.[tabId]
+                           dispatch
+            | Some UnsavedFileDl ->
+                closeTabDialog (editors.[tabId].FileName, settingTab, tabId)
+                               dispatch
+            | Some QuitDl ->
+                ExitIfOK dispatch
+            | Some (Alert txt) ->
+                alertDialog txt dispatch
+            | Some StepBackDl ->
+                showVexValidatedPrompt 
+                    "steps back" 
+                    validPosInt 
+                    (fun x -> 
+                        CloseDialog |> dispatch
+                        x |> int64 |> StepCodeBackBy |> dispatch) 
+                    "Number of steps back"
+                    (CloseDialog |> dispatch)
+            | Some StepDl ->
+                showVexValidatedPrompt 
+                    "steps forward" 
+                    validPosInt 
+                    (fun x -> 
+                        CloseDialog |> dispatch
+                        (ExecutionTop.NoBreak, (int64 x)) |> RunEditorTab |> dispatch) 
+                    "Number of steps forward" 
+                    (CloseDialog |> dispatch)
+            | Some (ResetEmulatorDl (txt, msg)) ->
+                ResetIfOK dispatch txt msg
+            | Option.None -> 
+                ()
+            
+
 
 let attemptToExitUpdate editors =
     let allSaved = 

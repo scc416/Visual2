@@ -108,7 +108,8 @@ let clockTooltipStr = "Instructions : clock cycles"
 /// work out tippy theme with opposite background to editor
 let tippyTheme =
     function
-    | "one-light-pro" | "solarised-light" -> "dark"
+    | "vs-dark" | "hc-black" -> "dark"
+    //| "one-light-pro" | "solarised-light" -> "dark"
     | _ -> "light"
 
 /// <summary> Make an editor content widget to display over editor.

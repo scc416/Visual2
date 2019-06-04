@@ -39,6 +39,7 @@ let init _ =
     let settings = checkSettings (getJSONSettings initSettings) initSettings
     let m =
         { 
+            DialogUpdated = false
             TabId = 0
             TestbenchTab = None
             Editors = Map.ofList [ (0, blankTab) ]
@@ -75,6 +76,8 @@ let init _ =
 
 let update (msg : Msg) (m : Model) =
     match msg with
+    | DialogUpdated ->
+        { m with DialogUpdated = true }, Cmd.none
     | UpdateDialogBox dialogBox ->
         let newDialogBox = dialogBoxUpdate (Some dialogBox) m.DialogBox
         { m with DialogBox = newDialogBox }, Cmd.none
@@ -164,7 +167,8 @@ let update (msg : Msg) (m : Model) =
             { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) - 2) }
         { m with Settings = newSettings }, Cmd.none
     | CloseDialog ->
-        { m with DialogBox = None }, Cmd.none
+        { m with DialogBox = None 
+                 DialogUpdated = false }, Cmd.none
     | AttemptToExit ->
         let newCmd = attemptToExitUpdate m.Editors
         m, newCmd
@@ -410,10 +414,9 @@ let update (msg : Msg) (m : Model) =
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
     mainMenu m.TabId m.DebugLevel m.RunMode m.Editors dispatch
-    dialogBox (m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab)
+    dialogBox (m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab, m.DialogBox)
               dispatch
-              m.DialogBox
-    Browser.console.log(string m.FlagsHasChanged)
+              m.DialogUpdated
     div [ ClassName "window" ] 
         [ header [ ClassName "toolbar toolbar-header" ] 
                  [ div [ ClassName "toolbar-actions" ] 
@@ -439,10 +442,10 @@ let view (m : Model) (dispatch : Msg -> unit) =
                          (statusBar m.RunMode)
                          div [ ClassName "btn-group clock" ]
                              [ tooltips (Refs.Content clockSymTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
-                                        [ button [ ClassName "btn btn-large btn-default clock-symbol" ]
+                                        [ button [ ClassName "btn btn-large btn-default clock-symbol" ; Disabled true ]
                                                  [ str "\U0001F551" ]]
                                tooltips (Refs.Content clockTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
-                                        [ button [ ClassName "btn btn-large btn-default clock-time" ]//; Disabled true ]
+                                        [ button [ ClassName "btn btn-large btn-default clock-time" ; Disabled true ]
                                                  [ m.ClockTime |> clockText |> str  ] ] ]
                          repButtons m.CurrentRep dispatch ] ]
           div [ ClassName "window-content" ] 

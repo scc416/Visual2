@@ -217,9 +217,11 @@ and Msg =
     | StartTest of Test
     | RunAllEmulatorTests
     | CheckRunMode of Msg * string
+    | DialogUpdated
 
 /// the main model for MVU
 type Model = { 
+    DialogUpdated : bool
     /// File Tab currently selected (and therefore visible)
     TabId : int
     /// tab containing current testbench specification (if testbench is loaded)
