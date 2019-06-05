@@ -216,12 +216,10 @@ let readOnlineInfo (ve: VisualEvent) info onlineFetchText =
     | false -> 
         Cmd.none
 
-let readOnlineInfoFailUpdate onlineFetchText ve lastRemindTime = 
-    let newLastOnlineFetchTime = Error System.DateTime.Now
-    let newLastRemindTime, cmd = checkActions onlineFetchText ve lastRemindTime
-    newLastOnlineFetchTime, newLastRemindTime, cmd
-
-let readOnlineInfoSuccessUpdate onlineFetchText ve lastRemindTime =
-    let newLastOnlineFetchTime = Ok System.DateTime.Now
+let readOnlineInfoResultUpdate onlineFetchText ve lastRemindTime success =
+    let newLastOnlineFetchTime = 
+        match success with
+        | true -> Ok System.DateTime.Now
+        | false -> Error System.DateTime.Now
     let newLastRemindTime, cmd = checkActions onlineFetchText ve lastRemindTime
     newLastOnlineFetchTime, newLastRemindTime, cmd

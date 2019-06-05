@@ -211,7 +211,7 @@ let update (msg : Msg) (m : Model) =
         m, cmd
     | ReadOnlineInfoSuccess (newOnlineFetchText, ve) -> 
         let newLastOnlineFetchTime, newLastRemindTime, cmd = 
-            readOnlineInfoSuccessUpdate newOnlineFetchText ve m.OnlineInfo.LastRemindTime
+            readOnlineInfoResultUpdate newOnlineFetchText ve m.OnlineInfo.LastRemindTime true
         let newSettings = { m.Settings with OnlineFetchText = newOnlineFetchText }
         let newOnlineInfo = 
             { m.OnlineInfo with LastOnlineFetchTime = Ok System.DateTime.Now 
@@ -220,7 +220,7 @@ let update (msg : Msg) (m : Model) =
                  Settings = newSettings }, cmd
     | ReadOnlineInfoFail ve -> 
         let newLastOnlineFetchTime, newLastRemindTime, cmd = 
-            readOnlineInfoFailUpdate m.Settings.OnlineFetchText ve m.OnlineInfo.LastRemindTime
+            readOnlineInfoResultUpdate m.Settings.OnlineFetchText ve m.OnlineInfo.LastRemindTime false
         let newOnlineInfo = 
             { m.OnlineInfo with LastOnlineFetchTime = Ok System.DateTime.Now 
                                 LastRemindTime = newLastRemindTime }
