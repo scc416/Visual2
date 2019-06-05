@@ -40,27 +40,27 @@ let init _ =
     let m =
         { 
             DialogUpdated = false
-            TabId = 0
+            TabInfo = {
+                Editors = Map.ofList [ (0, blankTab) ]
+                TabId = 0 }
             TestbenchTab = None
-            Editors = Map.ofList [ (0, blankTab) ]
             CurrentTabWidgets = Map.empty
             SettingsTab = None
-            CurrentRep = Hex
+            View = {
+                CurrentRep = Hex
+                ByteView = false
+                ReverseDirection = false
+                SymbolMap = Map.empty
+                FlagsHaveChanged = false
+                CurrentView = Registers
+                }
             DisplayedCurrentRep = Hex
-            CurrentView = Registers
-            ByteView = false
-            ReverseDirection = false
             MaxStepsToRun = 50000
-            MemoryMap = Map.empty
-            RegMap = ExecutionTop.initialRegMap
-            Flags = initialFlags
-            SymbolMap = Map.empty
+            Content = initContent
             RunMode = ExecutionTop.ResetMode
-            DebugLevel = debugLevel
-            LastOnlineFetchTime = Result.Error System.DateTime.Now
             Activity = true
             Sleeping = false
-            LastRemindTime = None
+
             Settings = settings
             DialogBox = None
             InitClose = false
@@ -69,7 +69,12 @@ let init _ =
             ClockTime = (0uL, 0uL)
             LastDisplayStepsDone = 0L
             IExports = None
-            FlagsHasChanged = false
+            OnlineInfo = {
+                LastOnlineFetchTime = Result.Error System.DateTime.Now
+                LastRemindTime = None
+                DebugLevel = debugLevel
+                }
+
         }
     let cmd = Startup |> ReadOnlineInfo |> Cmd.ofMsg         
     m, cmd
@@ -82,82 +87,77 @@ let update (msg : Msg) (m : Model) =
         let newDialogBox = dialogBoxUpdate (Some dialogBox) m.DialogBox
         { m with DialogBox = newDialogBox }, Cmd.none
     | ChangeView view -> 
-        { m with CurrentView = view }, Cmd.none
+        { m with View = { m.View with CurrentView = view } }, Cmd.none
     | ChangeRep rep ->
-        { m with CurrentRep = rep }, Cmd.none
+        { m with View = { m.View with CurrentRep = rep } }, Cmd.none
     | ToggleByteView -> 
-        { m with ByteView = not m.ByteView }, Cmd.none
+        { m with View = { m.View with ByteView = not m.View.ByteView } }, Cmd.none
     | ToggleReverseView -> 
-        { m with ReverseDirection = not m.ReverseDirection }, Cmd.none
+        { m with View = { m.View with ReverseDirection = not m.View.ReverseDirection } }, Cmd.none
     | NewFile -> 
-        let newTabId, newEditors = newFileUpdate m.Editors
-        { m with TabId = newTabId
-                 Editors = newEditors }, Cmd.none
+        let newTabInfo = newFileUpdate m.TabInfo.Editors
+        { m with TabInfo = newTabInfo }, Cmd.none
     | EditorTextChange ->
-        let newEditor = { m.Editors.[m.TabId] with Saved = false }
-        let newEditors = Map.add m.TabId newEditor m.Editors
-        { m with Editors = newEditors }, Cmd.none
+        let i = m.TabInfo
+        let newEditor = { i.Editors.[i.TabId] with Saved = false }
+        let newEditors = Map.add i.TabId newEditor i.Editors
+        { m with TabInfo = { m.TabInfo with Editors = newEditors } }, Cmd.none
     | SelectFileTab id -> 
-        let newTabId = selectFileTabUpdate id m.Editors
-        { m with TabId = newTabId }, Cmd.none
+        let newTabId = selectFileTabUpdate id m.TabInfo.Editors
+        { m with TabInfo = { m.TabInfo with TabId = newTabId } }, Cmd.none
     | AttemptToDeleteTab id ->
         let newCmd =
-            attemptToDeleteTabUpdate (m.TabId, m.Editors, m.DialogBox) 
+            attemptToDeleteTabUpdate (m.TabInfo, m.DialogBox) 
                                      id
         m, newCmd
     | DeleteTab -> 
-        let newTabId, newEditors, newSettingsTab = 
-            deleteTabUpdate (m.TabId, m.Editors, m.SettingsTab)
-        { m with TabId = newTabId
-                 Editors = newEditors 
+        let newInfo, newSettingsTab = 
+            deleteTabUpdate (m.TabInfo, m.SettingsTab)
+        { m with TabInfo = newInfo
                  SettingsTab = newSettingsTab
                  CurrentTabWidgets = Map.empty }, Cmd.ofMsg CloseDialog
     | OpenFile editors -> 
-        let newEditors, newFilePath, newTabId = 
-            openFileUpdate (m.Editors, m.Settings.CurrentFilePath, m.TabId)
+        let newFilePath, newInfo = 
+            openFileUpdate (m.TabInfo, m.Settings.CurrentFilePath)
                            editors
         let newSettings = 
             { m.Settings with CurrentFilePath = newFilePath }
-        { m with Editors = newEditors
-                 TabId = newTabId
+        { m with TabInfo = newInfo
                  Settings = newSettings }, Cmd.ofMsg CloseDialog
     | OpenFileDialog -> 
         let newDialog = dialogBoxUpdate (Some OpenFileDl) m.DialogBox
         { m with DialogBox = newDialog }, Cmd.none
     | SaveFile -> 
-        let newDialog, newEditors = 
-            saveFileUpdate (m.TabId, m.Editors)
-        { m with Editors = newEditors
-                 DialogBox = newDialog }, Cmd.none
+        let newDialog, newInfo = 
+            saveFileUpdate m.TabInfo
+        { m with TabInfo = newInfo
+                 DialogBox = dialogBoxUpdate newDialog m.DialogBox }, Cmd.none
     | SaveAsFileDialog -> 
         let newDialogBox =
-            saveAsFileDialogUpdate m.DialogBox m.TabId
+            saveAsFileDialogUpdate m.DialogBox m.TabInfo.TabId
         { m with DialogBox = newDialogBox }, Cmd.none
     | SaveAsFile fileInfo ->
-        let newEditors, newFilePathSetting =
-            saveAsFileUpdate (m.Editors, m.TabId, m.Settings.CurrentFilePath)
+        let newInfo, newFilePathSetting =
+            saveAsFileUpdate (m.TabInfo, m.Settings.CurrentFilePath)
                              fileInfo
         let newSettings = 
             { m.Settings with CurrentFilePath = newFilePathSetting }
-        { m with Editors = newEditors
+        { m with TabInfo = newInfo
                  Settings = newSettings }, Cmd.ofMsg CloseDialog
     | SelectSettingsTab ->
-        let newEditors, newTabId =
-            selectSettingsTabUpdate (m.SettingsTab, m.Editors)
-        { m with Editors = newEditors
-                 TabId = newTabId
-                 SettingsTab = Some newTabId }, Cmd.none
+        let newInfo =
+            selectSettingsTabUpdate (m.SettingsTab, m.TabInfo.Editors)
+        { m with TabInfo = newInfo
+                 SettingsTab = Some newInfo.TabId }, Cmd.none
     | SaveSettings ->
-        let newSettings, newEditors, newId =
-            saveSettingsUpdate (m.Settings, m.Editors, m.SettingsTab.Value, m.TabId, m.IExports)
+        let newSettings, newInfo =
+            saveSettingsUpdate (m.Settings, m.TabInfo.Editors, m.SettingsTab.Value, m.IExports)
         { m with Settings = newSettings 
-                 Editors = newEditors 
-                 TabId = newId 
+                 TabInfo = newInfo
                  SettingsTab = None }, Cmd.none
     | LoadDemoCode -> 
-        let newEditors, newId = loadDemo m.Editors
-        { m with Editors = newEditors 
-                 TabId = newId }, Cmd.none
+        let newInfo = loadDemo m.TabInfo.Editors
+        { m with TabInfo = newInfo }, Cmd.none
     | IncreaseFontSize ->
         let newSettings = 
             { m.Settings with EditorFontSize = string ((int m.Settings.EditorFontSize) + 2) }
@@ -170,60 +170,68 @@ let update (msg : Msg) (m : Model) =
         { m with DialogBox = None 
                  DialogUpdated = false }, Cmd.none
     | AttemptToExit ->
-        let newCmd = attemptToExitUpdate m.Editors
+        let newCmd = attemptToExitUpdate m.TabInfo.Editors
         m, newCmd
     | Exit ->
         close()
         m, Cmd.ofMsg CloseDialog
     | UpdateIEditor (x, y) ->
-        let newEditors = Map.add y { m.Editors.[y] with IEditor = Some x } m.Editors
-        { m with Editors = newEditors }, Cmd.none
+        let newEditors = Map.add y { m.TabInfo.Editors.[y] with IEditor = Some x } m.TabInfo.Editors
+        let newInfo = { m.TabInfo with Editors = newEditors }
+        { m with TabInfo = newInfo }, Cmd.none
     | FindEditor ->
-        let action = m.Editors.[m.TabId].IEditor?getAction ("actions.find")
+        let i = m.TabInfo
+        let action = i.Editors.[i.TabId].IEditor?getAction ("actions.find")
         action?run ()
         m, Cmd.none
     | FindAndReplaceEditor ->
-        let action = m.Editors.[m.TabId].IEditor?getAction ("editor.action.startFindReplaceAction")
+        let i = m.TabInfo
+        let action = i.Editors.[i.TabId].IEditor?getAction ("editor.action.startFindReplaceAction")
         action?run ()
         m, Cmd.none
     | UndoEditor ->
-        m.Editors.[m.TabId].IEditor?trigger ("Update.fs", "undo") |> ignore
+        let i = m.TabInfo
+        i.Editors.[i.TabId].IEditor?trigger ("Update.fs", "undo") |> ignore
         m, Cmd.none
     | SelectAllEditor ->
-        m.Editors.[m.TabId].IEditor?trigger ("Update.fs", "selectAll") |> ignore
+        let i = m.TabInfo
+        i.Editors.[i.TabId].IEditor?trigger ("Update.fs", "selectAll") |> ignore
         m, Cmd.none
     | RedoEditor ->
-        m.Editors.[m.TabId].IEditor?trigger ("Update.fs", "redo") |> ignore
+        let i = m.TabInfo
+        i.Editors.[i.TabId].IEditor?trigger ("Update.fs", "redo") |> ignore
         m, Cmd.none
     | InitiateClose ->
         { m with InitClose = true }, Cmd.none
     | ReadOnlineInfo ve ->
         let cmd = 
             readOnlineInfo ve
-                           m.LastOnlineFetchTime
+                           m.OnlineInfo
                            m.Settings.OnlineFetchText
-                           m.LastRemindTime
-                           m.DebugLevel
         m, cmd
     | ReadOnlineInfoSuccess (newOnlineFetchText, ve) -> 
         let newLastOnlineFetchTime, newLastRemindTime, cmd = 
-            readOnlineInfoSuccessUpdate newOnlineFetchText ve m.LastRemindTime
+            readOnlineInfoSuccessUpdate newOnlineFetchText ve m.OnlineInfo.LastRemindTime
         let newSettings = { m.Settings with OnlineFetchText = newOnlineFetchText }
-        { m with LastOnlineFetchTime = Ok System.DateTime.Now 
-                 LastRemindTime = newLastRemindTime
+        let newOnlineInfo = 
+            { m.OnlineInfo with LastOnlineFetchTime = Ok System.DateTime.Now 
+                                LastRemindTime = newLastRemindTime }
+        { m with OnlineInfo = newOnlineInfo
                  Settings = newSettings }, cmd
     | ReadOnlineInfoFail ve -> 
         let newLastOnlineFetchTime, newLastRemindTime, cmd = 
-            readOnlineInfoFailUpdate m.Settings.OnlineFetchText ve m.LastRemindTime
-        { m with LastOnlineFetchTime = newLastOnlineFetchTime 
-                 LastRemindTime = newLastRemindTime}, cmd
+            readOnlineInfoFailUpdate m.Settings.OnlineFetchText ve m.OnlineInfo.LastRemindTime
+        let newOnlineInfo = 
+            { m.OnlineInfo with LastOnlineFetchTime = Ok System.DateTime.Now 
+                                LastRemindTime = newLastRemindTime }
+        { m with OnlineInfo = newOnlineInfo }, cmd
     | InitialiseIExports iExports -> 
         //iExports?languages?register (registerLanguage)
         //iExports?languages?setMonarchTokensProvider (token)
         { m with IExports = Some iExports }, Cmd.none
     | RunSimulation ->
         let cmd = 
-            runSimulation m.TabId
+            runSimulation m.TabInfo.TabId
         m, 
         Cmd.batch [ RunningCode |> ReadOnlineInfo |> Cmd.ofMsg
                     cmd ]
@@ -245,10 +253,11 @@ let update (msg : Msg) (m : Model) =
             runEditorRunMode bkCon steps m.RunMode
         m, cmd
     | TryParseAndIndentCode (test, steps, bkCon, testOpt) ->
+        let i = m.TabInfo
         let loadImage, newRunMode, newDecorations = 
             tryParseAndIndentCode 
-                m.Editors.[m.TabId].IEditor 
-                m.DebugLevel 
+                i.Editors.[i.TabId].IEditor 
+                m.OnlineInfo.DebugLevel 
                 m.Decorations
         let msg =
             match test with
@@ -259,51 +268,52 @@ let update (msg : Msg) (m : Model) =
         Cmd.ofMsg msg
     | MatchLoadImage (info, steps, bkCon) ->
         let newEnableEditors, newRunMode, cmd = 
-            matchLI m.RegMap m.Flags m.MemoryMap steps bkCon info 
+            matchLI m.Content steps bkCon info 
         { m with EditorEnable = defaultValue m.EditorEnable newEnableEditors
                  RunMode = defaultValue m.RunMode newRunMode }, cmd
     | AsmStepDisplay (breakCon, steps, ri) ->
         let newRunMode, cmd =
-            asmStepDisplay breakCon m.Settings.SimulatorMaxSteps m.RunMode steps ri m.Editors
+            asmStepDisplay breakCon m.Settings.SimulatorMaxSteps m.RunMode steps ri m.TabInfo.Editors
         { m with RunMode = newRunMode }, cmd
     | RrepareModeForExecution ->
+        let i = m.TabInfo
         let cmd = 
-            prepareModeForExecution m.Editors.[m.TabId].IEditor m.RunMode
+            prepareModeForExecution i.Editors.[i.TabId].IEditor m.RunMode
         m, cmd
     | IsItTestbench ->
-        let cmd = isItTestbench m.Editors.[m.TabId].IEditor
+        let i = m.TabInfo
+        let cmd = isItTestbench i.Editors.[i.TabId].IEditor
         m, cmd
     | ResetEmulator ->
         printfn "Resetting..."
-        { m with MemoryMap = Map.empty
-                 SymbolMap = Map.empty
-                 RegMap = initialRegMap
+        { m with Content = initContent
                  RunMode = ResetMode
                  ClockTime = (0uL, 0uL)
-                 Flags = initialFlags
-                 FlagsHasChanged = false
+                 View = { m.View with FlagsHaveChanged = false }
                  EditorEnable = true }, 
         Cmd.batch [ Cmd.ofMsg DeleteAllContentWidgets
                     Cmd.ofMsg RemoveDecorations ]
     | RemoveDecorations ->
+        let i = m.TabInfo
         executeFunc 
-            (List.iter (fun x -> removeDecorations m.Editors.[m.TabId].IEditor x) m.Decorations)
-            m.TabId
+            (List.iter (fun x -> removeDecorations i.Editors.[i.TabId].IEditor x) m.Decorations)
+            i.TabId
         { m with Decorations = [] }, Cmd.none
     | DeleteAllContentWidgets ->
+        let i = m.TabInfo
         executeFunc 
-            (deleteAllContentWidgets m.CurrentTabWidgets m.Editors.[m.TabId].IEditor)
-            m.TabId
+            (deleteAllContentWidgets m.CurrentTabWidgets i.Editors.[i.TabId].IEditor)
+            i.TabId
         { m with CurrentTabWidgets = Map.empty }, Cmd.none
     | ShowInfoFromCurrentMode ->
-        let newSymbolTable, newClkTime, newRegMap, newFlags, newMemoryMap, newFlagsHasChanged = 
+        let newSymbolTable, newClkTime, newContent, newFlagsHaveChanged = 
             showInfoFromCurrentMode m.RunMode
-        { m with SymbolMap = defaultValue m.SymbolMap newSymbolTable 
+        { m with View = 
+                    { m.View with SymbolMap = defaultValue m.View.SymbolMap newSymbolTable 
+                                  FlagsHaveChanged = defaultValue m.View.FlagsHaveChanged newFlagsHaveChanged }
                  ClockTime = defaultValue m.ClockTime newClkTime 
-                 RegMap = defaultValue m.RegMap newRegMap
-                 Flags = defaultValue m.Flags newFlags 
-                 MemoryMap = defaultValue m.MemoryMap newMemoryMap
-                 FlagsHasChanged = defaultValue m.FlagsHasChanged newFlagsHasChanged }, 
+                 Content = defaultValue m.Content newContent
+                  }, 
         Cmd.none
     | UpdateGUIFromRunState ri ->
         let newRunMode, newEditorEnable, cmd = updateGUIFromRunState ri
@@ -311,21 +321,23 @@ let update (msg : Msg) (m : Model) =
                  EditorEnable = defaultValue m.EditorEnable newEditorEnable
                  }, cmd
     | HighlightCurrentAndNextIns (className, ri) -> 
+        let i = m.TabInfo
         let newDecorations, cmd = 
-            highlightCurrentAndNextIns className ri m.Editors.[m.TabId].IEditor m.Decorations 
+            highlightCurrentAndNextIns className ri i.Editors.[i.TabId].IEditor m.Decorations 
         { m with Decorations = newDecorations }, cmd
     | MakeToolTipInfo (v, orientation, dp, condInstr) ->
+        let i = m.TabInfo
         let cmd = 
             toolTipInfo 
                 (v, orientation)
                 dp
                 condInstr
-                m.Editors.[m.TabId].IEditor
+                i.Editors.[i.TabId].IEditor
                 m.Settings.EditorTheme
         m, cmd
     | DisplayState (ri', running, ri) ->
         let newLastDisplayStepsDone, cmd =
-            displayState ri' running m.TabId ri m.LastDisplayStepsDone m.Settings.SimulatorMaxSteps
+            displayState ri' running m.TabInfo.TabId ri m.LastDisplayStepsDone m.Settings.SimulatorMaxSteps
         { m with LastDisplayStepsDone = defaultValue m.LastDisplayStepsDone newLastDisplayStepsDone}, 
         cmd
     | MakeShiftTooltip (h, v, orientation, dp, dpAfter, uFAfter, rn, shiftT, alu, shiftAmt, op2) ->
@@ -339,46 +351,49 @@ let update (msg : Msg) (m : Model) =
                 op2
         m, cmd
     | MakeEditorInfoButton (theme, clickable, h, v, orientation, el, txt) ->
+        let i = m.TabInfo
         let newWidgets = 
             makeEditorInfoButtonWithTheme 
                 theme
                 clickable 
                 (h, v, orientation)
                 m.CurrentTabWidgets
-                m.Editors.[m.TabId].IEditor
+                i.Editors.[i.TabId].IEditor
                 (int m.Settings.EditorFontSize)
                 txt
                 el
         { m with CurrentTabWidgets = newWidgets }, Cmd.none
     | StepCode ->
         let cmd =
-            stepCode m.TabId m.Editors 
+            stepCode m.TabInfo
         m, cmd
     | StepCodeBackBy steps ->
+        let i = m.TabInfo
         let newRunMode, editorEnable, cmd = 
             stepCodeBackBy 
                 steps 
                 m.RunMode
-                m.Editors.[m.TabId].IEditor
+                i.Editors.[i.TabId].IEditor
         { m with RunMode = newRunMode
                  EditorEnable = defaultValue m.EditorEnable editorEnable }, cmd
     | RunTestBenchOnCode ->
         let cmd = 
             runTestbenchOnCode 
-                m.Editors
+                m.TabInfo.Editors
                 (Cmd.ofMsg RunTestBench)
         m, cmd
     | RunTestBench ->
-        let results, cmdLst, decorations = getParsedTests 0x80000000u m.Editors
-        let cmd = runTestbench m.TabId m.Editors results
+        let results, cmdLst, decorations = getParsedTests 0x80000000u m.TabInfo.Editors
+        let cmd = runTestbench m.TabInfo.TabId results
         let newDecorations = m.Decorations @ decorations
         let allCmd = 
             Cmd.batch (cmdLst @ [ cmd ])
         { m with Decorations = newDecorations }, allCmd
     | RunEditorTabOnTests lst -> 
+        let i = m.TabInfo
         let cmd1 = 
             prepareModeForExecution 
-                m.Editors.[m.TabId].IEditor
+                i.Editors.[i.TabId].IEditor
                 m.RunMode
         let cmd2 = runEditorTabOnTests lst m.RunMode
         m, Cmd.batch [ cmd1 ; cmd2 ]
@@ -394,10 +409,10 @@ let update (msg : Msg) (m : Model) =
         popupMenu lst
         m, Cmd.none
     | StartTest test ->
-        let cmd = startTest test m.Editors
+        let cmd = startTest test m.TabInfo.Editors
         m, cmd
     | RunAllEmulatorTests ->
-        runAllEmulatorTests m.RegMap m.Flags m.MemoryMap 
+        runAllEmulatorTests m.Content
         m, Cmd.none
     | CheckRunMode (msg, actionName) ->
         let fMsg = 
@@ -413,8 +428,8 @@ let update (msg : Msg) (m : Model) =
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose
-    mainMenu m.TabId m.DebugLevel m.RunMode m.Editors dispatch
-    dialogBox (m.Settings.CurrentFilePath, m.Editors, m.TabId, m.SettingsTab, m.DialogBox)
+    mainMenu m.TabInfo m.OnlineInfo.DebugLevel m.RunMode dispatch
+    dialogBox (m.Settings.CurrentFilePath, m.TabInfo, m.SettingsTab, m.DialogBox)
               dispatch
               m.DialogUpdated
     div [ ClassName "window" ] 
@@ -447,20 +462,15 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                tooltips (Refs.Content clockTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
                                         [ button [ ClassName "btn btn-large btn-default clock-time" ; Disabled true ]
                                                  [ m.ClockTime |> clockText |> str  ] ] ]
-                         repButtons m.CurrentRep dispatch ] ]
+                         repButtons m.View.CurrentRep dispatch ] ]
           div [ ClassName "window-content" ] 
               [ div [ ClassName "pane-group" ] 
                     [ div [ ClassName "pane file-view-pane"] 
-                          ((editorPanel (m.TabId, m.Editors, m.SettingsTab, m.Settings, m.EditorEnable) 
+                          ((editorPanel (m.TabInfo, m.SettingsTab, m.Settings, m.EditorEnable) 
                                        dispatch) @
                            [ div [ m.EditorEnable |> overlayClass |> ClassName ] []])
-                      div [ ClassName "pane dashboard"
-                            dashboardStyle m.CurrentRep ]
-                          [ viewButtons m.CurrentView dispatch
-                            viewPanel (m.CurrentRep, m.CurrentView, m.RegMap) 
-                                      (m.MemoryMap, m.SymbolMap, m.ByteView, m.ReverseDirection, m.RunMode)
-                                      dispatch
-                            footer m.Flags m.FlagsHasChanged ] ] ] ]
+                      viewPanel (m.View, m.Content, m.RunMode)
+                                      dispatch ] ] ]
 
 Program.mkProgram init update view
 #if DEBUG

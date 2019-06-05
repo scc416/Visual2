@@ -35,19 +35,20 @@ let blankTab =
       Saved = true }
 
 /// top-level function to delete tab
-let deleteTabUpdate (tabId, editors : Map<int, Editor>, settingsTab) =
-    let newEditors = Map.remove tabId editors
+let deleteTabUpdate (info, settingsTab) =
+    let newEditors = Map.remove info.TabId info.Editors
     let newTabId = 
         match Map.isEmpty newEditors with
         | true -> -1
         | false -> selectLastTabId newEditors
     let newSettingsTab =
         match settingsTab with
-        | Some x when x = tabId -> None
+        | Some x when x = info.TabId -> None
         | x -> 
-            editors.[tabId].IEditor?dispose () |> ignore
+            info.Editors.[info.TabId].IEditor?dispose () |> ignore
             x
-    newTabId, newEditors, newSettingsTab
+    { TabId = newTabId
+      Editors =  newEditors }, newSettingsTab
 
 /// top-level function to select file tab
 let selectFileTabUpdate id editors =
@@ -62,14 +63,15 @@ let selectFileTabUpdate id editors =
 let newFileUpdate editors =
     let newTabId = uniqueTabId editors
     let newEditors = Map.add newTabId blankTab editors
-    newTabId, newEditors
+    { TabId = newTabId
+      Editors = newEditors }
 
-let attemptToDeleteTabUpdate (tabId, (editors: Map<int, Editor>), dialogBox)
+let attemptToDeleteTabUpdate (info, dialogBox)
                              id =
     match id with
     | -1 -> Cmd.none
     | _ ->
-        match id = tabId, editors.[id].Saved with
+        match id = info.TabId, info.Editors.[id].Saved with
         | true, true -> Cmd.ofMsg DeleteTab
         | true, false -> UnsavedFileDl |> UpdateDialogBox |> Cmd.ofMsg
         | _ -> Cmd.none

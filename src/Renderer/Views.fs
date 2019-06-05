@@ -129,7 +129,7 @@ let ResetIfOK dispatch str msg =
     showMessage callback str
 
 /// determine if any dialog box has to be opened in view
-let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingTab : int option, dialogBox : DialogBox option)
+let dialogBox (currentFilePath, info, settingTab : int option, dialogBox : DialogBox option)
               dispatch =
     function
    | true -> ()
@@ -144,10 +144,10 @@ let dialogBox (currentFilePath, editors : Map<int, Editor>, tabId: int, settingT
                          dispatch
             | Some SaveAsDl ->
                 saveFileAs currentFilePath 
-                           editors.[tabId]
+                           info.Editors.[info.TabId]
                            dispatch
             | Some UnsavedFileDl ->
-                closeTabDialog (editors.[tabId].FileName, settingTab, tabId)
+                closeTabDialog (info.Editors.[info.TabId].FileName, settingTab, info.TabId)
                                dispatch
             | Some QuitDl ->
                 ExitIfOK dispatch
@@ -510,17 +510,7 @@ let regView (regMap : Map<CommonData.RName, uint32>) currentRep =
 
     ul [ ClassName "list-group" ] (registerSet regMap)
 
-/// return the view panel on the right
-let viewPanel (currentRep, currentView, regMap : Map<CommonData.RName, uint32>)
-              (memoryMap : Map<uint32, uint32>, symbolMap, byteView, reverseDirection, runMode)
-              dispatch = 
-    let view =
-        match currentView with
-        | Registers -> regView regMap currentRep
-        | Memory -> memView memoryMap dispatch byteView reverseDirection runMode currentRep symbolMap
-        | Symbols -> symbolView symbolMap currentRep
-    div [ ClassName "viewer" ; viewerStyle currentRep ] 
-        [ view ]
+
 
 let footerColour =
     function
@@ -547,3 +537,18 @@ let footer (flags : CommonData.Flags) (flagsChanged : bool) =
                               footerDiv "Z" flags.Z
                               footerDiv "C" flags.C
                               footerDiv "V" flags.V ] ] ]
+
+/// return the view panel on the right
+let viewPanel (view, content, runMode)
+              dispatch = 
+    let viewEl =
+        match view.CurrentView with
+        | Registers -> regView content.RegMap view.CurrentRep
+        | Memory -> memView content.MemoryMap dispatch view.ByteView view.ReverseDirection runMode view.CurrentRep view.SymbolMap
+        | Symbols -> symbolView view.SymbolMap view.CurrentRep
+    div [ ClassName "pane dashboard"
+          dashboardStyle view.CurrentRep ]
+        [ viewButtons view.CurrentView dispatch
+          div [ ClassName "viewer" ; viewerStyle view.CurrentRep ] 
+              [ viewEl ]
+          footer content.Flags view.FlagsHaveChanged ]

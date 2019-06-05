@@ -180,25 +180,25 @@ let overlayClass =
     | _ -> "darken-overlay disabled-click"
 
 /// return all the react elements in the editor panel (including the react monaco editor)
-let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, settings, editorEnable) 
+let editorPanel (info, settingsTabId, settings, editorEnable) 
                 dispatch =
 
     /// return the class of the tab header
     /// "active" if it is the current tab
     let tabHeaderClass (id : int) : HTMLAttr =
         match id with
-        | x when x = currentFileTabId -> ClassName "tab-item tab-file active" 
+        | x when x = info.TabId -> ClassName "tab-item tab-file active" 
         | _ -> ClassName "tab-item tab-file"   
 
     let editorClass (id : int) : HTMLAttr =
         match id with
-        | x when x = currentFileTabId -> ClassName "editor" 
+        | x when x = info.TabId -> ClassName "editor" 
         | _ -> ClassName "editor invisible"
 
     let editor txt id = 
         let onChange : EditorsProps = 
             Refs.OnChange (fun _ -> 
-                match editors.[id].Saved with
+                match info.Editors.[info.TabId].Saved with
                 | true -> EditorTextChange |> dispatch
                 | false -> ())
         editor [ onChange
@@ -210,7 +210,7 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
     let editorDiv id =
         div [ editorClass id
               id |> tabNameIdFormatter |> Key ] 
-            [ editor editors.[id].DefaultValue id ]
+            [ editor info.Editors.[info.TabId].DefaultValue id ]
 
     /// return a tab header
     let tabHeaderDiv (id : int) (editor : Editor) : ReactElement =
@@ -239,7 +239,7 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
     /// all tab headers plus the add new tab button
     let tabHeaders =
         let filesHeader = 
-            editors
+            info.Editors
             |> Map.map (fun id editor -> tabHeaderDiv id editor)
             |> Map.toList
             |> List.map (fun (_, name) -> name)
@@ -252,12 +252,12 @@ let editorPanel (currentFileTabId, editors : Map<int, Editor>, settingsTabId, se
     /// the editor
     let editorViewDiv =
         let editorsLst = 
-            editors
+            info.Editors
             |> Map.toList
             |> List.map (fun (key, _) -> editorDiv key)
         match settingsTabId with
-        | Some x when x = currentFileTabId -> 
-            let settingEl = settingsMenu dispatch settings editors.[currentFileTabId].Saved
+        | Some x when x = info.TabId -> 
+            let settingEl = settingsMenu dispatch settings info.Editors.[info.TabId].Saved
             settingEl :: editorsLst
         | _ -> 
             editorsLst

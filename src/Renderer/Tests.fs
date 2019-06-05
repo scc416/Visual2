@@ -249,7 +249,7 @@ let processTestResults (fn : string) (res : Map<TestT, (TestT * TestSetup * RunI
     else Result.Ok "Passed"
 
 /// on small test files print more info
-let RunEmulatorTest allowed regMap flags memoryMap ts =
+let RunEmulatorTest allowed content ts =
     let maxSteps = 1000L
 
     //let more = size < 4
@@ -264,7 +264,7 @@ let RunEmulatorTest allowed regMap flags memoryMap ts =
 
     if more then printfn "\n\nIndented ASM:\n%s\n" (lim.EditorText |> String.concat "\n")
 
-    let ri = getRunInfoFromImage NoBreak lim regMap flags memoryMap
+    let ri = getRunInfoFromImage NoBreak lim content
 
     if lim.Errors <> [] then
         match ts.After with
@@ -292,12 +292,12 @@ let RunEmulatorTest allowed regMap flags memoryMap ts =
         | _ ->
             ErrorTests, ts, ri', sprintf "Test code timed out after %d Visual2 instructions" maxSteps
 
-let runEmulatorTestFile allowed regMap flags memoryMap fn =
+let runEmulatorTestFile allowed content fn =
     let testF = Refs.appDirName + @"/test-data/" + fn
     let results = loadStateFile testF
     let resultsBySuccess =
         results
-        |> List.map (RunEmulatorTest allowed regMap flags memoryMap)
+        |> List.map (RunEmulatorTest allowed content)
         |> List.groupBy (fun (rt, _, _, _) -> rt)
         |> Map.ofList
     let resultSummary = processTestResults fn resultsBySuccess allowed
@@ -307,7 +307,7 @@ let runEmulatorTestFile allowed regMap flags memoryMap fn =
     | Result.Error s -> s
     |> printfn "%s with %d tests...%s" (fnWithoutSuffix fn) results.Length
 
-let runAllEmulatorTests regMap flags memoryMap =
+let runAllEmulatorTests content =
     let allowed = readAllowedTests()
     printfn "Errors allowed in tests: %A" allowed
     let contents = electron.remote.getCurrentWebContents()
@@ -324,5 +324,5 @@ let runAllEmulatorTests regMap flags memoryMap =
                 else lis)
         |> List.filter (String.startsWith "ALLOWED" >> not)
 
-    List.iter (runEmulatorTestFile allowed regMap flags memoryMap ) files
+    List.iter (runEmulatorTestFile allowed content) files
     printfn "Finished. See './test-results' for result files"

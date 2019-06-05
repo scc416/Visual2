@@ -219,51 +219,67 @@ and Msg =
     | CheckRunMode of Msg * string
     | DialogUpdated
 
-/// the main model for MVU
-type Model = { 
-    DialogUpdated : bool
-    /// File Tab currently selected (and therefore visible)
-    TabId : int
-    /// tab containing current testbench specification (if testbench is loaded)
-    TestbenchTab : int option
-    /// Map tabIds to the editors which are contained in them
-    Editors : Map<int, Editor>
-    /// Map of content widgets currently on editor, indexed by id
-    CurrentTabWidgets : Map<string, obj>
-    /// id of tab containing settings form, if this exists
-    SettingsTab : int option
-    /// The current number representation being used
-    CurrentRep : Representations
-    /// indicates what the current DOM symbols display representation is
-    DisplayedCurrentRep : Representations
-    /// The current View in the right-hand pane
-    CurrentView : Views
-    /// Whether the Memory View is byte of word based
-    ByteView : bool
-    /// direction of memory addresses
-    ReverseDirection : bool
-    /// Number of instructions imulated before break. If 0 run forever
-    MaxStepsToRun : int
+type Content = {
     /// Contents of data memory
     MemoryMap : Map<uint32, uint32>
     /// Contents of CPU registers
     RegMap : Map<CommonData.RName, uint32>
     /// Contents of CPU flags
     Flags : CommonData.Flags
-    FlagsHasChanged : bool
+    }
+
+type ViewInfo = {
+    /// The current number representation being used
+    CurrentRep : Representations
+    /// The current View in the right-hand pane
+    CurrentView : Views
+    /// Whether the Memory View is byte of word based
+    ByteView : bool
+    /// direction of memory addresses
+    ReverseDirection : bool
     /// Values of all Defined Symols
     SymbolMap : Map<string, uint32 * ExecutionTop.SymbolType>
-    /// Current state of simulator
-    RunMode : ExecutionTop.RunMode
+    FlagsHaveChanged : bool
+    }
+
+type TabInfo = {
+    /// File Tab currently selected (and therefore visible)
+    TabId : int
+    /// Map tabIds to the editors which are contained in them
+    Editors : Map<int, Editor>
+    }
+
+type OnlineInfo = {
     /// Global debug level set from main process.
     /// 0 => production. 1 => development. 2 => debug parameter.
     DebugLevel : int
+    LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
+    LastRemindTime : System.TimeSpan option   
+    }
+
+/// the main model for MVU
+type Model = { 
+    OnlineInfo : OnlineInfo
+    TabInfo : TabInfo
+    DialogUpdated : bool
+    /// tab containing current testbench specification (if testbench is loaded)
+    TestbenchTab : int option
+    /// Map of content widgets currently on editor, indexed by id
+    CurrentTabWidgets : Map<string, obj>
+    /// id of tab containing settings form, if this exists
+    SettingsTab : int option
+    /// indicates what the current DOM symbols display representation is
+    DisplayedCurrentRep : Representations
+    View : ViewInfo
+    /// Number of instructions imulated before break. If 0 run forever
+    MaxStepsToRun : int
+    Content : Content
+    /// Current state of simulator
+    RunMode : ExecutionTop.RunMode
     /// Execution Step number at which GUI was last updated
     LastDisplayStepsDone : int64
-    LastOnlineFetchTime : Result<System.DateTime, System.DateTime>
     Activity : bool
     Sleeping : bool
-    LastRemindTime : System.TimeSpan option
     Settings : VSettings
     DialogBox : DialogBox option
     InitClose : bool
@@ -435,12 +451,18 @@ let visualDocsPage name =
     | [ page ] -> sprintf "https://tomcl.github.io/visual2.github.io/%s.html#content" page
     | [ page; tag ] -> sprintf @"https://tomcl.github.io/visual2.github.io/%s.html#%s" page tag
     | _ -> failwithf "What? Split must return non-empty list!"
-    
-
-let initialFlags = { N = false; Z = false; C = false; V = false }
 
 /// Return list of lines in IEditor
 let formatText (editor : Monaco.Editor.IEditor option) = 
     editor?getValue ()
     |> (fun (x : string) -> x.Split [| '\n' |])
     |> Array.toList
+    
+let initialFlags = { N = false; Z = false; C = false; V = false }
+
+let initContent =
+    {
+        MemoryMap = Map.empty
+        RegMap = ExecutionTop.initialRegMap
+        Flags = initialFlags 
+    }

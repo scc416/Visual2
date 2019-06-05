@@ -53,15 +53,19 @@ let showInfoFromCurrentMode runMode =
     | RunErrorMode ri ->
         let dp, uFl = ri.dpCurrent
         let memoryMap = makeDataLocMemoryMap dp.MM
-        let newFlagsHasChanged = uFl.NZU
+        let newFlagsHaveChanged = uFl.NZU
+        let newContent = 
+            {
+                RegMap = dp.Regs
+                MemoryMap = memoryMap
+                Flags = uFl.F
+            }
         Some ri.st, 
         Some ((ri.StepsDone |> uint64), (ri.CyclesDone |> uint64)), 
-        Some dp.Regs,
-        Some uFl.F,
-        Some memoryMap,
-        Some newFlagsHasChanged 
+        Some newContent,
+        Some newFlagsHaveChanged 
     | _ -> 
-        None, None, None, None, None, None
+        None, None, None, None
 
 /// Apply GUI decorations to instruction line of last PC and current PC.
 /// Move current instruction line to middle of window if not visible.
@@ -94,8 +98,8 @@ let highlightCurrentAndNextIns classname pInfo editor decorations =
     | _ -> 
         newDecorations, cmd1
 
-let stepCode tabId editors : Cmd<Msg> =
-    match currentTabIsTB tabId editors with
+let stepCode info : Cmd<Msg> =
+    match currentTabIsTB info.TabId info.Editors with
     | false -> 
         (NoBreak, 1L) |> RunEditorTab |> Cmd.ofMsg 
     | true -> 
@@ -292,13 +296,13 @@ let asmStepDisplay (breakc : BreakCondition) simulatorMaxSteps runMode steps ri'
                                           ("editor-line-highlight", ri') |> HighlightCurrentAndNextIns |> Cmd.ofMsg 
                                           cmd2 ]
 
-let getRunInfoFromImage bc (lim : LoadImage) regMap flags memoryMap =
-    getRunInfoFromImageWithInits bc lim regMap flags memoryMap lim.Mem
+let getRunInfoFromImage bc (lim : LoadImage) content =
+    getRunInfoFromImageWithInits bc lim content.RegMap content.Flags content.MemoryMap lim.Mem
 
-let matchLI regMap flags memoryMap steps breakCon =
+let matchLI content steps breakCon =
     function
     | Some(lim, _) ->
-        let ri = getRunInfoFromImage breakCon lim regMap flags memoryMap
+        let ri = getRunInfoFromImage breakCon lim content
         Some false, Some (ActiveMode(RunState.Running, ri)), 
         (breakCon, steps, ri) |> AsmStepDisplay |> Cmd.ofMsg 
     | _ -> 
@@ -549,7 +553,7 @@ let runEditorTabOnTests (tests : Test list) runMode =
         Cmd.batch 
             [ cmd1 ; Cmd.ofMsg ResetEmulator ; cmd2 ]
 
-let runTestbench currentTabId editors (result : Result<(int * Test list), string>) =
+let runTestbench currentTabId (result : Result<(int * Test list), string>) =
     match result with
     | Error(mess) ->
         mess 

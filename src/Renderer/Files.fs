@@ -96,23 +96,25 @@ let saveFileAs filePathSetting (editor : Editor) dispatch : (unit) =
 
 /// top-level function for saving file
 /// open the save dialog when necessary
-let saveFileUpdate (tabId, editors : Map<int, Editor>) =
-    match tabId with
+let saveFileUpdate info =
+    match info.TabId with
     | -1 -> 
-        Option.None, editors
+        Option.None, info
     | id -> 
-        let filePath = editors.[id].FilePath
+        let filePath = info.Editors.[id].FilePath
         match filePath with
         | Option.None -> 
-            Some SaveAsDl, editors /// open the dialog
+            Some SaveAsDl, info /// open the dialog
         | Some fPath ->
-            let currentEditor = editors.[id]
+            let currentEditor = info.Editors.[id]
             writeToFile (currentEditor.IEditor?getValue ()) fPath
             let newEditors = 
                 Map.add id
                         { currentEditor with Saved = true }
-                        editors
-            Option.None, newEditors    
+                        info.Editors
+            Option.None, 
+            { Editors = newEditors   
+              TabId = info.TabId }
 
 /// top-level function for save file as
 /// open the save file dialog when necessary
@@ -122,34 +124,34 @@ let saveAsFileDialogUpdate dialogBox =
     | _ -> dialogBoxUpdate (Some SaveAsDl) dialogBox
 
 /// top-level function for opening up the open file dialog
-let saveAsFileUpdate (editors : Map<int, Editor>, tabId, filePathSettingStr)
+let saveAsFileUpdate (info, filePathSettingStr)
                      fileInfo = 
     match fileInfo with
     | Option.None -> 
-        editors, filePathSettingStr
+        info, filePathSettingStr
     | Some (filePath, fileName) ->
         let newEditor =
-            { editors.[tabId] with FilePath = Some filePath
-                                   FileName = Some fileName
-                                   Saved = true }
+            { info.Editors.[info.TabId] with FilePath = Some filePath
+                                             FileName = Some fileName
+                                             Saved = true }
         let newEditors = 
-            editors
-            |> Map.add tabId
+            info.Editors
+            |> Map.add info.TabId
                        newEditor
             |> Map.filter (fun key value ->
-                key = tabId ||
+                key = info.TabId ||
                 value.FilePath <> newEditor.FilePath)
         let newFilePathSettings = filePathSetting filePath
-        newEditors, newFilePathSettings        
+        { info with Editors = newEditors }, newFilePathSettings        
 
 /// top-level function for opening file
-let openFileUpdate (oldEditors : Map<int, Editor>, filePath, id) 
+let openFileUpdate (info, filePath) 
                    editor =
-    let newId = uniqueTabId oldEditors
+    let newId = uniqueTabId info.Editors
     let length = List.length editor
     match length with
     | 0 -> // no file is selected to be opened
-        oldEditors, filePath, id
+        filePath, info
     | _ ->
         let newEditors =
             editor
@@ -158,16 +160,17 @@ let openFileUpdate (oldEditors : Map<int, Editor>, filePath, id)
             |> List.zip [newId .. newId + length - 1]
             |> List.filter (fun (_, x) ->
                 // check if the files are already opened
-                oldEditors
+                info.Editors
                 |> Map.forall (fun _ value -> 
                     value.FilePath <> x.FilePath))
             |> Map.ofList
-        let mergedEditors = mapMerge newEditors oldEditors
+        let mergedEditors = mapMerge newEditors info.Editors
         let currentEditor = List.head editor // find the first opened file
         let newId = // make the first file as current tab
             mergedEditors
             |> Map.findKey (fun _ value -> 
                 value.FilePath = currentEditor.FilePath)
-        mergedEditors,
-        filePathSetting mergedEditors.[newId].FilePath.Value, 
-        newId
+        mergedEditors.[newId].FilePath.Value
+        |> filePathSetting,
+        { TabId = newId
+          Editors = mergedEditors }

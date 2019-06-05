@@ -53,7 +53,7 @@ let interlockAction (actionName : string) debugLevel runMode dispatch msg = (fun
  *
  ****************************************************************************************************)
 
-let loadDemo (editors : Map<int, Editor>) : ( Map<int, Editor> * int) =
+let loadDemo (editors : Map<int, Editor>) =
     let sampleFileName = Tests.sampleDir + "karatsuba.s"
     let txt = 
         Node.Exports.fs.readFileSync (sampleFileName, "utf8")
@@ -65,8 +65,8 @@ let loadDemo (editors : Map<int, Editor>) : ( Map<int, Editor> * int) =
           Saved = true }
     let newId = Refs.uniqueTabId editors
     let newEditors= Map.add newId newEditor editors
-    newEditors, newId
-
+    { Editors = newEditors
+      TabId = newId }
 
 (****************************************************************************************************
  *
@@ -223,18 +223,17 @@ let helpMenu dispatch debugLevel runMode =
 
 
 /// Make all app menus
-let mainMenu tabId
+let mainMenu info
              debugLevel
              runMode
-             editors
              (dispatch : (Msg -> Unit))=
     let template =
         ResizeArray<MenuItemOptions> [
-            fileMenu dispatch tabId debugLevel runMode
+            fileMenu dispatch info.TabId debugLevel runMode
             editMenu dispatch debugLevel runMode
             viewMenu()
             helpMenu dispatch debugLevel runMode
-            testMenu dispatch debugLevel runMode editors
+            testMenu dispatch debugLevel runMode info.Editors
         ]
     template
     |> electron.remote.Menu.buildFromTemplate

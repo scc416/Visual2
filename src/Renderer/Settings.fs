@@ -217,18 +217,22 @@ let createSettingsTab editors =
           Saved = true }
     let newEditors =
         Map.add id newSettingTab editors
-    newEditors, id
+    { Editors = newEditors
+      TabId = id }
 
 /// top-level function to select the settings tab
 /// create a setting tab when necessary
 let selectSettingsTabUpdate (settingsTab, editors) =
     match settingsTab with
-    | None -> createSettingsTab editors
+    | None -> 
+        createSettingsTab editors
     // setting tab already exists
-    | Some x -> editors, x
+    | Some x -> 
+        { Editors = editors
+          TabId = x }
 
 /// top-level function to save settings
-let saveSettingsUpdate (settings, editors, settingsTab, tabId, iExports) = 
+let saveSettingsUpdate (settings, editors, settingsTab, iExports) = 
     let newSettings =
         getFormSettings settings
     // close and remove the setting tab after settings are saved
@@ -240,4 +244,6 @@ let saveSettingsUpdate (settings, editors, settingsTab, tabId, iExports) =
     match newSettings.EditorTheme = settings.EditorTheme with
     | false -> iExports?editor?setTheme (newSettings.EditorTheme)
     | true -> ()
-    newSettings, newEditors, newId
+    newSettings, 
+    { Editors = newEditors
+      TabId = newId }
