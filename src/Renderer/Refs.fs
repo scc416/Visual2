@@ -218,6 +218,7 @@ and Msg =
     | RunAllEmulatorTests
     | CheckRunMode of Msg * string
     | DialogUpdated
+    | SaveSettingsOnly
 
 type Content = {
     /// Contents of data memory

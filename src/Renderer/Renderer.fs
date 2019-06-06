@@ -128,10 +128,9 @@ let update (msg : Msg) (m : Model) =
         let newDialog = dialogBoxUpdate (Some OpenFileDl) m.DialogBox
         { m with DialogBox = newDialog }, Cmd.none
     | SaveFile -> 
-        let newDialog, newInfo = 
-            saveFileUpdate m.TabInfo
-        { m with TabInfo = newInfo
-                 DialogBox = dialogBoxUpdate newDialog m.DialogBox }, Cmd.none
+        let newInfo, cmd = 
+            saveFileUpdate m.TabInfo m.SettingsTab
+        { m with TabInfo = newInfo }, cmd
     | SaveAsFileDialog -> 
         let newDialogBox =
             saveAsFileDialogUpdate m.DialogBox m.TabInfo.TabId
@@ -155,6 +154,12 @@ let update (msg : Msg) (m : Model) =
         { m with Settings = newSettings 
                  TabInfo = newInfo
                  SettingsTab = None }, Cmd.none
+    | SaveSettingsOnly ->
+        let newSettings, newEditors =
+            saveSettingsOnlyUpdate (m.Settings, m.IExports, m.SettingsTab.Value, m.TabInfo.Editors )
+        let newTabInfo = { m.TabInfo with Editors = newEditors } 
+        { m with Settings = newSettings 
+                 TabInfo = newTabInfo }, Cmd.none
     | LoadDemoCode -> 
         let newInfo = loadDemo m.TabInfo.Editors
         { m with TabInfo = newInfo }, Cmd.none
@@ -174,7 +179,7 @@ let update (msg : Msg) (m : Model) =
         m, newCmd
     | Exit ->
         close()
-        m, Cmd.ofMsg CloseDialog
+        m, Cmd.none
     | UpdateIEditor (x, y) ->
         let newEditors = Map.add y { m.TabInfo.Editors.[y] with IEditor = Some x } m.TabInfo.Editors
         let newInfo = { m.TabInfo with Editors = newEditors }

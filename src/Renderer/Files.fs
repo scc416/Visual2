@@ -6,6 +6,7 @@ open Fable.Import
 open Fable.Import.Electron
 open Node.Exports
 open Refs
+open Elmish
 
 let writeToFile str path =
     let errorHandler _err = // TODO: figure out how to handle errors which can occur
@@ -96,15 +97,20 @@ let saveFileAs filePathSetting (editor : Editor) dispatch : (unit) =
 
 /// top-level function for saving file
 /// open the save dialog when necessary
-let saveFileUpdate info =
-    match info.TabId with
-    | -1 -> 
-        Option.None, info
-    | id -> 
+let saveFileUpdate info settingTabs =
+    match info.TabId, settingTabs with
+    | -1, _ -> 
+        info, Cmd.none
+    | id, Some x when x = id ->
+        info, Cmd.ofMsg SaveSettingsOnly
+    | id, _ -> 
         let filePath = info.Editors.[id].FilePath
         match filePath with
         | Option.None -> 
-            Some SaveAsDl, info /// open the dialog
+            info, 
+            SaveAsDl
+            |> UpdateDialogBox
+            |> Cmd.ofMsg /// open the dialog
         | Some fPath ->
             let currentEditor = info.Editors.[id]
             writeToFile (currentEditor.IEditor?getValue ()) fPath
@@ -112,9 +118,9 @@ let saveFileUpdate info =
                 Map.add id
                         { currentEditor with Saved = true }
                         info.Editors
-            Option.None, 
             { Editors = newEditors   
-              TabId = info.TabId }
+              TabId = info.TabId },
+            Cmd.none
 
 /// top-level function for save file as
 /// open the save file dialog when necessary

@@ -247,3 +247,17 @@ let saveSettingsUpdate (settings, editors, settingsTab, iExports) =
     newSettings, 
     { Editors = newEditors
       TabId = newId }
+
+/// top-level function to save settings
+let saveSettingsOnlyUpdate (settings, iExports, settingsTab : int, editors : Map<int, Editor>) = 
+    let newSettings =
+        getFormSettings settings
+    let newEditors = 
+        Map.add 
+            settingsTab
+            { editors.[settingsTab] with Saved = true }
+            editors
+    match newSettings.EditorTheme = settings.EditorTheme with
+    | false -> iExports?editor?setTheme (newSettings.EditorTheme)
+    | true -> ()
+    newSettings, newEditors
