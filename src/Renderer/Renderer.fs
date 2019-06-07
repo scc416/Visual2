@@ -132,9 +132,9 @@ let update (msg : Msg) (m : Model) =
             saveFileUpdate m.TabInfo m.SettingsTab
         { m with TabInfo = newInfo }, cmd
     | SaveAsFileDialog -> 
-        let newDialogBox =
-            saveAsFileDialogUpdate m.DialogBox m.TabInfo.TabId
-        { m with DialogBox = newDialogBox }, Cmd.none
+        let cmd =
+            saveAsFileDialogUpdate (m.TabInfo.TabId, m.SettingsTab)
+        m, cmd
     | SaveAsFile fileInfo ->
         let newInfo, newFilePathSetting =
             saveAsFileUpdate (m.TabInfo, m.Settings.CurrentFilePath)

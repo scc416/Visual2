@@ -124,10 +124,11 @@ let saveFileUpdate info settingTabs =
 
 /// top-level function for save file as
 /// open the save file dialog when necessary
-let saveAsFileDialogUpdate dialogBox =
+let saveAsFileDialogUpdate =
     function
-    | -1 -> dialogBox /// make sure sure no other dialog is opened and there is at least one tab
-    | _ -> dialogBoxUpdate (Some SaveAsDl) dialogBox
+    | -1, _ -> Cmd.none /// make sure sure no other dialog is opened and there is at least one tab
+    | x, Some y when x = y -> Cmd.ofMsg SaveSettingsOnly
+    | _ -> SaveAsDl |> UpdateDialogBox |> Cmd.ofMsg
 
 /// top-level function for opening up the open file dialog
 let saveAsFileUpdate (info, filePathSettingStr)
