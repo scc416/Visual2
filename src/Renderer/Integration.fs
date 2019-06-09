@@ -434,7 +434,7 @@ let matchRunMode bkCon steps =
 let matchActiveMode runMode =
     match runMode with
     | ActiveMode(RunState.Running, ri) -> 
-        (RunState.Running, ri)|> ActiveMode |> Some,
+        (RunState.Stopping, ri)|> ActiveMode |> Some,
         Cmd.none
     | _ -> 
         None,
