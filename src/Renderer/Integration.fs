@@ -196,15 +196,15 @@ let handleTest (pInfo : RunInfo) editors =
                 []
             | true, rest -> Cmd.none, rest
             | false, _ ->
-                let cmd1 = 
+                let cmd2 = 
                     Cmd.batch 
                         [ test.TNum |> sprintf "Test %d has errors!" |> Alert |> UpdateDialogBox |> Cmd.ofMsg
                           Cmd.ofMsg ResetEmulator ]
-                let cmd2 =   
+                let cmd3 =   
                     match Testbench.getTBWithTab editors with
                     | Ok(tbTab, _) -> tbTab |> SelectFileTab |> Cmd.ofMsg
                     | _ -> Cmd.none
-                Cmd.batch [ cmd1 ; cmd2 ], []
+                Cmd.batch [ cmd1 ; cmd2 ; cmd3 ], []
     | NoTest, _ -> Cmd.none, []
     | _ -> 
         "Test terminated because program has runtime error" |> Alert |> UpdateDialogBox |> Cmd.ofMsg,

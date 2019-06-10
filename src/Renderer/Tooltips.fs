@@ -410,7 +410,6 @@ let makeShiftTooltip (h, v, orientation) (dp : DataPath, dpAfter : DataPath, uFA
     printfn "Making shift tooltip"
     let diagram = displayShiftDiagram rn (before, bToi dp.Fl.C) (after', final, bToi uF.Ca, finalC, finalFWrite, alu) shiftT (shiftAmt |> int)
     Cmd.batch [
-        Cmd.ofMsg DeleteAllContentWidgets 
         Cmd.ofMsg DeleteAllContentWidgets
         ("light", lineTipsClickable, h, (v + 1), orientation, diagram, "Shift") |> MakeEditorInfoButton |> Cmd.ofMsg 
         ]

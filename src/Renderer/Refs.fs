@@ -194,7 +194,7 @@ and Msg =
     | RunEditorTab of BreakCondition * int64
     | DeleteAllContentWidgets
     | RemoveDecorations
-    | RrepareModeForExecution
+    | PrepareModeForExecution
     | RunEditorRunMode of BreakCondition * int64
     | AsmStepDisplay of BreakCondition * int64 * RunInfo
     | MatchLoadImage of (LoadImage * string list) option * int64 * BreakCondition

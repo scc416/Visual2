@@ -251,7 +251,7 @@ let update (msg : Msg) (m : Model) =
         let cmd = matchRunMode NoBreak steps m.RunMode 
         m, cmd
     | RunEditorTab (bkCon, steps) ->
-        m, Cmd.batch [ Cmd.ofMsg RrepareModeForExecution 
+        m, Cmd.batch [ Cmd.ofMsg PrepareModeForExecution 
                        (bkCon, steps) |> RunEditorRunMode |> Cmd.ofMsg ]
     | RunEditorRunMode (bkCon, steps)->
         let cmd = 
@@ -280,7 +280,7 @@ let update (msg : Msg) (m : Model) =
         let newRunMode, cmd =
             asmStepDisplay breakCon m.Settings.SimulatorMaxSteps m.RunMode steps ri m.TabInfo.Editors
         { m with RunMode = newRunMode }, cmd
-    | RrepareModeForExecution ->
+    | PrepareModeForExecution ->
         let i = m.TabInfo
         let cmd = 
             prepareModeForExecution i.Editors.[i.TabId].IEditor m.RunMode
