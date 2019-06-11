@@ -186,25 +186,45 @@ let update (msg : Msg) (m : Model) =
         { m with TabInfo = newInfo }, Cmd.none
     | FindEditor ->
         let i = m.TabInfo
-        let action = i.Editors.[i.TabId].IEditor?getAction ("actions.find")
-        action?run ()
+        match m.TabInfo.TabId with
+        | -1 -> 
+            ()
+        | _ ->
+            let action = i.Editors.[i.TabId].IEditor?getAction ("actions.find")
+            action?run ()
         m, Cmd.none
     | FindAndReplaceEditor ->
         let i = m.TabInfo
-        let action = i.Editors.[i.TabId].IEditor?getAction ("editor.action.startFindReplaceAction")
-        action?run ()
+        match m.TabInfo.TabId with
+        | -1 -> 
+            ()
+        | _ ->
+            let action = i.Editors.[i.TabId].IEditor?getAction ("editor.action.startFindReplaceAction")
+            action?run ()
         m, Cmd.none
     | UndoEditor ->
         let i = m.TabInfo
-        i.Editors.[i.TabId].IEditor?trigger ("Update.fs", "undo") |> ignore
+        match m.TabInfo.TabId with
+        | -1 -> 
+            ()
+        | _ ->
+            i.Editors.[i.TabId].IEditor?trigger ("Update.fs", "undo") |> ignore
         m, Cmd.none
     | SelectAllEditor ->
         let i = m.TabInfo
-        i.Editors.[i.TabId].IEditor?trigger ("Update.fs", "selectAll") |> ignore
+        match m.TabInfo.TabId with
+        | -1 -> 
+            ()
+        | _ ->
+            i.Editors.[i.TabId].IEditor?trigger ("Update.fs", "selectAll") |> ignore
         m, Cmd.none
     | RedoEditor ->
         let i = m.TabInfo
-        i.Editors.[i.TabId].IEditor?trigger ("Update.fs", "redo") |> ignore
+        match m.TabInfo.TabId with
+        | -1 -> 
+            ()
+        | _ ->
+            i.Editors.[i.TabId].IEditor?trigger ("Update.fs", "redo") |> ignore
         m, Cmd.none
     | InitiateClose ->
         { m with InitClose = true }, Cmd.none
