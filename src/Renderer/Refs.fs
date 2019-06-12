@@ -18,6 +18,7 @@ open Fable.Import.Electron
 open Monaco
 open ExecutionTop
 
+
 // **********************************************************************************
 //                                  App Version
 // **********************************************************************************
@@ -434,13 +435,13 @@ let initSettings = {
     }
 
 let themes = [
-                "vs", "vs";
-                "vs-dark", "vs-dark";
-                "hc-black", "hc-black";
-                //"one-dark-pro", "One Dark Pro";
-                //"one-light-pro", "One Light Pro";
-                //"solarised-dark", "Solarised Dark";
-                //"solarised-light", "Solarised Light";
+                //"vs", "vs";
+                //"vs-dark", "vs-dark";
+                //"hc-black", "hc-black";
+                "one-dark-pro", "One Dark Pro";
+                "one-light-pro", "One Light Pro";
+                "solarised-dark", "Solarised Dark";
+                "solarised-light", "Solarised Light";
               ]
 
 let minFontSize = 6L
@@ -467,3 +468,6 @@ let initContent =
         RegMap = ExecutionTop.initialRegMap
         Flags = initialFlags 
     }
+
+
+

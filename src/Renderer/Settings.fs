@@ -153,20 +153,20 @@ let settingsMenu dispatch (settings : VSettings) saved: ReactElement =
                                   Id "editor-theme" 
                                   DefaultValue settings.EditorTheme 
                                   onChange ]
-                                [ option [ Value "vs" ]
-                                         [ str "vs" ]
-                                  option [ Value "vs-dark" ]
-                                         [ str "vs-dark" ]
-                                  option [ Value "hc-black" ]
-                                         [ str "hc-black" ] ] ]
-                                //[ option [ Value "one-dark-pro" ]
-                                  //       [ str "One Dark Pro" ]
-                                  //option [ Value "one-light-pro" ]
-                                  //       [ str "One Light Pro" ]
-                                  //option [ Value "solarised-dark" ]
-                                  //       [ str "Solarised Dark" ]
-                                  //option [ Value "solarised-light" ]
-                                         //[ str "Solarised Light" ] ] ]
+                                //[ option [ Value "vs" ]
+                                  //       [ str "vs" ]
+                                  //option [ Value "vs-dark" ]
+                                  //       [ str "vs-dark" ]
+                                  //option [ Value "hc-black" ]
+                                         //[ str "hc-black" ] ] ]
+                                [ option [ Value "one-dark-pro" ]
+                                         [ str "One Dark Pro" ]
+                                  option [ Value "one-light-pro" ]
+                                         [ str "One Light Pro" ]
+                                  option [ Value "solarised-dark" ]
+                                         [ str "Solarised Dark" ]
+                                  option [ Value "solarised-light" ]
+                                         [ str "Solarised Light" ] ] ]
                    div [ Class "form-group" ]
                        [ label [ Class "settings-label" ]
                                [ str "Word Wrap" ]
@@ -242,7 +242,7 @@ let saveSettingsUpdate (settings, editors, settingsTab, iExports) =
         | true -> -1
         | _ -> selectLastTabId newEditors
     match newSettings.EditorTheme = settings.EditorTheme with
-    | false -> iExports?editor?setTheme (newSettings.EditorTheme)
+    | false -> iExports?editor?setTheme newSettings.EditorTheme
     | true -> ()
     newSettings, 
     { Editors = newEditors
