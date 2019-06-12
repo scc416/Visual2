@@ -76,7 +76,7 @@ let init _ =
                 }
 
         }
-    let cmd = Startup |> ReadOnlineInfo |> Cmd.ofMsg         
+    let cmd = Startup |> ReadOnlineInfo |> Cmd.ofMsg
     m, cmd
 
 let update (msg : Msg) (m : Model) =

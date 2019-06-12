@@ -45,7 +45,10 @@ let deleteTabUpdate (info, settingsTab) =
         match settingsTab with
         | Some x when x = info.TabId -> None
         | x -> 
-            info.Editors.[info.TabId].IEditor?dispose () |> ignore
+            match x = Some info.TabId with
+            | true ->
+                info.Editors.[info.TabId].IEditor?dispose () |> ignore
+            | _ -> ()
             x
     { TabId = newTabId
       Editors =  newEditors }, newSettingsTab

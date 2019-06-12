@@ -14,6 +14,18 @@
 
 <body>
     <div id="app"></div>
+<!--    <script>-->
+<!--        // Monaco uses a custom amd loader that over-rides node's require.-->
+<!--        // Keep a reference to node's require so we can restore it after executing the amd loader file.-->
+<!--        var nodeRequire = global.require;-->
+<!--        global.require('electron-settings');-->
+<!--        </script>-->
+<!--    <script>console.log('hello from index.html');</script>-->
+<!---->
+<!--    <script type="text/javascript" charset="UTF-8" src="js/vs/loader.js"></script>-->
+<!--    <script>console.log('loader done...');</script>-->
+<!--    <script type="text/javascript" src="js/monaco-init.js"></script>-->
     <script type="text/javascript" charset="UTF-8" src="js/renderer.js"></script>
+    <script>console.log('renderer.js has been successfully loaded!');</script>
 </body>
 </html>
