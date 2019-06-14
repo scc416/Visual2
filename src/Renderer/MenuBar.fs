@@ -149,7 +149,7 @@ let editMenu (dispatch : (Msg -> Unit)) debugLevel runMode =
         makeItem "Preferences" Core.Option.None (interlockAction "show preferences tab" debugLevel runMode dispatch SelectSettingsTab)
     ]
 
-let viewMenu() =
+let viewMenu debugLevel =
         let devToolsKey = if Node.Globals.``process``.platform = NodeJS.Platform.Darwin then "Alt+Command+I" else "Ctrl+Shift+I"
         makeMenu "View" [
             makeRoleItem "Toggle Fullscreen" (Some "F11") MenuItemRole.Togglefullscreen
@@ -158,8 +158,8 @@ let viewMenu() =
             makeRoleItem "Zoom Out" (Some "CmdOrCtrl+-") MenuItemRole.Zoomout
             makeRoleItem "Reset Zoom" (Some "CmdOrCtrl+0") MenuItemRole.Resetzoom
             menuSeparator
-            //makeCondItem (debugLevel > 0) "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
-            makeItem "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
+            makeCondItem (debugLevel > 0) "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
+            //makeItem "Toggle Dev Tools" (Some devToolsKey) (electron.remote.getCurrentWebContents()).toggleDevTools
         ]
 
 let popupMenu (items) =
@@ -231,7 +231,7 @@ let mainMenu info
         ResizeArray<MenuItemOptions> [
             fileMenu dispatch info.TabId debugLevel runMode
             editMenu dispatch debugLevel runMode
-            viewMenu()
+            viewMenu debugLevel
             helpMenu dispatch debugLevel runMode
             testMenu dispatch debugLevel runMode info.Editors
         ]

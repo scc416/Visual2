@@ -506,9 +506,9 @@ let update (msg : Msg) (m : Model) =
                         ]
                     ])
         iExports?editor?defineTheme
-            ("one-dark-pro",
+            ("solarised-light",
                 createObj[
-                    "base" ==> "vs-dark"
+                    "base" ==> "vs"
                     "inherit" ==> true
                     "rules" ==> [
                         createObj[ "token" ==> "delimiter" ; "foreground" ==> "#657b83" ]
