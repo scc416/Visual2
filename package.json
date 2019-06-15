@@ -2,11 +2,9 @@
   "name": "visual",
   "productName": "VisUAL2",
   "main": "main.js",
-  "postinstall": "electron-builder install-app-deps",
   "description" : "",
   "author" : "Dr. Tom Clarke, 2018 3rd year HLP students at EEE ICL, Sally Chan",
   "version" : "1.07.0",
-  "files": ["app/visual.*"],
   "scripts": {
     "start": "cd src/Main && dotnet fable webpack -w --port free -- -w --config webpack.config.js -w --mode production",
     "build": "cd src/Main && dotnet fable webpack --port free -- --config webpack.config.js --mode production",
