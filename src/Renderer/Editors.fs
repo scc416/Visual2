@@ -111,7 +111,7 @@ let makeErrorInEditor lineNumber (hoverLst : string list) (gHoverLst : string li
 
 
 
-let editorOptions vs =
+let editorOptions vs readOnly =
     createObj [
         // User defined settings
         "theme" ==> vs.EditorTheme
@@ -124,7 +124,7 @@ let editorOptions vs =
         "language" ==> "arm";
         "roundedSelection" ==> false;
         "scrollBeyondLastLine" ==> false;
-        //"readOnly" ==> readOnly;
+        "readOnly" ==> readOnly;
         "automaticLayout" ==> true;
         "minimap" ==> createObj [ "enabled" ==> false ];
         "glyphMargin" ==> true
@@ -202,7 +202,7 @@ let editorPanel (info, settingsTabId, settings, editorEnable)
                 | true -> EditorTextChange |> dispatch
                 | false -> ())
         editor [ onChange
-                 settings |> editorOptions |> Options 
+                 editorEnable |> not |> editorOptions settings |> Options 
                  Refs.DefaultValue txt 
                  EditorWillMount (fun x -> InitialiseIExports x |> dispatch)
                  EditorDidMount (fun x -> UpdateIEditor (x, id) |> dispatch) ]
