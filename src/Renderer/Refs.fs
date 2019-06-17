@@ -329,7 +329,7 @@ let initialClose (dispatch : Msg -> unit) =
     function
     | false -> 
         electron.ipcRenderer.on ("closingWindow", (fun event ->
-           AttemptToExit |> dispatch
+           (fun _ -> (AttemptToExit, "quit") |> CheckRunMode |> dispatch)
             )) |> ignore
         InitiateClose |> dispatch
     | _ ->

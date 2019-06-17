@@ -1,4 +1,4 @@
-module Renderer
+﻿module Renderer
 
 open Refs
 open Elmish
@@ -448,7 +448,6 @@ let update (msg : Msg) (m : Model) =
                 |> UpdateDialogBox 
         m, Cmd.ofMsg fMsg
     | InitialiseIExports iExports -> 
-        Browser.console.log (iExports?languages?getLanguages())
         iExports?editor?defineTheme
             ("one-light-pro",
                 createObj[
@@ -601,11 +600,11 @@ let view (m : Model) (dispatch : Msg -> unit) =
                                 [ str "Step " ]
                          (statusBar m.RunMode)
                          div [ ClassName "btn-group clock" ]
-                             [ tooltips (Refs.Content clockSymTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
-                                        [ button [ ClassName "btn btn-large btn-default clock-symbol" ; Disabled true ]
+                             [ tooltips (Refs.Content clockSymTooltipStr :: Placement "top" :: basicTooltipsPropsLst)
+                                        [ button [ ClassName "btn btn-large btn-default clock-symbol" ]
                                                  [ str "\U0001F551" ]]
-                               tooltips (Refs.Content clockTooltipStr :: Placement "bottom" :: basicTooltipsPropsLst)
-                                        [ button [ ClassName "btn btn-large btn-default clock-time" ; Disabled true ]
+                               tooltips (Refs.Content clockTooltipStr :: Placement "top" :: basicTooltipsPropsLst)
+                                        [ button [ ClassName "btn btn-large btn-default clock-time" ]
                                                  [ m.ClockTime |> clockText |> str  ] ] ]
                          repButtons m.View.CurrentRep dispatch ] ]
           div [ ClassName "window-content" ] 
