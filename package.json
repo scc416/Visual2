@@ -13,6 +13,7 @@
     "pack-win": "electron-builder --windows",
     "pack-linux": "electron-builder --linux",
     "pack-osx": "electron-builder --macos",
+    "pack-all": "yarn pack-osx && yarn pack-linux && yarn pack-win",
     "launch": "electron . -w",
     "launch-debug": "electron . -w --debug"
   },
