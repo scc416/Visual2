@@ -457,7 +457,8 @@ let update (msg : Msg) (m : Model) =
                 Cmd.batch [ 0 |> SelectFileTab |> Cmd.ofMsg 
                             0 |> AttemptToDeleteTab |> Cmd.ofMsg ]
             | _ -> Cmd.none
-        iExports?languages?setMonarchTokensProvider ("python", armlanguage)
+        iExports?languages?register (createObj [ "id" ==> "arm" ])
+        iExports?languages?setMonarchTokensProvider ("arm", armlanguage)
         iExports?editor?defineTheme
             ("one-light-pro",
                 createObj[

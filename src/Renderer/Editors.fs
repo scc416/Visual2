@@ -118,7 +118,7 @@ let editorOptions vs readOnly =
         "renderIndentGuides" ==> false
         "fontFamily" ==> "fira-code"
         "fontWeight" ==> "bold"
-        "language" ==> "python";
+        "language" ==> "arm";
         "roundedSelection" ==> false;
         "scrollBeyondLastLine" ==> false;
         "readOnly" ==> readOnly;
