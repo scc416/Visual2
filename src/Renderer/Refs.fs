@@ -102,8 +102,6 @@ type TestSetup = {
     Name : string
     }
 
-
-
 type CodeType = DP3 | DP2 | CMP | LDRSTR | LDMSTM | MISC | EQU | UNIMPLEMENTED
 
 /// Properties for react-tippy
@@ -285,7 +283,6 @@ type Model = {
     Settings : VSettings
     DialogBox : DialogBox option
     InitClose : bool
-    InitEditor : int
     Decorations : obj list
     EditorEnable : bool
     ClockTime : uint64 * uint64
