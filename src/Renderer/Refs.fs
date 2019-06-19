@@ -469,5 +469,5 @@ let initContent =
         Flags = initialFlags 
     }
 
-
-
+[<Global>]
+let armlanguage : obj = jsNative

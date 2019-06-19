@@ -448,127 +448,111 @@ let update (msg : Msg) (m : Model) =
                 |> UpdateDialogBox 
         m, Cmd.ofMsg fMsg
     | InitialiseIExports iExports -> 
+        iExports?languages?setMonarchTokensProvider ("python", armlanguage)
         iExports?editor?defineTheme
             ("one-light-pro",
                 createObj[
                     "base" ==> "vs"
                     "inherit" ==> true
                     "rules" ==> [
-                        createObj[ "token" ==> "operator" ; "foreground" ==> "#303030" ]
-                        createObj[ "token" ==> "keyword" ; "foreground" ==> "#1010a0" ]
-                        createObj[ "token" ==> "symbols" ; "foreground" ==> "#303030" ]
-                        createObj[ "token" ==> "comment" ; "foreground" ==> "#303030" ]
-                        createObj[ "token" ==> "comment.testerror" ; "foreground" ==> "#dc322f" ]
-                        createObj[ "token" ==> "escape" ; "foreground" ==> "#ff0000" ]
-                        createObj[ "token" ==> "string" ; "foreground" ==> "#e06c75" ]
-                        createObj[ "token" ==> "number.bare" ; "foreground" ==> "#c08000"]
-                        createObj[ "token" ==> "number.hash" ; "foreground" ==> "#408080"]
-                        ]
-                    "colors" ==> 
-                        createObj[
-                            "editor.foreground" ==> "#000000"
-                            "editor.background" ==> "#EDF9FA"
-                            "editorCursor.foreground" ==> "#8B0000"
-                            "editor.lineHighlightBackground" ==> "#eee8d5"
-                            "editorLineNumber.foreground" ==> "#93a1a1"
-                            "editor.selectionBackground" ==> "#CC0080"
-                            "editor.inactiveSelectionBackground" ==> "#fdf6e3"
-                        ]
-                    ])
+                        createObj [ "token" ==> "operator" ; "foreground" ==> "#303030" ]
+                        createObj [ "token" ==> "keyword" ; "foreground" ==> "#1010a0" ]
+                        createObj [ "token" ==> "symbols" ; "foreground" ==> "#303030" ]
+                        createObj [ "token" ==> "comment"; "foreground" ==> "#308030" ]
+                        createObj [ "token" ==> "comment.testerror" ; "foreground"==> "#dc322f" ]
+                        createObj [ "token" ==> "escape" ; "foreground" ==> "#ff0000" ]
+                        createObj [ "token" ==> "string" ; "foreground" ==> "#e06c75" ]
+                        createObj ["token" ==> "number.bare" ; "foreground" ==> "#c08000" ]
+                        createObj [ "token" ==> "number.hash" ; "foreground" ==> "#408080" ] ]
+                    "colors" ==> createObj
+                        [ "editor.foreground" ==> "#000000"
+                          "editor.background" ==> "#EDF9FA"
+                          "editorCursor.foreground" ==> "#8B0000"
+                          "editor.lineHighlightBackground"==> "#eee8d5"
+                          "editorLineNumber.foreground"==> "#93a1a1"
+                          "editor.selectionBackground"==> "#CC0080"
+                          "editor.inactiveSelectionBackground"==> "#fdf6e3"
+                        ] ] )
         iExports?editor?defineTheme
             ("one-dark-pro",
                 createObj[
                     "base" ==> "vs-dark"
                     "inherit" ==> true
-                    "rules" ==> [
-                        createObj[ "token" ==> "operator" ; "foreground" ==> "#b0b0b0" ]
-                        createObj[ "token" ==> "keyword" ; "foreground" ==> "#268bd2" ]
-                        createObj[ "token" ==> "symbols" ; "foreground" ==> "#a0a0a0" ]
-                        createObj[ "token" ==> "comment" ; "foreground" ==> "#20a020" ]
-                        createObj[ "token" ==> "comment.testerror" ; "foreground" ==> "#dc322f" ]
-                        createObj[ "token" ==> "escape" ; "foreground" ==> "#57b6c2" ]
-                        createObj[ "token" ==> "string" ; "foreground" ==> "#e06c75" ]
-                        createObj[ "token" ==> "number.bare" ; "foreground" ==> "#f0f080" ]
-                        createObj[ "token" ==> "number.hash"; "foreground" ==> "#80c0c0" ]
-                        ]
-                    "colors" ==> 
-                        createObj[
-                            "editor.foreground" ==> "#FFFFFF"
-                            "editor.background" ==> "#000000"
-                            "editorCursor.foreground" ==> "#8B0000"
-                            "editor.lineHighlightBackground" ==> "#073642"
-                            "editorLineNumber.foreground" ==> "#586e75"
-                            "editor.selectionBackground" ==> "#CC0080"
-                            "editor.inactiveSelectionBackground" ==> "#586e75"
-                            "editor.findMatchBackground" ==> "#657b83"
-                            "editor.findMatchHighlightBackground" ==> "#073642"
-                        ]
-                    ])
+                    "rules" ==>[
+                        createObj [ "token" ==> "operator" ; "foreground" ==> "#b0b0b0" ]
+                        createObj [ "token" ==> "keyword" ; "foreground" ==> "#268bd2" ]
+                        createObj [ "token" ==> "symbol" ; "foreground" ==> "#a0a0a0"]
+                        createObj [ "token" ==> "comment" ; "foreground" ==> "#20a020"]
+                        createObj [ "token" ==> "comment.testerror" ; "foreground" ==> "#dc322f" ]
+                        createObj [ "token" ==> "escape"; "foreground" ==> "#57b6c2" ]
+                        createObj [ "token" ==> "string" ; "foreground" ==> "#e06c75" ]
+                        createObj [ "token" ==> "number.hash" ; "foreground" ==> "#80c0c0" ] 
+                        createObj [ "token" ==> "number.bare" ; "foreground" ==> "#f0f080" ] ]
+                    "colors" ==> createObj
+                        [ "editor.foreground" ==> "#FFFFFF"
+                          "editorCursor.foreground" ==> "#8B0000"
+                          "editor.lineHighlightBackground" ==> "#073642"
+                          "editorLineNumber.foreground" ==> "#586e75" 
+                          "editor.selectionBackground" ==> "#CC0080"
+                          "editor.inactiveSelectionBackground" ==> "#586e75"
+                          "editor.findMatchBackground" ==> "#657b83" // Color of the current search match.
+                          "editor.findMatchHighlightBackground" ==> "#073642" ] ] )// Color of the other search matches.
         iExports?editor?defineTheme
             ("solarised-light",
                 createObj[
                     "base" ==> "vs"
                     "inherit" ==> true
                     "rules" ==> [
-                        createObj[ "token" ==> "delimiter" ; "foreground" ==> "#657b83" ]
-                        createObj[ "token" ==> "identifier" ; "foreground" ==> "#657b83" ]
-                        createObj[ "token" ==> "keyword" ; "foreground" ==> "#268bd2" ]
-                        createObj[ "token" ==> "symbol" ; "foreground" ==> "#657b83" ]
-                        createObj[ "token" ==> "comment" ; "foreground" ==> "#859900" ]
-                        createObj[ "token" ==> "comment.testerror" ; "foreground" ==> "#dc322f" ]
-                        createObj[ "token" ==> "escape" ; "foreground" ==> "#57b6c2" ]
-                        createObj[ "token" ==> "string" ; "foreground" ==> "#e06c75" ]
-                        createObj[ "token" ==> "number.bare" ; "foreground" ==> "#b58900" ]
-                        createObj[ "token" ==> "number.hash" ; "foreground" ==> "#2aa198" ]
-                    ]
-                    "colors" ==> 
-                        createObj[
-                            "editor.foreground" ==> "#657b83"
-                            "foreground" ==> "#657b83"
-                            "editor.background" ==> "#fdf6e3"
-                            "editorCursor.foreground" ==> "#d33682"
-                            "editor.lineHighlightBackground" ==> "#eee8d5"
-                            "editorLineNumber.foreground" ==> "#93a1a1"
-                            "editor.selectionBackground" ==> "#93a1a1"
-                            "editor.inactiveSelectionBackground" ==> "#93a1a1"
-                            "editor.findMatchBackground" ==> "#839496"
-                            "editor.findMatchHighlightBackground" ==> "#eee8d5"
-                        ]
-                ]
-            )
+                        createObj [ "token" ==> "delimiter" ; "foreground" ==> "#657b83" ]
+                        createObj [ "token" ==> "identifier" ; "foreground" ==> "#657b83" ]
+                        createObj [ "token" ==> "keyword" ; "foreground" ==> "#268bd2" ]
+                        createObj [ "token" ==> "symbol" ; "foreground" ==> "#657b83" ]
+                        createObj [ "token" ==> "comment" ; "foreground" ==> "#859900" ]
+                        createObj [ "token" ==> "comment.testerror" ; "foreground" ==> "#dc322f" ]
+                        createObj [ "token" ==> "escape" ; "foreground" ==> "#57b6c2" ]
+                        createObj [ "token" ==> "string" ; "foreground" ==> "#e06c75" ]
+                        createObj [ "token" ==> "number.hash" ; "foreground" ==> "#2aa198" ]
+                        createObj [ "token" ==> "number.bare" ; "foreground" ==> "#b58900" ] ]
+                    "colors" ==> createObj[
+                        "foreground" ==> "#657b83"
+                        "editor.foreground" ==> "#657b83";
+                        "editor.background" ==> "#fdf6e3";
+                        "editorCursor.foreground" ==> "#d33682";
+                        "editor.lineHighlightBackground" ==> "#eee8d5";
+                        "editorLineNumber.foreground" ==> "#93a1a1";
+                        "editor.selectionBackground" ==> "#93a1a1";
+                        "editor.inactiveSelectionBackground" ==> "#93a1a1";
+                        "editor.findMatchBackground" ==> "#839496"; // Color of the current search match.
+                        "editor.findMatchHighlightBackground" ==> "#eee8d" ] ] )// Color of the other search matches.
         iExports?editor?defineTheme
             ("solarised-dark",
                 createObj[
                     "base" ==> "vs-dark"
                     "inherit" ==> true
                     "rules" ==> [
-                        createObj[ "token" ==> "delimiter" ; "foreground" ==> "#839496" ]
-                        createObj[ "token" ==> "identifier" ; "foreground" ==> "#839496" ]
-                        createObj[ "token" ==> "keyword" ; "foreground" ==> "#268bd2" ]
-                        createObj[ "token" ==> "symbol" ; "foreground" ==> "#839496" ]
-                        createObj[ "token" ==> "comment" ; "foreground" ==> "#859900" ]
-                        createObj[ "token" ==> "comment.testerror" ; "foreground" ==> "#dc322f" ]
-                        createObj[ "token" ==> "escape" ; "foreground" ==> "#57b6c2" ]
-                        createObj[ "token" ==> "string" ; "foreground" ==> "#e06c75" ]
-                        createObj[ "token" ==> "number.bare" ; "foreground" ==> "#b58900" ]
-                        createObj[ "token" ==> "number.hash" ; "foreground" ==> "#2aa198" ]
-                    ]
+                        createObj [ "token" ==> "delimiter" ; "foreground" ==> "#839496" ]
+                        createObj [ "token" ==> "identifier" ; "foreground" ==> "#839496" ]
+                        createObj [ "token" ==> "keyword" ; "foreground" ==> "#268bd2" ] 
+                        createObj [ "token" ==> "symbol" ; "foreground" ==> "#839496" ]
+                        createObj [ "token" ==> "comment" ; "foreground" ==> "#859900" ]
+                        createObj [ "token" ==> "comment.testerror" ; "foreground" ==> "#dc322f" ]
+                        createObj [ "token" ==> "escape" ; "foreground" ==> "#57b6c2" ]
+                        createObj [ "token" ==> "string" ; "foreground" ==> "#e06c75" ]
+                        createObj [ "token" ==> "number.hash" ; "foreground" ==> "#2aa198" ]
+                        createObj [ "token" ==> "number.bare" ; "foreground" ==> "#b58900" ] ]
                     "colors" ==> 
                         createObj[
-                            "editor.foreground" ==> "#839496"
                             "foreground" ==> "#839496"
+                            "editor.foreground" ==> "#839496"
                             "editor.background" ==> "#002b36"
                             "editorCursor.foreground" ==> "#d33682"
                             "editor.lineHighlightBackground" ==> "#073642"
                             "editorLineNumber.foreground" ==> "#586e75"
                             "editor.selectionBackground" ==> "#586e75"
                             "editor.inactiveSelectionBackground" ==> "#586e75"
-                            "editor.findMatchBackground" ==> "#657b83"
-                            "editor.findMatchHighlightBackground" ==> "#073642"
-                        ]
-                    ]
-            )
-        { m with IExports = Some iExports }, Cmd.none
+                            "editor.findMatchBackground" ==> "#657b83" // Color of the current search match.
+                            "editor.findMatchHighlightBackground" ==> "#073642" ] ] )// Color of the other search matches.
+        { m with IExports = Some iExports }, Cmd.none//Cmd.ofMsg NewFile
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose

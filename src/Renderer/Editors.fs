@@ -108,9 +108,6 @@ let makeErrorInEditor lineNumber (hoverLst : string list) (gHoverLst : string li
         None
         decorations
 
-
-
-
 let editorOptions vs readOnly =
     createObj [
         // User defined settings
@@ -121,12 +118,12 @@ let editorOptions vs readOnly =
         "renderIndentGuides" ==> false
         "fontFamily" ==> "fira-code"
         "fontWeight" ==> "bold"
-        "language" ==> "arm";
+        "language" ==> "python";
         "roundedSelection" ==> false;
         "scrollBeyondLastLine" ==> false;
         "readOnly" ==> readOnly;
         "automaticLayout" ==> true;
-        "minimap" ==> createObj [ "enabled" ==> false ];
+        "minimap" ==> createObj [ "enabled" ==> false ]
         "glyphMargin" ==> true
     ]
 
