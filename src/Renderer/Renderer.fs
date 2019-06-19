@@ -39,6 +39,7 @@ let init _ =
     let settings = checkSettings (getJSONSettings initSettings) initSettings
     let m =
         { 
+            InitEditor = 0
             DialogUpdated = false
             TabInfo = {
                 Editors = Map.ofList [ (0, blankTab) ]
@@ -448,6 +449,14 @@ let update (msg : Msg) (m : Model) =
                 |> UpdateDialogBox 
         m, Cmd.ofMsg fMsg
     | InitialiseIExports iExports -> 
+        let cmd =
+            match m.InitEditor with
+            | 0 -> 
+                Cmd.ofMsg NewFile
+            | 1 -> 
+                Cmd.batch [ 0 |> SelectFileTab |> Cmd.ofMsg 
+                            0 |> AttemptToDeleteTab |> Cmd.ofMsg ]
+            | _ -> Cmd.none
         iExports?languages?setMonarchTokensProvider ("python", armlanguage)
         iExports?editor?defineTheme
             ("one-light-pro",
@@ -552,7 +561,7 @@ let update (msg : Msg) (m : Model) =
                             "editor.inactiveSelectionBackground" ==> "#586e75"
                             "editor.findMatchBackground" ==> "#657b83" // Color of the current search match.
                             "editor.findMatchHighlightBackground" ==> "#073642" ] ] )// Color of the other search matches.
-        { m with IExports = Some iExports }, Cmd.none//Cmd.ofMsg NewFile
+        { m with IExports = Some iExports ; InitEditor = m.InitEditor + 1}, cmd
 
 let view (m : Model) (dispatch : Msg -> unit) =
     initialClose dispatch m.InitClose

@@ -285,6 +285,7 @@ type Model = {
     Settings : VSettings
     DialogBox : DialogBox option
     InitClose : bool
+    InitEditor : int
     Decorations : obj list
     EditorEnable : bool
     ClockTime : uint64 * uint64
