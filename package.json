@@ -2,7 +2,7 @@
   "name": "visual",
   "productName": "VisUAL2",
   "main": "main.js",
-  "description" : "",
+  "description" : "F# written ARM assembler and simulator with elmish, React Monaco Editor, Electron & Fable",
   "author" : "Dr. Tom Clarke, 2018 3rd year HLP students at EEE ICL, Sally Chan",
   "version" : "1.07.0",
   "scripts": {
