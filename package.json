@@ -30,7 +30,7 @@
     "electron-settings": "^3.2.0",
     "electron-tabs": "^0.9.1",
     "fable-compiler": "^2.3.10",
-    "lodash": ">=4.17.11",
+    "lodash": ">=4.17.19",
     "monaco-editor": "0.16.2",
     "monaco-editor-webpack-plugin": "^1.7.0",
     "node-sass": "^4.12.0",
