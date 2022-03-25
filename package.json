@@ -55,7 +55,7 @@
     "cloc": "^2.3.3",
     "copy-webpack-plugin": "^4.5.1",
     "cross-zip-cli": "^1.0.0",
-    "electron": "4.1.5",
+    "electron": "13.6.6",
     "electron-builder": "^20.43.0",
     "electron-installer-dmg": "^1.0.0",
     "fable-loader": "^2.1.6",
